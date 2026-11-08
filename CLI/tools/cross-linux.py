@@ -41,7 +41,7 @@ def main():
     core_tests = os.path.abspath(os.path.join(arguments.source, "Tests", "Tests.cpp"))
 
     includes = ["-I", os.path.join(src, "shim"), "-I", source, "-I", src, "-isystem", os.path.join(HERE, "third_party", "CLI11")]
-    flags = ["-target", TARGET, "-std=c++20", "-O2", "-Wall", "-Wextra"]
+    flags = ["-target", TARGET, "-std=c++20", "-O2", "-Wall", "-Wextra", "-DIDLER_CLI"]
 
     def compile_one(path):
         name = os.path.basename(os.path.dirname(path)) + "_" + os.path.splitext(os.path.basename(path))[0] + ".o"

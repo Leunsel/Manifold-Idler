@@ -13,9 +13,9 @@ jobs:
     name: Window program (Windows)
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
 
       - name: Build the program and its tests
         run: msbuild Manifold-Idler.sln /p:Configuration=Release /p:Platform=x64 /m /nologo /v:minimal
@@ -30,7 +30,7 @@ jobs:
           Copy-Item x64\Release\Manifold-Idler.exe, LICENSE, README.md dist\
           Copy-Item Licenses dist\Licenses -Recurse
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Manifold-Idler-windows-x64
           path: dist/
@@ -50,7 +50,7 @@ jobs:
             binary: CLI/build/idler
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Configure
         run: cmake -S CLI -B CLI/build -DCMAKE_BUILD_TYPE=Release
@@ -68,7 +68,7 @@ jobs:
           cp "${{ matrix.binary }}" LICENSE CLI/README.md dist/
           cp CLI/third_party/CLI11/LICENSE dist/CLI11-LICENSE
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: dist/
@@ -82,7 +82,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
 

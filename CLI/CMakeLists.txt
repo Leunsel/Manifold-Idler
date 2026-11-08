@@ -57,6 +57,7 @@ else()
     target_link_libraries(idler_engine PUBLIC ${CMAKE_DL_LIBS})
 endif()
 target_include_directories(idler_engine BEFORE PUBLIC src/shim)
+target_compile_definitions(idler_engine PUBLIC IDLER_CLI)
 target_link_libraries(idler_engine PUBLIC idler_core Threads::Threads)
 idler_flags(idler_engine)
 
@@ -75,6 +76,7 @@ add_executable(idler
     src/main.cpp
     src/Commands.cpp
     src/Serve.cpp)
+target_include_directories(idler BEFORE PRIVATE src/shim)
 target_include_directories(idler SYSTEM PRIVATE third_party/CLI11)
 target_link_libraries(idler PRIVATE idler_cli_base idler_engine)
 idler_flags(idler)

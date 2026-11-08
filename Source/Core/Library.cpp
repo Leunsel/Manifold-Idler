@@ -341,20 +341,24 @@ namespace Idler
                 const Vdf::Node* locked = display->Find("icon_gray");
                 const Vdf::Node* permission = node.Find("permission");
                 const std::optional<std::uint32_t> who = permission ? ParseUnsigned(permission->Value) : std::optional<std::uint32_t>(0);
-                AchievementIcons entry{ name->Value, icon->Value, locked ? locked->Value : std::string(), who.value_or(3) };
+                AchievementIcons entry;
+                entry.Id = name->Value;
+                entry.Icon = icon->Value;
+                entry.IconLocked = locked ? locked->Value : std::string();
+                entry.Permission = who.value_or(3);
                 if (const Vdf::Node* progress = node.Find("progress"))
                 {
                     const Vdf::Node* value = progress->Find("value");
                     const Vdf::Node* stat = value ? value->Find("operand1") : nullptr;
                     const Vdf::Node* low = progress->Find("min_val");
                     const Vdf::Node* high = progress->Find("max_val");
-                    const std::optional<double> from = low ? ParseNumber(low->Value) : std::nullopt;
-                    const std::optional<double> to = high ? ParseNumber(high->Value) : std::nullopt;
-                    if (stat && !stat->Value.empty() && to && *to > from.value_or(0.0))
+                    const double from = low ? ParseNumber(low->Value).value_or(0.0) : 0.0;
+                    const double to = high ? ParseNumber(high->Value).value_or(from) : from;
+                    if (stat && !stat->Value.empty() && to > from)
                     {
                         entry.ProgressStat = stat->Value;
-                        entry.ProgressMin = from.value_or(0.0);
-                        entry.ProgressMax = *to;
+                        entry.ProgressMin = from;
+                        entry.ProgressMax = to;
                     }
                 }
                 icons.push_back(std::move(entry));
