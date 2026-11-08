@@ -3188,6 +3188,37 @@ namespace
         CHECK(EqualsIgnoreCase("Apps", "aPPS"));
         CHECK(!EqualsIgnoreCase("apps", "app"));
         CHECK(FoldCase("\xC3\x84RGER Game") == "\xC3\xA4rger game");
+        CHECK(LowerCodePoint(0x00C4) == 0x00E4);
+        CHECK(LowerCodePoint(0x00D7) == 0x00D7);
+        CHECK(LowerCodePoint(0x0141) == 0x0142);
+        CHECK(LowerCodePoint(0x0178) == 0x00FF);
+        CHECK(LowerCodePoint(0x03A3) == 0x03C3);
+        CHECK(LowerCodePoint(0x0416) == 0x0436);
+        CHECK(LowerCodePoint(0x0401) == 0x0451);
+        CHECK(LowerCodePoint(0x1EA0) == 0x1EA1);
+        CHECK(LowerCodePoint(0x0181) == 0x0253);
+        CHECK(LowerCodePoint(0x1F59) == 0x1F51);
+        CHECK(LowerCodePoint(0x1F5A) == 0x1F5A);
+        CHECK(LowerCodePoint(0xFF21) == 0xFF41);
+        CHECK(LowerCodePoint(0x00E4) == 0x00E4);
+        CHECK(LowerCodePoint(0x4E00) == 0x4E00);
+        CHECK(LowerCodePoint(0x1F600) == 0x1F600);
+#ifdef _WIN32
+        {
+            int differences = 0;
+            for (std::uint32_t code = 0; code <= 0xFFFF; ++code)
+            {
+                if (code >= 0xD800 && code <= 0xDFFF)
+                    continue;
+                wchar_t character = static_cast<wchar_t>(code);
+                ::CharLowerBuffW(&character, 1);
+                const std::uint32_t windows = static_cast<std::uint32_t>(character);
+                if (LowerCodePoint(code) != windows && ++differences <= 5)
+                    std::printf("  lower case of U+%04X: %04X here, %04X in Windows\n", code, LowerCodePoint(code), windows);
+            }
+            CHECK(differences == 0);
+        }
+#endif
         CHECK(WideToUtf8(Utf8ToWide("\xE6\x9D\xB1\xE6\x96\xB9")) == "\xE6\x9D\xB1\xE6\x96\xB9");
 
         CHECK(FontNeedsOf("Plain \xC3\x84 name") == 0);

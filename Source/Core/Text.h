@@ -14,6 +14,7 @@ namespace Idler
 
     std::string_view Trim(std::string_view text);
     bool EqualsIgnoreCase(std::string_view lhs, std::string_view rhs);
+    std::uint32_t LowerCodePoint(std::uint32_t code);
     std::string FoldCase(std::string_view text);
     std::optional<std::uint32_t> ParseUnsigned(std::string_view text);
 
