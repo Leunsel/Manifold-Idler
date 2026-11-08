@@ -1,0 +1,41 @@
+#include <windows.h>
+#include "..\Source\Resource.h"
+
+#pragma code_page(65001)
+
+IDR_FONT_FA_SOLID        RCDATA "Fonts\\fa-solid-900.ttf"
+
+IDI_APPICON ICON "icon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    0,1,0,0
+ PRODUCTVERSION 0,1,0,0
+ FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS      VS_FF_DEBUG
+#else
+ FILEFLAGS      0x0L
+#endif
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       VFT_APP
+ FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "CompanyName",      "Manifold"
+            VALUE "Comments",         "Idles Steam games through the running Steam client."
+            VALUE "FileDescription",  "Manifold Idler"
+            VALUE "FileVersion",      "0.1.0.0"
+            VALUE "InternalName",     "Manifold-Idler"
+            VALUE "OriginalFilename", "Manifold-Idler.exe"
+            VALUE "ProductName",      "Manifold Idler"
+            VALUE "ProductVersion",   "0.1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END

@@ -1,0 +1,11 @@
+* text=auto
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.vcxproj.filters text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.ttf binary
+*.ico binary
+*.png binary
+*.lib binary

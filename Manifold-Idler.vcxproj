@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{5a1f3c7e-8b42-4d19-9e6a-3f7c2b1d8e40}</ProjectGuid>
+    <RootNamespace>ManifoldIdler</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Manifold-Idler</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)x64\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)x64\obj\$(Configuration)\App\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CardFarm)'=='true'">
+    <CardFarmDefine>IDLER_CARD_FARM;</CardFarmDefine>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(ProjectDir)ImGui;$(ProjectDir)ImGui\backends;$(ProjectDir)WebView2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(CardFarmDefine)_WINDOWS;WIN32_LEAN_AND_MEAN;NOMINMAX;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(ProjectDir)WebView2\x64\WebView2LoaderStatic.lib;d3d11.lib;dxgi.lib;dwmapi.lib;shell32.lib;ole32.lib;advapi32.lib;user32.lib;gdi32.lib;windowscodecs.lib;winhttp.lib;crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Manifest>
+      <EnableDpiAwareness>false</EnableDpiAwareness>
+      <AdditionalManifestFiles>$(ProjectDir)Resources\App.manifest</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\App\Application.cpp" />
+    <ClCompile Include="Source\App\WebPanel.cpp" />
+    <ClCompile Include="Source\App\Splash.cpp" />
+    <ClCompile Include="Source\Core\WebPolicy.cpp" />
+    <ClCompile Include="Source\App\CardService.cpp" />
+    <ClCompile Include="Source\App\Desktop.cpp" />
+    <ClCompile Include="Source\App\IdlerModel.cpp" />
+    <ClCompile Include="Source\Core\AppInfo.cpp" />
+    <ClCompile Include="Source\Core\Cards.cpp" />
+    <ClCompile Include="Source\Core\Library.cpp" />
+    <ClCompile Include="Source\Core\Creatures.cpp" />
+    <ClCompile Include="Source\Core\MiniGames.cpp" />
+    <ClCompile Include="Source\Core\Queue.cpp" />
+    <ClCompile Include="Source\Core\RuntimeLog.cpp" />
+    <ClCompile Include="Source\Core\Settings.cpp" />
+    <ClCompile Include="Source\Core\Stats.cpp" />
+    <ClCompile Include="Source\Core\Terrarium.cpp" />
+    <ClCompile Include="Source\UI\TerrariumView.cpp" />
+    <ClCompile Include="Source\Core\Text.cpp" />
+    <ClCompile Include="Source\Core\Vdf.cpp" />
+    <ClCompile Include="Source\Steam\LibraryScan.cpp" />
+    <ClCompile Include="Source\Steam\SteamClient.cpp" />
+    <ClCompile Include="Source\Steam\SteamLocal.cpp" />
+    <ClCompile Include="Source\Steam\SteamWeb.cpp" />
+    <ClCompile Include="Source\Steam\Worker.cpp" />
+    <ClCompile Include="Source\Steam\WorkerProcess.cpp" />
+    <ClCompile Include="Source\UI\Covers.cpp" />
+    <ClCompile Include="Source\UI\Fonts.cpp" />
+    <ClCompile Include="Source\UI\IdleAnimation.cpp" />
+    <ClCompile Include="Source\UI\MenuWidgets.cpp" />
+    <ClCompile Include="Source\UI\MiniGameView.cpp" />
+    <ClCompile Include="Source\UI\Scenes\HomeAutumn.cpp" />
+    <ClCompile Include="Source\UI\Scenes\HomeSpring.cpp" />
+    <ClCompile Include="Source\UI\Scenes\HomeSummer.cpp" />
+    <ClCompile Include="Source\UI\Scenes\HomeWinter.cpp" />
+    <ClCompile Include="Source\UI\Scenes\StageClouds.cpp" />
+    <ClCompile Include="Source\UI\Scenes\StageMeadow.cpp" />
+    <ClCompile Include="Source\UI\Scenes\StageUnderwater.cpp" />
+    <ClCompile Include="Source\UI\ScreenMain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Resource.h" />
+    <ClInclude Include="Source\App\Application.h" />
+    <ClInclude Include="Source\App\CardService.h" />
+    <ClInclude Include="Source\App\Desktop.h" />
+    <ClInclude Include="Source\App\IdlerModel.h" />
+    <ClInclude Include="Source\Core\AppInfo.h" />
+    <ClInclude Include="Source\Core\Cards.h" />
+    <ClInclude Include="Source\Core\Library.h" />
+    <ClInclude Include="Source\Core\Creatures.h" />
+    <ClInclude Include="Source\Core\MiniGames.h" />
+    <ClInclude Include="Source\Core\Queue.h" />
+    <ClInclude Include="Source\UI\CreatureSprites.h" />
+    <ClInclude Include="Source\Core\RuntimeLog.h" />
+    <ClInclude Include="Source\Core\Settings.h" />
+    <ClInclude Include="Source\Core\SmoothWheel.h" />
+    <ClInclude Include="Source\Core\Clock.h" />
+    <ClInclude Include="Source\Core\Stats.h" />
+    <ClInclude Include="Source\Core\Terrarium.h" />
+    <ClInclude Include="Source\App\WebPanel.h" />
+    <ClInclude Include="Source\App\Splash.h" />
+    <ClInclude Include="Source\Core\WebPolicy.h" />
+    <ClInclude Include="Source\UI\TerrariumView.h" />
+    <ClInclude Include="Source\Core\Text.h" />
+    <ClInclude Include="Source\Core\Vdf.h" />
+    <ClInclude Include="Source\Generated\IconsFontAwesome5.h" />
+    <ClInclude Include="Source\Steam\LibraryScan.h" />
+    <ClInclude Include="Source\Steam\SteamClient.h" />
+    <ClInclude Include="Source\Steam\SteamLocal.h" />
+    <ClInclude Include="Source\Steam\SteamWeb.h" />
+    <ClInclude Include="Source\Steam\Worker.h" />
+    <ClInclude Include="Source\Steam\WorkerProcess.h" />
+    <ClInclude Include="Source\UI\Covers.h" />
+    <ClInclude Include="Source\UI\Fonts.h" />
+    <ClInclude Include="Source\UI\IdleAnimation.h" />
+    <ClInclude Include="Source\UI\MenuWidgets.h" />
+    <ClInclude Include="Source\UI\HomeScene.h" />
+    <ClInclude Include="Source\UI\StageScene.h" />
+    <ClInclude Include="Source\UI\MiniGameView.h" />
+    <ClInclude Include="Source\UI\ScreenMain.h" />
+    <ClInclude Include="Source\UI\Theme.h" />
+    <ClInclude Include="Source\UI\UiScale.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ImGui\imgui.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_draw.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_tables.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_widgets.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="ImGui\backends\imgui_impl_win32.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="ImGui\backends\imgui_impl_dx11.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClInclude Include="ImGui\imconfig.h" />
+    <ClInclude Include="ImGui\imgui.h" />
+    <ClInclude Include="ImGui\imgui_internal.h" />
+    <ClInclude Include="ImGui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="ImGui\backends\imgui_impl_dx11.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\App.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\App.manifest" />
+    <Image Include="Resources\icon.ico" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
