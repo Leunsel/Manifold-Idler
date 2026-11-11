@@ -1,0 +1,3 @@
+stb_image.h v2.30 (nothings/stb 013ac3beddff3dbffafd5177e7972067cd2b5083)
+stb_image_write.h v1.16 (nothings/stb 1ee679ca2ef753a528db5ba6801e1067b40481b8)
+Public domain or MIT, at the end of each file.

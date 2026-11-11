@@ -1,0 +1,4 @@
+/build/
+*.ini
+*.log
+*.stats

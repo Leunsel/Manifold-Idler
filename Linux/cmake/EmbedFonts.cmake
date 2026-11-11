@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.20)
+
+foreach(variable OUT TEXT BOLD ICONS)
+    if(NOT DEFINED ${variable})
+        message(FATAL_ERROR "EmbedFonts.cmake needs -D${variable}=")
+    endif()
+endforeach()
+
+set(pairs "")
+foreach(index RANGE 31)
+    string(APPEND pairs "[0-9a-f][0-9a-f]")
+endforeach()
+
+function(embed name file result)
+    file(READ "${file}" hex HEX)
+    string(REGEX REPLACE "(${pairs})" "\\1\n" hex "${hex}")
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," hex "${hex}")
+    set(${result} "        const unsigned char k${name}[] = {\n${hex}\n        };\n" PARENT_SCOPE)
+endfunction()
+
+embed(Text "${TEXT}" text)
+embed(Bold "${BOLD}" bold)
+embed(Icons "${ICONS}" icons)
+
+set(content "#include \"UI/FontData.h\"\n\nnamespace Idler::FontData\n{\n    namespace\n    {\n")
+string(APPEND content "${text}\n${bold}\n${icons}")
+string(APPEND content "    }\n\n")
+foreach(name Text Bold Icons)
+    string(APPEND content "    Blob ${name}()\n    {\n        return Blob{ k${name}, static_cast<int>(sizeof(k${name})) };\n    }\n\n")
+endforeach()
+string(APPEND content "}\n")
+
+file(WRITE "${OUT}.tmp" "${content}")
+file(COPY_FILE "${OUT}.tmp" "${OUT}" ONLY_IF_DIFFERENT)
+file(REMOVE "${OUT}.tmp")

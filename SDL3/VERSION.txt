@@ -1,0 +1,5 @@
+SDL 3.2.30, the public headers of the release (SDL3-devel-3.2.30-VC.zip), without the test and OpenGL headers.
+https://github.com/libsdl-org/SDL/releases/tag/release-3.2.30
+
+The program links SDL3 dynamically: libSDL3.so.0 from the system on Linux.
+The 3.2 headers keep it to functions every SDL 3 has.
