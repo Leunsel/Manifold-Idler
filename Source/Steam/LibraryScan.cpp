@@ -15,6 +15,7 @@ namespace Idler::Steam
         struct ScanOutput
         {
             std::vector<Ownership> Owned;
+            std::uint32_t Account = 0;
             std::uint32_t FreePackageDate = 0;
             std::string Persona;
             std::string Problem;
@@ -55,8 +56,7 @@ namespace Idler::Steam
                     }
                     else if (word == "client")
                     {
-                        std::uint32_t account = 0;
-                        parts >> account >> output.FreePackageDate;
+                        parts >> output.Account >> output.FreePackageDate;
                     }
                     else if (word == "persona")
                     {
@@ -120,9 +120,13 @@ namespace Idler::Steam
         if (!result.Problem.empty())
             return result;
 
-        const PlaytimeMap playtimes = ParsePlaytimes(ReadLocalConfigFile(status));
-        result.Games = BuildLibrary(apps.Apps, owned.Owned, playtimes, owned.FreePackageDate, ReadAchievementCounts(status, owned.Owned));
-        ReadUnlockRules(status, result.Games);
+        Status known = status;
+        if (owned.Account != 0)
+            known.Account = owned.Account;
+        result.Account = known.Account;
+        const PlaytimeMap playtimes = ParsePlaytimes(ReadLocalConfigFile(known));
+        result.Games = BuildLibrary(apps.Apps, owned.Owned, playtimes, owned.FreePackageDate, ReadAchievementCounts(known, owned.Owned));
+        ReadUnlockRules(known, result.Games);
         return result;
     }
 }

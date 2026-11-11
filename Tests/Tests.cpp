@@ -2707,26 +2707,13 @@ namespace
 })");
         CHECK(twice.ProcessId == 4242 && twice.Account == 12345 && twice.ClientLibrary == "/x/steamclient.so");
 
-        constexpr std::string_view kLoginUsers = R"("users"
-{
-    "76561197960265729"
-    {
-        "AccountName"   "older"
-        "MostRecent"    "0"
-        "Timestamp"     "1700000000"
-    }
-    "76561198000000000"
-    {
-        "AccountName"   "current"
-        "MostRecent"    "1"
-        "Timestamp"     "1800000000"
-    }
-})";
-        CHECK(ParseMostRecentAccount(kLoginUsers) == 39734272u);
-        CHECK(ParseMostRecentAccount("\"users\" { \"76561197960265729\" { \"MostRecent\" \"0\" } }") == 0);
-        CHECK(ParseMostRecentAccount("\"users\" { \"not an id\" { \"MostRecent\" \"1\" } }") == 0);
-        CHECK(ParseMostRecentAccount("") == 0);
-        CHECK(ParseMostRecentAccount("\"users\" { \"7656119") == 0);
+        using namespace std::string_view_literals;
+        CHECK(SteamAppIdOfEnvironment("HOME=/home/x\0SteamAppId=620\0SteamGameId=620\0"sv) == 620u);
+        CHECK(SteamAppIdOfEnvironment("SteamAppId=480"sv) == 480u);
+        CHECK(SteamAppIdOfEnvironment("PATH=/bin\0NotSteamAppId=620\0"sv) == 0u);
+        CHECK(SteamAppIdOfEnvironment("SteamAppId=\0"sv) == 0u);
+        CHECK(SteamAppIdOfEnvironment("SteamAppId=12x\0"sv) == 0u);
+        CHECK(SteamAppIdOfEnvironment(""sv) == 0u);
     }
 
     void TestLocalTime()

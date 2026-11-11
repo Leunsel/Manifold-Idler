@@ -340,6 +340,8 @@ namespace Idler
         bool m_dirty = false;
 
         Steam::Status m_steam;
+        std::uint32_t m_clientAccount = 0;
+        std::uint32_t m_clientProcess = 0;
         std::string m_persona;
         std::uint32_t m_loadedAccount = 0;
 

@@ -114,7 +114,7 @@ namespace Idler::Cli
             else if (!steam.Running())
                 line("Steam", "not running");
             else if (!steam.LoggedOn())
-                line("Steam", "nobody is logged on");
+                line("Steam", steam.MayConnect() ? "running, asking it who is logged on" : "nobody is logged on");
             else
                 line("Steam", "logged on" + (model.Persona().empty() ? std::string() : " as " + model.Persona()));
 

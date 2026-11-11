@@ -88,7 +88,7 @@ namespace Idler::Worker
         int Idle(std::uint32_t appId)
         {
             const Steam::Status status = Steam::ReadStatus();
-            if (!status.LoggedOn())
+            if (!status.MayConnect())
             {
                 Say("error steam Steam is not running.");
                 return 3;
@@ -192,7 +192,7 @@ namespace Idler::Worker
 
         int OpenStats(Steam::Connection& steam, const Steam::Status& status, std::uint32_t appId)
         {
-            if (!status.LoggedOn())
+            if (!status.MayConnect())
             {
                 Say("error steam Steam is not running.");
                 return 3;
@@ -338,7 +338,7 @@ namespace Idler::Worker
         int Scan()
         {
             const Steam::Status status = Steam::ReadStatus();
-            if (!status.LoggedOn())
+            if (!status.MayConnect())
             {
                 Say("error steam Steam is not running.");
                 return 3;
@@ -360,6 +360,11 @@ namespace Idler::Worker
 #else
             const std::uint64_t steamId = steam.User()->GetSteamID();
 #endif
+            if (static_cast<std::uint32_t>(steamId) == 0)
+            {
+                Say("error steam Nobody is logged on to Steam.");
+                return 3;
+            }
             Say("client " + std::to_string(static_cast<std::uint32_t>(steamId)) + " " + std::to_string(steam.Apps()->GetEarliestPurchaseUnixTime(kFreePackageApp)));
             if (const char* persona = steam.Friends()->GetPersonaName())
                 Say(std::string("persona ") + persona);

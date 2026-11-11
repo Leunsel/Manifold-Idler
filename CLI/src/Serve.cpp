@@ -152,7 +152,7 @@ namespace Idler::Cli
         while (!quit && !g_quit)
         {
             model.Update();
-            if (startPending && model.ScannedOnce())
+            if (startPending && model.ScannedOnce() && model.ScanProblem().empty())
             {
                 startPending = false;
                 if (HasWorkLeft(model.Queue()))

@@ -109,26 +109,19 @@ namespace Idler
         return registry;
     }
 
-    std::uint32_t ParseMostRecentAccount(std::string_view loginUsers)
+    std::uint32_t SteamAppIdOfEnvironment(std::string_view environment)
     {
-        constexpr std::uint64_t kSteamIdBase = 76561197960265728ull;
-        Vdf::Node root;
-        if (!Vdf::Parse(loginUsers, root))
-            return 0;
-        const Vdf::Node* users = root.Find("users");
-        if (!users)
-            return 0;
-        for (const Vdf::Node& user : users->Children)
+        constexpr std::string_view kName = "SteamAppId=";
+        std::size_t start = 0;
+        while (start < environment.size())
         {
-            const Vdf::Node* recent = user.Find("MostRecent");
-            if (!recent || Trim(recent->Value) != "1")
-                continue;
-            std::uint64_t steamId = 0;
-            const std::string_view id = Trim(user.Key);
-            const auto [end, error] = std::from_chars(id.data(), id.data() + id.size(), steamId);
-            if (error != std::errc{} || end != id.data() + id.size() || steamId <= kSteamIdBase || steamId - kSteamIdBase > 0xFFFFFFFFull)
-                return 0;
-            return static_cast<std::uint32_t>(steamId - kSteamIdBase);
+            std::size_t end = environment.find('\0', start);
+            if (end == std::string_view::npos)
+                end = environment.size();
+            const std::string_view entry = environment.substr(start, end - start);
+            if (entry.substr(0, kName.size()) == kName)
+                return ParseUnsigned(entry.substr(kName.size())).value_or(0);
+            start = end + 1;
         }
         return 0;
     }

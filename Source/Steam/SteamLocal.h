@@ -15,10 +15,12 @@ namespace Idler::Steam
         std::filesystem::path Root;
         std::uint32_t ProcessId = 0;
         std::uint32_t Account = 0;
+        bool AccountFromClient = false;
 
         bool Installed() const { return !Root.empty(); }
         bool Running() const { return ProcessId != 0; }
         bool LoggedOn() const { return Running() && Account != 0; }
+        bool MayConnect() const { return LoggedOn() || (Running() && AccountFromClient); }
     };
 
     Status ReadStatus();

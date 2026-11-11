@@ -9,8 +9,13 @@
 #include <csignal>
 #include <cstdlib>
 #include <system_error>
+
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 
@@ -160,8 +165,7 @@ namespace Idler::Steam
         {
             status.ProcessId = processId;
             status.Account = registry.Account;
-            if (status.Account == 0 && !status.Root.empty())
-                status.Account = ParseMostRecentAccount(ReadTextFile(status.Root / "config" / "loginusers.vdf"));
+            status.AccountFromClient = status.Account == 0;
         }
         return status;
     }
@@ -176,7 +180,26 @@ namespace Idler::Steam
 
     std::vector<std::uint32_t> RunningApps()
     {
-        return ReadRegistry().RunningApps;
+        std::vector<std::uint32_t> apps = ReadRegistry().RunningApps;
+        if (!apps.empty())
+            return apps;
+        const uid_t user = ::getuid();
+        const pid_t self = ::getpid();
+        std::error_code error;
+        std::filesystem::directory_iterator entry("/proc", error);
+        for (const std::filesystem::directory_iterator end{}; !error && entry != end; entry.increment(error))
+        {
+            const auto processId = ParseUnsigned(entry->path().filename().string());
+            if (!processId || static_cast<pid_t>(*processId) == self)
+                continue;
+            struct stat info{};
+            if (::stat(entry->path().c_str(), &info) != 0 || info.st_uid != user)
+                continue;
+            const std::uint32_t appId = SteamAppIdOfEnvironment(ReadTextFile(entry->path() / "environ"));
+            if (appId != 0 && std::find(apps.begin(), apps.end(), appId) == apps.end())
+                apps.push_back(appId);
+        }
+        return apps;
     }
 #endif
 

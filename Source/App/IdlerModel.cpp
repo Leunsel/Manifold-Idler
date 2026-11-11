@@ -210,7 +210,9 @@ namespace Idler
 
     void IdlerModel::RefreshSteam(double now)
     {
-        const Steam::Status status = Steam::ReadStatus();
+        Steam::Status status = Steam::ReadStatus();
+        if (status.AccountFromClient && status.ProcessId == m_clientProcess)
+            status.Account = m_clientAccount;
         const bool changed = status.Account != m_steam.Account || status.Running() != m_steam.Running();
         m_steam = status;
 
@@ -219,6 +221,8 @@ namespace Idler
             m_steamLogged = true;
             if (status.LoggedOn())
                 LOG_SUCCESS("Steam is running, account " + std::to_string(status.Account));
+            else if (status.MayConnect())
+                LOG_INFO("Steam is running; asking it which account is logged on");
             else if (status.Running())
                 LOG_WARN("Steam is running, nobody is logged on");
             else
@@ -240,7 +244,7 @@ namespace Idler
             m_nextScan = 0.0;
         }
 
-        if (status.LoggedOn() && now >= m_nextScan && !m_scanning)
+        if (status.MayConnect() && now >= m_nextScan && !m_scanning)
             StartScan();
     }
 
@@ -316,7 +320,7 @@ namespace Idler
 
     void IdlerModel::Rescan()
     {
-        if (!m_scanning && m_steam.LoggedOn())
+        if (!m_scanning && m_steam.MayConnect())
             StartScan();
     }
 
@@ -341,10 +345,18 @@ namespace Idler
 
         m_scanThread.join();
         m_scanning = false;
+        Steam::ScanResult result = std::move(m_scanResult);
+        if (m_steam.AccountFromClient && result.Problem.empty() && result.Account != 0 && result.Account != m_steam.Account)
+        {
+            m_clientAccount = result.Account;
+            m_clientProcess = m_steam.ProcessId;
+            m_nextSteamCheck = now;
+            m_nextScan = now;
+            return;
+        }
+
         m_scannedOnce = true;
         m_nextScan = now + kRescanSeconds;
-
-        Steam::ScanResult result = std::move(m_scanResult);
         if (!result.Problem.empty() && result.Problem != m_scanProblem)
             LOG_ERROR("Library not read: " + result.Problem);
         m_scanProblem = result.Problem;
