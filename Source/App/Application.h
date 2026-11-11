@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/IdlerModel.h"
+#include "App/Shell.h"
 #include "Core/Settings.h"
 #include "Core/SmoothWheel.h"
 
@@ -14,7 +15,7 @@
 
 namespace Idler
 {
-    class Application
+    class Application final : public Shell
     {
     public:
         explicit Application(std::filesystem::path settingsPath);
@@ -33,17 +34,19 @@ namespace Idler
         void SetSplash(bool splash) { m_splash = splash; }
         const wchar_t* LastError() const { return m_error; }
 
-        IdlerModel& Model() { return m_model; }
+        IdlerModel& Model() override { return m_model; }
         HWND Window() const { return m_hwnd; }
+        void* NativeWindow() const override { return m_hwnd; }
 
-        float CornerRadius() const;
-        void AddDragArea(float left, float top, float right, float bottom);
+        float CornerRadius() const override;
+        void AddDragArea(float left, float top, float right, float bottom) override;
 
-        void Minimise() { ::ShowWindow(m_hwnd, SW_MINIMIZE); }
-        bool Maximised() const { return ::IsZoomed(m_hwnd) != FALSE; }
-        float Zoom() const { return m_zoom; }
-        void ToggleMaximised() { ::ShowWindow(m_hwnd, Maximised() ? SW_RESTORE : SW_MAXIMIZE); }
-        void Close();
+        void Minimise() override { ::ShowWindow(m_hwnd, SW_MINIMIZE); }
+        bool Maximised() const override { return ::IsZoomed(m_hwnd) != FALSE; }
+        float Zoom() const override { return m_zoom; }
+        void ToggleMaximised() override { ::ShowWindow(m_hwnd, Maximised() ? SW_RESTORE : SW_MAXIMIZE); }
+        void Close() override;
+        bool HasTray() const override { return true; }
         void Quit() { m_running = false; }
 
         static UINT ShowWindowMessage();

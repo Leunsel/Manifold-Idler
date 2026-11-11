@@ -5,12 +5,12 @@
 
 namespace Idler
 {
-    class Application;
+    class Shell;
 }
 
 namespace Idler::UI
 {
-    void DrawMain(Application& app);
+    void DrawMain(Shell& app);
 
     void SetStartPage(std::wstring_view page, std::uint32_t selectedApp);
     void SetStartSelection(std::wstring_view apps);

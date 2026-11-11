@@ -13,10 +13,10 @@ namespace Idler::UI::HomeScene
     struct Canvas
     {
         ImDrawList* List = nullptr;
-        ImVec2 Min;
+        ImVec2 Min{};
         float Pixel = 1.0f;
         float Haze = 0.0f;
-        ImVec4 HazeColor;
+        ImVec4 HazeColor{};
 
         void Fill(float left, float top, float right, float bottom, ImVec4 color) const;
     };

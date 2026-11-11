@@ -112,6 +112,7 @@
     <ClCompile Include="Source\Steam\Worker.cpp" />
     <ClCompile Include="Source\Steam\WorkerProcess.cpp" />
     <ClCompile Include="Source\UI\Covers.cpp" />
+    <ClCompile Include="Source\UI\CoversWin32.cpp" />
     <ClCompile Include="Source\UI\Fonts.cpp" />
     <ClCompile Include="Source\UI\IdleAnimation.cpp" />
     <ClCompile Include="Source\UI\MenuWidgets.cpp" />
@@ -128,6 +129,9 @@
   <ItemGroup>
     <ClInclude Include="Source\Resource.h" />
     <ClInclude Include="Source\App\Application.h" />
+    <ClInclude Include="Source\App\Shell.h" />
+    <ClInclude Include="Source\App\StartOptions.h" />
+    <ClInclude Include="Source\App\WindowCommon.h" />
     <ClInclude Include="Source\App\CardService.h" />
     <ClInclude Include="Source\App\Desktop.h" />
     <ClInclude Include="Source\App\IdlerModel.h" />
@@ -145,6 +149,7 @@
     <ClInclude Include="Source\Core\Stats.h" />
     <ClInclude Include="Source\Core\Terrarium.h" />
     <ClInclude Include="Source\App\WebPanel.h" />
+    <ClInclude Include="Source\UI\CoverPlatform.h" />
     <ClInclude Include="Source\App\Splash.h" />
     <ClInclude Include="Source\Core\WebPolicy.h" />
     <ClInclude Include="Source\UI\TerrariumView.h" />

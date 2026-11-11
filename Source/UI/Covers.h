@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <filesystem>
 
-struct ID3D11Device;
-
 namespace Idler::UI::Covers
 {
     enum class Size
@@ -17,7 +15,7 @@ namespace Idler::UI::Covers
 
     inline constexpr float kAspect = 460.0f / 215.0f;
 
-    void Initialise(ID3D11Device* device);
+    void Initialise(void* device);
     void Shutdown();
 
     void SetSteamRoot(const std::filesystem::path& root);

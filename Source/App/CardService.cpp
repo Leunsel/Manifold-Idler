@@ -1,15 +1,15 @@
 #include "App/CardService.h"
 
+#include "Core/Clock.h"
 #include "Core/RuntimeLog.h"
 #include "Core/WebPolicy.h"
 #include "Steam/SteamWeb.h"
-
-#include <windows.h>
 
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <ctime>
+#include <cwchar>
 #include <fstream>
 #include <iterator>
 #include <utility>
@@ -122,7 +122,7 @@ namespace Idler
             hash *= 1099511628211ull;
         }
         wchar_t name[32];
-        ::swprintf_s(name, L"%016llx.img", static_cast<unsigned long long>(hash));
+        std::swprintf(name, std::size(name), L"%016llx.img", static_cast<unsigned long long>(hash));
         return m_pictureFolder / name;
     }
 
@@ -132,7 +132,7 @@ namespace Idler
         return m_log.Knows(m_steamId, appId);
     }
 
-    void CardService::OpenSignIn(HWND window, bool preview)
+    void CardService::OpenSignIn(void* window, bool preview)
     {
         m_signingIn = true;
         m_web.Open(window, m_webFolder, kSignInPage, true);
@@ -161,7 +161,7 @@ namespace Idler
         m_signingIn = false;
     }
 
-    void CardService::SetWindow(HWND window)
+    void CardService::SetWindow(void* window)
     {
         m_window = window;
     }
@@ -214,7 +214,7 @@ namespace Idler
                 }
             }
 
-            const auto now = ::GetTickCount64();
+            const auto now = Clock::TickMilliseconds();
             if (clear)
             {
                 m_clearing = true;

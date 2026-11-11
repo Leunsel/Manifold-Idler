@@ -52,10 +52,10 @@ namespace Idler
         std::uint64_t PicturesGeneration() const { return m_picturesGeneration; }
         bool KnowsCardSet(std::uint32_t appId) const;
 
-        void OpenSignIn(HWND window, bool preview);
+        void OpenSignIn(void* window, bool preview);
         void CloseSignIn();
         WebPanel& Web() { return m_web; }
-        void SetWindow(HWND window);
+        void SetWindow(void* window);
         void Pump();
         void CloseWeb();
 
@@ -113,7 +113,7 @@ namespace Idler
         bool m_pretend = false;
 
         WebPanel m_web;
-        HWND m_window = nullptr;
+        void* m_window = nullptr;
         bool m_signingIn = false;
         bool m_clearing = false;
         bool m_clearDone = false;

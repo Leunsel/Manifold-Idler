@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <utility>
 
+#include <windows.h>
 #include <shellapi.h>
 
 #pragma warning(push, 0)
@@ -264,12 +265,12 @@ namespace Idler
         Close();
     }
 
-    void WebPanel::Open(HWND parent, const std::filesystem::path& dataFolder, const std::wstring& url, bool visible)
+    void WebPanel::Open(void* parent, const std::filesystem::path& dataFolder, const std::wstring& url, bool visible)
     {
         Close();
         auto impl = std::make_shared<Impl>();
         m_impl = impl;
-        impl->Parent = parent;
+        impl->Parent = static_cast<HWND>(parent);
         impl->Bounds = RECT{ 0, 0, 960, 600 };
 
         ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
@@ -387,13 +388,14 @@ namespace Idler
             m_impl->PendingClear = std::move(done);
     }
 
-    void WebPanel::SetBounds(const RECT& bounds)
+    void WebPanel::SetBounds(const WebBounds& bounds)
     {
-        if (!m_impl || ::EqualRect(&m_impl->Bounds, &bounds))
+        const RECT rect{ bounds.Left, bounds.Top, bounds.Right, bounds.Bottom };
+        if (!m_impl || ::EqualRect(&m_impl->Bounds, &rect))
             return;
-        m_impl->Bounds = bounds;
+        m_impl->Bounds = rect;
         if (m_impl->Controller)
-            m_impl->Controller->put_Bounds(bounds);
+            m_impl->Controller->put_Bounds(rect);
     }
 
     void WebPanel::SetZoom(double zoom)

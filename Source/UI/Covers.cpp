@@ -1,8 +1,6 @@
 #include "UI/Covers.h"
 
-#include <windows.h>
-#include <d3d11.h>
-#include <wincodec.h>
+#include "UI/CoverPlatform.h"
 
 #include <algorithm>
 #include <condition_variable>
@@ -17,23 +15,25 @@ namespace Idler::UI::Covers
 {
     namespace
     {
-        constexpr UINT kThumbWidth = 148;
-        constexpr UINT kThumbHeight = 69;
-        constexpr UINT kFullWidth = 460;
-        constexpr UINT kFullHeight = 215;
+        constexpr unsigned kThumbWidth = 148;
+        constexpr unsigned kThumbHeight = 69;
+        constexpr unsigned kFullWidth = 460;
+        constexpr unsigned kFullHeight = 215;
         constexpr std::size_t kMaxThumbs = 300;
         constexpr std::size_t kMaxFull = 6;
         constexpr std::size_t kMaxFiles = 200;
-        constexpr UINT kAvatarSize = 64;
+        constexpr unsigned kAvatarSize = 64;
         constexpr std::uint64_t kFileKey = 1ull << 63;
 
         struct Entry
         {
-            ID3D11ShaderResourceView* View = nullptr;
+            ImTextureID View{};
             int LastUsedFrame = 0;
             std::filesystem::path File;
-            UINT Width = 0;
-            UINT Height = 0;
+            unsigned Width = 0;
+            unsigned Height = 0;
+            bool Pending = false;
+            CoverPlatform::Pixels Pixels;
         };
 
         enum class Kind
@@ -43,7 +43,6 @@ namespace Idler::UI::Covers
             File
         };
 
-        ID3D11Device* g_device = nullptr;
         std::filesystem::path g_root;
         int g_frame = 0;
         float g_pictureScale = 1.0f;
@@ -79,16 +78,6 @@ namespace Idler::UI::Covers
             return (key & kFileKey) != 0 ? Kind::File : (key & 1) != 0 ? Kind::Full : Kind::Thumb;
         }
 
-        template <typename T>
-        void Release(T*& object)
-        {
-            if (object)
-            {
-                object->Release();
-                object = nullptr;
-            }
-        }
-
         std::filesystem::path FindPicture(const std::filesystem::path& root, std::uint32_t appId)
         {
             const std::filesystem::path folder = root / L"appcache" / L"librarycache" / std::to_wstring(appId);
@@ -122,98 +111,17 @@ namespace Idler::UI::Covers
             return {};
         }
 
-        ID3D11ShaderResourceView* Read(IWICImagingFactory* factory, const std::filesystem::path& file, UINT width, UINT height, float shape)
-        {
-            IWICBitmapDecoder* decoder = nullptr;
-            IWICBitmapFrameDecode* frame = nullptr;
-            IWICBitmapClipper* clipper = nullptr;
-            IWICBitmapScaler* scaler = nullptr;
-            IWICFormatConverter* converter = nullptr;
-            ID3D11ShaderResourceView* view = nullptr;
-
-            HRESULT hr = factory->CreateDecoderFromFilename(file.c_str(), nullptr, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder);
-            if (SUCCEEDED(hr)) hr = decoder->GetFrame(0, &frame);
-            UINT sourceWidth = 0;
-            UINT sourceHeight = 0;
-            if (SUCCEEDED(hr)) hr = frame->GetSize(&sourceWidth, &sourceHeight);
-            if (SUCCEEDED(hr) && (sourceWidth == 0 || sourceHeight == 0))
-                hr = E_FAIL;
-
-            WICRect cut{ 0, 0, static_cast<INT>(sourceWidth), static_cast<INT>(sourceHeight) };
-            if (SUCCEEDED(hr))
-            {
-                const float aspect = static_cast<float>(sourceWidth) / static_cast<float>(sourceHeight);
-                if (aspect > shape + 0.02f)
-                {
-                    cut.Width = static_cast<INT>(static_cast<float>(sourceHeight) * shape);
-                    cut.X = (static_cast<INT>(sourceWidth) - cut.Width) / 2;
-                }
-                else if (aspect < shape - 0.02f)
-                {
-                    cut.Height = static_cast<INT>(static_cast<float>(sourceWidth) / shape);
-                    cut.Y = (static_cast<INT>(sourceHeight) - cut.Height) / 2;
-                }
-                hr = factory->CreateBitmapClipper(&clipper);
-                if (static_cast<UINT>(cut.Width) < width)
-                {
-                    width = static_cast<UINT>(cut.Width);
-                    height = static_cast<UINT>(cut.Height);
-                }
-            }
-            if (SUCCEEDED(hr)) hr = clipper->Initialize(frame, &cut);
-            if (SUCCEEDED(hr)) hr = factory->CreateBitmapScaler(&scaler);
-            if (SUCCEEDED(hr)) hr = scaler->Initialize(clipper, width, height, WICBitmapInterpolationModeFant);
-            if (SUCCEEDED(hr)) hr = factory->CreateFormatConverter(&converter);
-            if (SUCCEEDED(hr)) hr = converter->Initialize(scaler, GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
-
-            std::vector<BYTE> pixels;
-            if (SUCCEEDED(hr))
-            {
-                pixels.resize(static_cast<std::size_t>(width) * height * 4);
-                hr = converter->CopyPixels(nullptr, width * 4, static_cast<UINT>(pixels.size()), pixels.data());
-            }
-            if (SUCCEEDED(hr))
-            {
-                D3D11_TEXTURE2D_DESC desc{};
-                desc.Width = width;
-                desc.Height = height;
-                desc.MipLevels = 1;
-                desc.ArraySize = 1;
-                desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-                desc.SampleDesc.Count = 1;
-                desc.Usage = D3D11_USAGE_IMMUTABLE;
-                desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-                const D3D11_SUBRESOURCE_DATA data{ pixels.data(), width * 4, 0 };
-
-                ID3D11Texture2D* texture = nullptr;
-                if (SUCCEEDED(g_device->CreateTexture2D(&desc, &data, &texture)))
-                {
-                    g_device->CreateShaderResourceView(texture, nullptr, &view);
-                    texture->Release();
-                }
-            }
-
-            Release(converter);
-            Release(scaler);
-            Release(clipper);
-            Release(frame);
-            Release(decoder);
-            return view;
-        }
-
         void Work()
         {
-            ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-            IWICImagingFactory* factory = nullptr;
-            ::CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory));
+            CoverPlatform::BeginWorker();
 
             while (true)
             {
                 std::uint64_t key = 0;
                 std::filesystem::path root;
                 std::filesystem::path picture;
-                UINT pictureWidth = 0;
-                UINT pictureHeight = 0;
+                unsigned pictureWidth = 0;
+                unsigned pictureHeight = 0;
                 float scale = 1.0f;
                 {
                     std::unique_lock lock(g_lock);
@@ -234,37 +142,56 @@ namespace Idler::UI::Covers
                     }
                 }
 
-                ID3D11ShaderResourceView* view = nullptr;
-                if (factory && KindOf(key) == Kind::File)
+                CoverPlatform::Pixels pixels;
+                bool decoded = false;
+                if (KindOf(key) == Kind::File)
                 {
                     std::error_code error;
                     if (!picture.empty() && std::filesystem::is_regular_file(picture, error))
-                        view = Read(factory, picture, pictureWidth, pictureHeight, static_cast<float>(pictureWidth) / static_cast<float>(pictureHeight));
+                        decoded = CoverPlatform::Decode(picture, pictureWidth, pictureHeight, static_cast<float>(pictureWidth) / static_cast<float>(pictureHeight), pixels);
                 }
-                else if (factory)
+                else
                 {
                     const bool full = KindOf(key) == Kind::Full;
                     const auto appId = static_cast<std::uint32_t>(key >> 1);
                     if (const auto file = FindPicture(root, appId); !file.empty())
-                        view = Read(factory, file, static_cast<UINT>(static_cast<float>(full ? kFullWidth : kThumbWidth) * scale), static_cast<UINT>(static_cast<float>(full ? kFullHeight : kThumbHeight) * scale), kAspect);
+                        decoded = CoverPlatform::Decode(file, static_cast<unsigned>(static_cast<float>(full ? kFullWidth : kThumbWidth) * scale), static_cast<unsigned>(static_cast<float>(full ? kFullHeight : kThumbHeight) * scale), kAspect, pixels);
                 }
+
+                ImTextureID view{};
+                if (decoded && CoverPlatform::UploadsOnWorker())
+                    view = CoverPlatform::Upload(pixels);
 
                 std::lock_guard lock(g_lock);
                 const auto entry = g_entries.find(key);
-                if (entry != g_entries.end() && !entry->second.View)
-                    entry->second.View = view;
-                else if (view)
-                    view->Release();
+                if (entry != g_entries.end() && entry->second.View == ImTextureID{} && !entry->second.Pending)
+                {
+                    if (view != ImTextureID{})
+                        entry->second.View = view;
+                    else if (decoded && !CoverPlatform::UploadsOnWorker())
+                    {
+                        entry->second.Pixels = std::move(pixels);
+                        entry->second.Pending = true;
+                    }
+                }
+                else if (view != ImTextureID{})
+                    CoverPlatform::Release(view);
             }
 
-            Release(factory);
-            ::CoUninitialize();
+            CoverPlatform::EndWorker();
+        }
+
+        void Forget(Entry& entry)
+        {
+            if (entry.View != ImTextureID{})
+                CoverPlatform::Release(entry.View);
+            entry.View = ImTextureID{};
         }
     }
 
-    void Initialise(ID3D11Device* device)
+    void Initialise(void* device)
     {
-        g_device = device;
+        CoverPlatform::SetDevice(device);
         g_stop = false;
         g_thread = std::thread(Work);
     }
@@ -280,13 +207,10 @@ namespace Idler::UI::Covers
             g_thread.join();
 
         for (auto& [key, entry] : g_entries)
-        {
-            if (entry.View)
-                entry.View->Release();
-        }
+            Forget(entry);
         g_entries.clear();
         g_requests.clear();
-        g_device = nullptr;
+        CoverPlatform::SetDevice(nullptr);
     }
 
     void SetSteamRoot(const std::filesystem::path& root)
@@ -310,8 +234,7 @@ namespace Idler::UI::Covers
                 ++entry;
                 continue;
             }
-            if (entry->second.View)
-                entry->second.View->Release();
+            Forget(entry->second);
             std::erase(g_requests, entry->first);
             entry = g_entries.erase(entry);
         }
@@ -320,6 +243,18 @@ namespace Idler::UI::Covers
     void NewFrame()
     {
         ++g_frame;
+        if (!CoverPlatform::UploadsOnWorker())
+        {
+            std::lock_guard lock(g_lock);
+            for (auto& [key, entry] : g_entries)
+            {
+                if (!entry.Pending)
+                    continue;
+                entry.View = CoverPlatform::Upload(entry.Pixels);
+                entry.Pixels = {};
+                entry.Pending = false;
+            }
+        }
         if (g_entries.size() <= kMaxThumbs + kMaxFull + kMaxFiles)
             return;
 
@@ -339,8 +274,7 @@ namespace Idler::UI::Covers
             for (std::size_t index = 0; index + limit < known.size(); ++index)
             {
                 const auto entry = g_entries.find(known[index].second);
-                if (entry->second.View)
-                    entry->second.View->Release();
+                Forget(entry->second);
                 g_entries.erase(entry);
                 std::erase(g_requests, known[index].second);
             }
@@ -359,7 +293,7 @@ namespace Idler::UI::Covers
             g_wake.notify_one();
         }
         entry->second.LastUsedFrame = g_frame;
-        return entry->second.View ? static_cast<ImTextureID>(reinterpret_cast<std::uintptr_t>(entry->second.View)) : ImTextureID{};
+        return entry->second.View;
     }
 
     ImTextureID File(const std::filesystem::path& file, int width, int height)
@@ -373,14 +307,14 @@ namespace Idler::UI::Covers
         {
             Entry created;
             created.File = file;
-            created.Width = static_cast<UINT>(width);
-            created.Height = static_cast<UINT>(height);
+            created.Width = static_cast<unsigned>(width);
+            created.Height = static_cast<unsigned>(height);
             entry = g_entries.emplace(key, std::move(created)).first;
             g_requests.push_back(key);
             g_wake.notify_one();
         }
         entry->second.LastUsedFrame = g_frame;
-        return entry->second.View ? static_cast<ImTextureID>(reinterpret_cast<std::uintptr_t>(entry->second.View)) : ImTextureID{};
+        return entry->second.View;
     }
 
     void RetryFiles()
@@ -389,7 +323,7 @@ namespace Idler::UI::Covers
         for (auto entry = g_entries.begin(); entry != g_entries.end();)
         {
             const bool waiting = std::find(g_requests.begin(), g_requests.end(), entry->first) != g_requests.end();
-            if (KindOf(entry->first) == Kind::File && !entry->second.View && !waiting)
+            if (KindOf(entry->first) == Kind::File && entry->second.View == ImTextureID{} && !entry->second.Pending && !waiting)
                 entry = g_entries.erase(entry);
             else
                 ++entry;

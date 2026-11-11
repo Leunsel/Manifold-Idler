@@ -2,6 +2,7 @@
 
 #include "App/Desktop.h"
 #include "App/Splash.h"
+#include "App/WindowCommon.h"
 #include "Core/Text.h"
 #include "Resource.h"
 #include "UI/Covers.h"
@@ -35,14 +36,9 @@ namespace Idler
         constexpr const wchar_t* kWindowClass = kCardFarmEnabled ? L"ManifoldIdlerAltWindow" : L"ManifoldIdlerWindow";
         constexpr const wchar_t* kWindowTitle = kCardFarmEnabled ? L"Manifold Idler (test)" : L"Manifold Idler";
 
-        constexpr int kClientWidth = 980;
-        constexpr int kClientHeight = 600;
+        using namespace WindowCommon;
+
         constexpr DWORD kWindowStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME | WS_CLIPCHILDREN;
-        constexpr float kResizeEdge = 5.0f;
-        constexpr float kResizeCorner = 14.0f;
-        constexpr float kZoomShare = 0.4f;
-        constexpr float kZoomStep = 0.125f;
-        constexpr float kMaxZoom = 2.0f;
 
         constexpr DWORD kUseImmersiveDarkMode = 20;
         constexpr DWORD kWindowCornerPreference = 33;
@@ -59,30 +55,12 @@ namespace Idler
 
         constexpr UINT_PTR kSizeMoveTimer = 1;
 
-        constexpr ULONGLONG kBusyMilliseconds = 1500;
-        constexpr DWORD kIdleFrameMilliseconds = 250;
-        constexpr DWORD kAnimationFrameMilliseconds = 33;
-        constexpr DWORD kHiddenUpdateMilliseconds = 250;
-
-        constexpr double kCaptureTimeoutSeconds = 20.0;
-        constexpr int kCaptureSettleFrames = 12;
-
         void FollowSystemAnimations()
         {
             BOOL on = TRUE;
             if (!::SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &on, 0))
                 on = TRUE;
             UI::IdleAnimation::SetEnabled(on != FALSE);
-        }
-
-        bool ClicksOrKeysQueued()
-        {
-            for (const ImGuiInputEvent& event : ImGui::GetCurrentContext()->InputEventsQueue)
-            {
-                if (event.Type != ImGuiInputEventType_MousePos && event.Type != ImGuiInputEventType_MouseWheel && event.Type != ImGuiInputEventType_MouseViewport)
-                    return true;
-            }
-            return false;
         }
 
         Settings LoadSettings(const std::filesystem::path& path)
@@ -434,10 +412,7 @@ namespace Idler
 
     void Application::UpdateZoom(UINT width, UINT height)
     {
-        const float scale = WindowScale();
-        const float growth = std::min(static_cast<float>(width) / (kClientWidth * scale), static_cast<float>(height) / (kClientHeight * scale));
-        const float wanted = 1.0f + std::max(0.0f, growth - 1.0f) * kZoomShare;
-        const float zoom = std::min(kMaxZoom, std::floor(wanted / kZoomStep) * kZoomStep);
+        const float zoom = ZoomFor(static_cast<float>(width), static_cast<float>(height), WindowScale());
         if (zoom == m_zoom)
             return;
         m_zoom = zoom;
@@ -447,37 +422,7 @@ namespace Idler
     void Application::RescaleForDpi(UINT dpi)
     {
         m_dpi = dpi;
-        const float scale = WindowScale() * m_zoom;
-
-        ImGuiStyle& style = ImGui::GetStyle();
-        const auto* base = static_cast<const ImGuiStyle*>(m_baseStyle);
-        style = *base;
-        style.ScaleAllSizes(scale);
-
-        if (scale >= 1.75f)
-        {
-            style.FrameBorderSize = 2.0f;
-            style.ChildBorderSize = 2.0f;
-            style.PopupBorderSize = 2.0f;
-        }
-        else if (scale < 1.0f)
-        {
-            style.WindowBorderSize = base->WindowBorderSize;
-            style.ChildBorderSize = base->ChildBorderSize;
-            style.PopupBorderSize = base->PopupBorderSize;
-            style.FrameBorderSize = base->FrameBorderSize;
-            style.ImageBorderSize = base->ImageBorderSize;
-            style.TabBorderSize = base->TabBorderSize;
-            style.TabBarBorderSize = base->TabBarBorderSize;
-            style.TabBarOverlineSize = base->TabBarOverlineSize;
-            style.TreeLinesSize = base->TreeLinesSize;
-            style.DragDropTargetBorderSize = base->DragDropTargetBorderSize;
-            style.InputTextCursorSize = base->InputTextCursorSize;
-            style.SeparatorSize = base->SeparatorSize;
-            style.SeparatorTextBorderSize = base->SeparatorTextBorderSize;
-        }
-
-        style.FontScaleDpi = scale;
+        ScaleStyle(*static_cast<const ImGuiStyle*>(m_baseStyle), WindowScale() * m_zoom);
     }
 
     void Application::ApplyPendingResize()

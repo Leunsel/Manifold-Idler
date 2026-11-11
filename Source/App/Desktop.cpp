@@ -72,6 +72,11 @@ namespace Idler::Desktop
         OpenLink(std::wstring(L"steam://friends/status/") + status);
     }
 
+    bool KnowsInputIdle()
+    {
+        return true;
+    }
+
     double SecondsSinceInput()
     {
         LASTINPUTINFO info{ sizeof(info), 0 };
@@ -117,6 +122,11 @@ namespace Idler::Desktop
         return ::InitiateShutdownW(nullptr, nullptr, 0, SHUTDOWN_POWEROFF, SHTDN_REASON_MAJOR_APPLICATION | SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED) == ERROR_SUCCESS;
     }
 
+    bool CanMovePointer()
+    {
+        return true;
+    }
+
     bool PointerIn(void* window, float& x, float& y)
     {
         POINT point{};
@@ -139,12 +149,22 @@ namespace Idler::Desktop
         return window && ::GetForegroundWindow() == static_cast<HWND>(window);
     }
 
-    bool StartsWithWindows()
+    const char* StartAtLoginLabel()
+    {
+        return "Start with Windows";
+    }
+
+    const char* StartAtLoginNote()
+    {
+        return "Starts in the tray when you log on to Windows.";
+    }
+
+    bool StartsAtLogin()
     {
         return ::RegGetValueW(HKEY_CURRENT_USER, kRunKey, kRunValue, RRF_RT_REG_SZ, nullptr, nullptr, nullptr) == ERROR_SUCCESS;
     }
 
-    bool SetStartsWithWindows(bool start)
+    bool SetStartsAtLogin(bool start)
     {
         HKEY key = nullptr;
         if (::RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0, KEY_SET_VALUE, &key) != ERROR_SUCCESS)

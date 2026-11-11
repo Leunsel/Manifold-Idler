@@ -803,13 +803,6 @@ namespace Idler::UI
             drawList->AddRectFilled(at(right, ground - 0.5f), at(right + 1.0f, ground + 0.5f), IM_COL32(0, 0, 0, alpha / 2));
         }
 
-        void DrawBallShadow(ImDrawList* drawList, ImVec2 min, float pixel, const TerrariumBall& ball, float scale)
-        {
-            if (ball.State != BallState::Lying && ball.State != BallState::Flying)
-                return;
-            DrawGroundShadow(drawList, min, pixel, ball.X - 2.0f * scale, ball.X + 2.0f * scale, ball.Floor + kBallRadius, std::max(0.0f, ball.Floor - ball.Y));
-        }
-
         void DrawBallAt(ImDrawList* drawList, ImVec2 center, float pixel, float turned)
         {
             static constexpr const char* kTurns[3][5] = {
@@ -831,13 +824,6 @@ namespace Idler::UI
                     drawList->AddRectFilled(at, ImVec2(at.x + pixel, at.y + pixel), ImGui::GetColorU32(colors[cell == 'b' ? 1 : 0]));
                 }
             }
-        }
-
-        void DrawShellShadow(ImDrawList* drawList, ImVec2 min, float pixel, const TerrariumShell& shell, float scale)
-        {
-            if (shell.State != BallState::Lying && shell.State != BallState::Flying)
-                return;
-            DrawGroundShadow(drawList, min, pixel, shell.X - 4.0f * scale, shell.X + 4.0f * scale, shell.Floor + shell.Radius, std::max(0.0f, shell.Floor - shell.Y));
         }
 
         void DrawLooseShell(ImDrawList* drawList, ImVec2 center, float pixel, const TerrariumShell& shell)
@@ -1003,7 +989,7 @@ namespace Idler::UI
             box.SetPointer(hovered, (mouse.x - min.x) / pixel - cells.SpriteWidth * 0.5f, (mouse.y - min.y) / pixel - cells.SpriteHeight * 0.5f);
             void* const window = ImGui::GetMainViewport()->PlatformHandleRaw;
             const bool mayTug = home && model.Options().CreaturesTugMouse && hovered && !ImGui::IsAnyMouseDown() && !g_carrying && !g_ballInHand && !g_shellInHand &&
-                IdleAnimation::Enabled() && Desktop::IsInFront(window);
+                IdleAnimation::Enabled() && Desktop::CanMovePointer() && Desktop::IsInFront(window);
             box.SetTugAllowed(mayTug);
             box.Update(guests, cells, elapsed, IdleAnimation::Enabled() && !(home && box.Residents().empty()));
             if (home)
@@ -1544,7 +1530,7 @@ namespace Idler::UI
         StageScene::Frame StageFrame(ImDrawList* drawList, ImVec2 min)
         {
             StageScene::Frame frame;
-            frame.Paint = HomeScene::Canvas{ drawList, min, g_stage.Pixel };
+            frame.Paint = HomeScene::Canvas{ .List = drawList, .Min = min, .Pixel = g_stage.Pixel };
             frame.Columns = g_stage.Columns;
             frame.Rows = g_stage.Rows;
             frame.Ground = g_stage.Ground;
@@ -1553,11 +1539,6 @@ namespace Idler::UI
             frame.Time = StageTime();
             frame.Game = g_stage.Game;
             return frame;
-        }
-
-        ImVec4 DayNight(ImVec4 day, ImVec4 night, float daylight)
-        {
-            return Mix(night, day, daylight);
         }
 
         void MaskCorners(ImDrawList* drawList, ImVec2 min, ImVec2 max, float radius, ImU32 color)

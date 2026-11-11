@@ -6,10 +6,18 @@
 #include <memory>
 #include <string>
 
-#include <windows.h>
-
 namespace Idler
 {
+    struct WebBounds
+    {
+        long Left = 0;
+        long Top = 0;
+        long Right = 0;
+        long Bottom = 0;
+
+        bool operator==(const WebBounds&) const = default;
+    };
+
     struct WebPage
     {
         bool Ok = false;
@@ -38,7 +46,7 @@ namespace Idler
         WebPanel(const WebPanel&) = delete;
         WebPanel& operator=(const WebPanel&) = delete;
 
-        void Open(HWND parent, const std::filesystem::path& dataFolder, const std::wstring& url, bool visible);
+        void Open(void* parent, const std::filesystem::path& dataFolder, const std::wstring& url, bool visible);
         void Close();
         void Hide();
         void Tick();
@@ -47,7 +55,7 @@ namespace Idler
         void Load(const std::wstring& url, PageHandler done);
         void ClearData(std::function<void()> done);
 
-        void SetBounds(const RECT& bounds);
+        void SetBounds(const WebBounds& bounds);
         void SetZoom(double zoom);
 
         State CurrentState() const;

@@ -1,6 +1,7 @@
 #include "UI/ScreenMain.h"
 
-#include "App/Application.h"
+#include "App/IdlerModel.h"
+#include "App/Shell.h"
 #include "App/Desktop.h"
 #include "App/WebPanel.h"
 #include "Core/RuntimeLog.h"
@@ -23,6 +24,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <cwchar>
 #include <deque>
 #include <filesystem>
 #include <optional>
@@ -473,7 +475,7 @@ namespace Idler::UI
         {
             const std::time_t when = std::time(nullptr) + static_cast<std::time_t>(seconds);
             std::tm local{};
-            if (localtime_s(&local, &when) != 0)
+            if (!LocalTime(when, local))
                 return {};
             char text[32];
             std::strftime(text, sizeof(text), "%a %H:%M", &local);
@@ -537,7 +539,7 @@ namespace Idler::UI
                 model.AwardCreature(CreatureId::Manifold);
         }
 
-        void Sidebar(Application& app)
+        void Sidebar(Shell& app)
         {
             IdlerModel& model = app.Model();
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -684,7 +686,7 @@ namespace Idler::UI
             ImGui::PopStyleColor();
         }
 
-        void BeginPage(Application& app, std::string_view status, ImVec4 statusColor = ManifoldTheme::Muted, bool queueButton = true)
+        void BeginPage(Shell& app, std::string_view status, ImVec4 statusColor = ManifoldTheme::Muted, bool queueButton = true)
         {
             const PageEntry* page = &kPages[0];
             for (const PageEntry& entry : kPages)
@@ -1683,7 +1685,7 @@ namespace Idler::UI
             EndCard();
         }
 
-        void IdlingPage(Application& app)
+        void IdlingPage(Shell& app)
         {
             IdlerModel& model = app.Model();
             std::string status;
@@ -2257,7 +2259,7 @@ namespace Idler::UI
                 InfoRow("Refund", refund, ManifoldTheme::Warning);
         }
 
-        void LibraryPage(Application& app)
+        void LibraryPage(Shell& app)
         {
             IdlerModel& model = app.Model();
             const auto& games = model.Games();
@@ -3026,7 +3028,7 @@ namespace Idler::UI
             ImGui::EndPopup();
         }
 
-        void WebDialog(Application& app)
+        void WebDialog(Shell& app)
         {
             CardService& cards = app.Model().Cards();
             WebPanel& web = cards.Web();
@@ -3034,7 +3036,7 @@ namespace Idler::UI
             {
                 g_webWantsOpen = false;
                 ImGui::OpenPopup("##web");
-                cards.OpenSignIn(app.Window(), g_webPreview);
+                cards.OpenSignIn(app.NativeWindow(), g_webPreview);
             }
             g_webDialogOpen = ImGui::IsPopupOpen("##web");
             if (!g_webDialogOpen)
@@ -3065,7 +3067,7 @@ namespace Idler::UI
                 IdleAnimation::RequestFrames();
                 EmptyState("##web_starting", 103u, "Opening Steam's page.");
             }
-            web.SetBounds(RECT{ static_cast<LONG>(start.x), static_cast<LONG>(start.y), static_cast<LONG>(start.x + room.x), static_cast<LONG>(start.y + room.y) });
+            web.SetBounds(WebBounds{ static_cast<long>(start.x), static_cast<long>(start.y), static_cast<long>(start.x + room.x), static_cast<long>(start.y + room.y) });
             web.SetZoom(app.Zoom());
 
             if (!closed && (web.TakeEscape() || (!g_webPreview && cards.State() == LoginState::SignedIn)))
@@ -3324,7 +3326,7 @@ namespace Idler::UI
             EndCard();
         }
 
-        void CardsPage(Application& app)
+        void CardsPage(Shell& app)
         {
             IdlerModel& model = app.Model();
             const CardService& cards = model.Cards();
@@ -3567,9 +3569,9 @@ namespace Idler::UI
         {
             const std::vector<double>& Seconds;
             float Height = 0.0f;
-            std::function<std::string(int)> Label;
-            std::function<void(int)> Tooltip;
-            std::function<void(int)> Clicked;
+            std::function<std::string(int)> Label{};
+            std::function<void(int)> Tooltip{};
+            std::function<void(int)> Clicked{};
             int Selected = -1;
             const std::vector<double>* Line = nullptr;
             const char* Empty = "Nothing idled yet.";
@@ -3671,7 +3673,7 @@ namespace Idler::UI
         {
             static constexpr const char* kDays[7] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
             const std::vector<double> seconds = WeekdaySeconds();
-            BarChartInput chart{ seconds };
+            BarChartInput chart{ .Seconds = seconds };
             chart.Height = height;
             chart.Label = [](int index) { return std::string(kDays[index]); };
             chart.Tooltip = [&](int index)
@@ -3692,7 +3694,7 @@ namespace Idler::UI
                     std::snprintf(text, sizeof(text), "%02d:00", hour);
                     return std::string(text);
                 };
-            BarChartInput chart{ seconds };
+            BarChartInput chart{ .Seconds = seconds };
             chart.Height = height;
             chart.Empty = "Fills up while games idle.";
             chart.Label = [&](int index) { return index % 6 == 0 ? hourText(index) : std::string(); };
@@ -3718,7 +3720,7 @@ namespace Idler::UI
             }
 
             const std::int32_t firstDay = today - days + 1;
-            BarChartInput chart{ seconds };
+            BarChartInput chart{ .Seconds = seconds };
             chart.Height = height;
             chart.Line = &average;
             chart.Label = [=](int index) -> std::string
@@ -4167,7 +4169,7 @@ namespace Idler::UI
             ImGui::TextDisabled("Last 30 days");
             ImGui::PopID();
             const std::int32_t firstDay = today - kChartDays + 1;
-            BarChartInput chart{ days };
+            BarChartInput chart{ .Seconds = days };
             chart.Height = std::clamp(ImGui::GetContentRegionAvail().y - below, Px(84.0f), Px(300.0f));
             chart.Empty = "Not in the last 30 days.";
             chart.Label = [=](int index) -> std::string
@@ -4514,7 +4516,7 @@ namespace Idler::UI
             }
         }
 
-        void StatisticsPage(Application& app)
+        void StatisticsPage(Shell& app)
         {
             IdlerModel& model = app.Model();
             const std::int32_t today = TodayNumber();
@@ -5047,7 +5049,7 @@ namespace Idler::UI
             EndCard();
         }
 
-        void CreaturesPage(Application& app)
+        void CreaturesPage(Shell& app)
         {
             IdlerModel& model = app.Model();
             ListenForCode(model);
@@ -5305,7 +5307,7 @@ namespace Idler::UI
             }
         }
 
-        void LogPage(Application& app)
+        void LogPage(Shell& app)
         {
             const std::uint64_t generation = RuntimeLog::Generation();
             if (g_logGeneration != generation)
@@ -5465,8 +5467,9 @@ namespace Idler::UI
             bool changed = false;
 
             BeginCard("When to idle");
-            changed |= ToggleRow("Only when I am away", "Idling starts after this long without mouse or keyboard, and stops at the next input.", options.OnlyWhenAway);
-            if (options.OnlyWhenAway)
+            if (Desktop::KnowsInputIdle())
+                changed |= ToggleRow("Only when I am away", "Idling starts after this long without mouse or keyboard, and stops at the next input.", options.OnlyWhenAway);
+            if (options.OnlyWhenAway && Desktop::KnowsInputIdle())
             {
                 ControlRow("Away for", nullptr, Px(110.0f), [&]()
                     {
@@ -5491,7 +5494,7 @@ namespace Idler::UI
                 model.SaveNow();
         }
 
-        void BehaviourCard(Application& app)
+        void BehaviourCard(Shell& app)
         {
             IdlerModel& model = app.Model();
             Settings& options = model.Options();
@@ -5506,8 +5509,9 @@ namespace Idler::UI
                 {
                     changed |= ChoiceCombo("##season", options.Season, SceneSeason::Count, SceneSeasonName, Px(140.0f));
                 });
-            changed |= ToggleRow("Creatures may tug the mouse", "One that is angry after a throw and reaches the pointer pulls it a little way off. Moving the mouse frees it.",
-                options.CreaturesTugMouse);
+            if (Desktop::CanMovePointer())
+                changed |= ToggleRow("Creatures may tug the mouse", "One that is angry after a throw and reaches the pointer pulls it a little way off. Moving the mouse frees it.",
+                    options.CreaturesTugMouse);
             changed |= ToggleRow("Log tab", "Shows what the program does while it runs. The file is written either way.", options.ShowLog);
             changed |= ToggleRow("Vary the times",
                 "Games start at different moments and take breaks of their own, and their goals differ a little, so their hours do not come out the same.", options.VaryTimes);
@@ -5534,17 +5538,18 @@ namespace Idler::UI
             EndCard();
 
             BeginCard("Window");
-            changed |= ToggleRow("Keep idling in the tray", "Closing the window while games idle moves it to the tray instead of ending the program.", options.KeepInTray);
-            bool startsWithWindows = Desktop::StartsWithWindows();
-            if (ToggleRow("Start with Windows", "Starts in the tray when you log on to Windows.", startsWithWindows))
-                Desktop::SetStartsWithWindows(startsWithWindows);
+            if (app.HasTray())
+                changed |= ToggleRow("Keep idling in the tray", "Closing the window while games idle moves it to the tray instead of ending the program.", options.KeepInTray);
+            bool startsAtLogin = Desktop::StartsAtLogin();
+            if (ToggleRow(Desktop::StartAtLoginLabel(), Desktop::StartAtLoginNote(), startsAtLogin))
+                Desktop::SetStartsAtLogin(startsAtLogin);
             EndCard();
 
             if (changed)
                 model.SaveNow();
         }
 
-        void SettingsPage(Application& app)
+        void SettingsPage(Shell& app)
         {
             BeginPage(app, "");
             ImGui::BeginChild("##settings_width", ImVec2(std::min(ImGui::GetContentRegionAvail().x, Px(kSettingsWidth)), 0.0f), ImGuiChildFlags_None,
@@ -5628,7 +5633,7 @@ namespace Idler::UI
         {
             const auto comma = apps.find(L',');
             const std::wstring number(apps.substr(0, comma));
-            if (const int appId = ::_wtoi(number.c_str()); appId > 0)
+            if (const long appId = std::wcstol(number.c_str(), nullptr, 10); appId > 0)
             {
                 g_selection.push_back(static_cast<std::uint32_t>(appId));
                 g_gameSelection.insert(static_cast<std::uint32_t>(appId));
@@ -5637,7 +5642,7 @@ namespace Idler::UI
         }
     }
 
-    void DrawMain(Application& app)
+    void DrawMain(Shell& app)
     {
         QueueByKey(app.Model());
         g_logTabShown = app.Model().Options().ShowLog;
