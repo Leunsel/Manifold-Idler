@@ -79,6 +79,7 @@ int main(int argc, char** argv)
     CLI::App* serve = app.add_subcommand("serve", "Runs the idler in this terminal until it is told to end");
     serve->add_flag("--start", serveOptions.Start, "Start the queue as soon as the library is read");
     serve->add_flag("--pretend", serveOptions.Pretend, "")->group("");
+    CLI::Option* serveWeb = serve->add_option("--web", serveOptions.WebAddress, "Also serve a web page, at 127.0.0.1:8090 or the address:port given")->expected(0, 1);
 
     std::vector<std::string> request;
     const auto simple = [&](const char* name, const char* help)
@@ -92,6 +93,7 @@ int main(int argc, char** argv)
     simple("start", "Start the queue");
     simple("stop", "Stop the queue");
     simple("lists", "The saved lists; the one with a star is the queue");
+    simple("web", "The address of the web page, with its token");
     simple("quit", "End the server");
 
     std::vector<std::uint32_t> apps;
@@ -157,10 +159,12 @@ int main(int argc, char** argv)
     log->callback([&]() { request = { "log", std::to_string(logLines) }; });
 
     bool serviceStart = false;
+    std::string serviceWebAddress;
     CLI::App* service = app.add_subcommand("service", "Run the server as a systemd user service, Linux only");
     service->require_subcommand(1);
     CLI::App* serviceInstall = service->add_subcommand("install", "Install and start it; it starts again at every login");
     serviceInstall->add_flag("--start", serviceStart, "Start the queue as soon as the library is read");
+    CLI::Option* serviceWeb = serviceInstall->add_option("--web", serviceWebAddress, "Also serve the web page, at 127.0.0.1:8090 or the address:port given")->expected(0, 1);
     CLI::App* serviceRemove = service->add_subcommand("remove", "Stop and remove it");
 
     CLI11_PARSE(app, argc, argv);
@@ -168,13 +172,14 @@ int main(int argc, char** argv)
     const std::filesystem::path settings = settingsText.empty() ? Idler::Cli::DefaultSettingsFile() : Idler::Cli::PathFromUtf8(settingsText);
 
     if (serviceInstall->parsed())
-        return Idler::Cli::InstallService(settings, serviceStart);
+        return Idler::Cli::InstallService(settings, serviceStart, serviceWeb->count() > 0, serviceWebAddress);
     if (serviceRemove->parsed())
         return Idler::Cli::RemoveService(settings);
 
     if (serve->parsed())
     {
         serveOptions.Settings = settings;
+        serveOptions.Web = serveWeb->count() > 0;
         if (serveOptions.Pretend && settingsText.empty())
         {
             std::fprintf(stderr, "--pretend is for checks, with settings of their own.\n");

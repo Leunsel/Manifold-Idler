@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 
 namespace Idler::Cli
@@ -83,6 +84,24 @@ namespace Idler::Cli
             }
         }
 
+        std::string GoalKindWord(const Goal& goal)
+        {
+            switch (goal.Kind)
+            {
+            case GoalKind::ForHours: return "for";
+            case GoalKind::UntilTotal: return "until";
+            case GoalKind::CardDrops: return "cards";
+            default: return "none";
+            }
+        }
+
+        std::string HoursNumber(float hours)
+        {
+            char text[32];
+            std::snprintf(text, sizeof(text), "%g", static_cast<double>(hours));
+            return text;
+        }
+
         std::string EntryState(const IdlerModel& model, const QueueEntry& entry)
         {
             switch (model.StateOf(entry.AppId))
@@ -105,50 +124,65 @@ namespace Idler::Cli
 
         CommandResult Status(const IdlerModel& model)
         {
-            std::string text;
-            const auto line = [&](const char* label, const std::string& value) { text += Padded(label, 14) + value + "\n"; };
+            CommandResult result;
+            result.Columns = { "key", "label", "value" };
+            const auto line = [&](const char* key, const char* label, const std::string& value)
+                {
+                    result.Text += Padded(label, 14) + value + "\n";
+                    result.Rows.push_back({ key, label, value });
+                };
 
             const Steam::Status& steam = model.SteamStatus();
             if (!steam.Installed())
-                line("Steam", "not found");
+                line("steam", "Steam", "not found");
             else if (!steam.Running())
-                line("Steam", "not running");
+                line("steam", "Steam", "not running");
             else if (!steam.LoggedOn())
-                line("Steam", steam.MayConnect() ? "running, asking it who is logged on" : "nobody is logged on");
+                line("steam", "Steam", steam.MayConnect() ? "running, asking it who is logged on" : "nobody is logged on");
             else
-                line("Steam", "logged on" + (model.Persona().empty() ? std::string() : " as " + model.Persona()));
+                line("steam", "Steam", "logged on" + (model.Persona().empty() ? std::string() : " as " + model.Persona()));
 
             if (model.Scanning() && !model.ScannedOnce())
-                line("Library", "being read");
+                line("library", "Library", "being read");
             else if (!model.ScanProblem().empty())
-                line("Library", model.ScanProblem());
+                line("library", "Library", model.ScanProblem());
             else if (model.ScannedOnce())
-                line("Library", GamesText(model.Games().size()));
+                line("library", "Library", GamesText(model.Games().size()));
 
-            line("Queue", model.Lists()[static_cast<std::size_t>(model.ActiveList())].Name + ", " + GamesText(model.Queue().size()));
-            line("State", StateText(model));
-            line("At once", std::to_string(model.Slots()));
-            line("This session", DurationText(static_cast<std::uint64_t>(model.SessionSeconds())));
+            line("queue", "Queue", model.Lists()[static_cast<std::size_t>(model.ActiveList())].Name + ", " + GamesText(model.Queue().size()));
+            line("state", "State", StateText(model));
+            line("slots", "At once", std::to_string(model.Slots()));
+            line("session", "This session", DurationText(static_cast<std::uint64_t>(model.SessionSeconds())));
 
             const QueueForecast forecast = model.Forecast();
             if (forecast.Endless)
-                line("Time left", "no end: a game has no limit");
+                line("left", "Time left", "no end: a game has no limit");
             else if (forecast.Seconds > 0.0)
-                line("Time left", DurationText(static_cast<std::uint64_t>(std::ceil(forecast.Seconds))) + (model.Options().VaryTimes ? " plus breaks" : ""));
-            return Done(std::move(text));
+                line("left", "Time left", DurationText(static_cast<std::uint64_t>(std::ceil(forecast.Seconds))) + (model.Options().VaryTimes ? " plus breaks" : ""));
+            result.Rows.push_back({ "active", "", model.Active() ? "yes" : "no" });
+            return result;
         }
 
         CommandResult ShowQueue(const IdlerModel& model)
         {
+            CommandResult result;
+            result.Columns = { "app", "name", "state", "goal", "idled", "kind", "hours" };
             if (model.Queue().empty())
-                return Done("The queue is empty.\n");
-            std::string text;
+            {
+                result.Text = "The queue is empty.\n";
+                return result;
+            }
             for (const QueueEntry& entry : model.Queue())
             {
-                text += Padded(std::to_string(entry.AppId), 10) + Padded(EntryState(model, entry), 30) + Padded(GoalWords(entry.Goal), 24) +
-                    Padded(DurationText(static_cast<std::uint64_t>(entry.IdledSeconds)), 14) + GameName(model, entry.AppId) + "\n";
+                const std::string app = std::to_string(entry.AppId);
+                const std::string state = EntryState(model, entry);
+                const std::string goal = GoalWords(entry.Goal);
+                const std::string idled = DurationText(static_cast<std::uint64_t>(entry.IdledSeconds));
+                const std::string name = GameName(model, entry.AppId);
+                result.Text += Padded(app, 10) + Padded(state, 30) + Padded(goal, 24) + Padded(idled, 14) + name + "\n";
+                result.Rows.push_back({ app, name, state, goal, idled, GoalKindWord(entry.Goal), HoursNumber(entry.Goal.Hours) });
             }
-            return Done(std::move(text));
+            return result;
         }
 
         bool LibraryReady(const IdlerModel& model, std::string& problem)
@@ -243,7 +277,9 @@ namespace Idler::Cli
                 return Failed(problem);
             const int limit = words.size() >= 2 ? static_cast<int>(ParseUnsigned(words[1]).value_or(50)) : 50;
             const std::string search = words.size() >= 3 ? FoldCase(words[2]) : std::string();
-            std::string text;
+            CommandResult result;
+            result.Columns = { "app", "name", "playtime", "queued" };
+            std::string& text = result.Text;
             int shown = 0;
             int found = 0;
             for (const Game& game : model.Games())
@@ -253,25 +289,31 @@ namespace Idler::Cli
                 ++found;
                 if (shown < limit)
                 {
-                    text += Padded(std::to_string(game.AppId), 10) + Padded(PlaytimeText(game.PlaytimeMinutes), 14) + game.Name + "\n";
+                    const std::string app = std::to_string(game.AppId);
+                    const std::string playtime = PlaytimeText(game.PlaytimeMinutes);
+                    text += Padded(app, 10) + Padded(playtime, 14) + game.Name + "\n";
+                    result.Rows.push_back({ app, game.Name, playtime, model.FindEntry(game.AppId) ? "yes" : "no" });
                     ++shown;
                 }
             }
             text += std::to_string(shown) + " of " + GamesText(found) + " shown.\n";
-            return Done(std::move(text));
+            return result;
         }
 
         CommandResult Lists(const IdlerModel& model)
         {
-            std::string text;
+            CommandResult result;
+            result.Columns = { "name", "games", "active" };
             const auto& lists = model.Lists();
             for (std::size_t index = 0; index < lists.size(); ++index)
             {
                 if (model.IsListHidden(static_cast<int>(index)))
                     continue;
-                text += (static_cast<int>(index) == model.ActiveList() ? "* " : "  ") + Padded(lists[index].Name, 30) + GamesText(lists[index].Entries.size()) + "\n";
+                const bool active = static_cast<int>(index) == model.ActiveList();
+                result.Text += (active ? "* " : "  ") + Padded(lists[index].Name, 30) + GamesText(lists[index].Entries.size()) + "\n";
+                result.Rows.push_back({ lists[index].Name, std::to_string(lists[index].Entries.size()), active ? "yes" : "no" });
             }
-            return Done(std::move(text));
+            return result;
         }
 
         CommandResult UseList(IdlerModel& model, const std::vector<std::string>& words)
@@ -296,10 +338,15 @@ namespace Idler::Cli
             const std::size_t wanted = words.size() >= 2 ? ParseUnsigned(words[1]).value_or(30) : 30;
             const std::vector<LogEntry> entries = RuntimeLog::Entries();
             const std::size_t first = entries.size() > wanted ? entries.size() - wanted : 0;
-            std::string text;
+            CommandResult result;
+            result.Columns = { "time", "level", "message" };
             for (std::size_t index = first; index < entries.size(); ++index)
-                text += entries[index].Time + "  " + Padded(RuntimeLog::LevelName(entries[index].Level), 9) + entries[index].Message + "\n";
-            return Done(std::move(text));
+            {
+                const LogEntry& entry = entries[index];
+                result.Text += entry.Time + "  " + Padded(RuntimeLog::LevelName(entry.Level), 9) + entry.Message + "\n";
+                result.Rows.push_back({ entry.Time, RuntimeLog::LevelName(entry.Level), entry.Message });
+            }
+            return result;
         }
     }
 

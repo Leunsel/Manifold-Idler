@@ -1,18 +1,13 @@
 #include "Ipc.h"
 
 #include "Paths.h"
+#include "Sockets.h"
 
 #ifdef _WIN32
-#include <winsock2.h>
 #include <afunix.h>
 #else
-#include <sys/select.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
 #include <sys/un.h>
-#include <unistd.h>
 #endif
 
 #include <cstring>
@@ -22,54 +17,13 @@ namespace Idler::Cli
 {
     namespace
     {
-#ifdef _WIN32
-        using Socket = SOCKET;
-        const Socket kNoSocket = INVALID_SOCKET;
-        void CloseSocket(Socket socket) { ::closesocket(socket); }
-        constexpr int kSendEnd = SD_SEND;
-        constexpr int kSendFlags = 0;
-
-        bool StartSockets()
-        {
-            static const bool started = []()
-                {
-                    WSADATA data{};
-                    return ::WSAStartup(MAKEWORD(2, 2), &data) == 0;
-                }();
-            return started;
-        }
-
-        void SetTimeout(Socket socket, int milliseconds)
-        {
-            const DWORD value = static_cast<DWORD>(milliseconds);
-            ::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&value), sizeof(value));
-            ::setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char*>(&value), sizeof(value));
-        }
-#else
-        using Socket = int;
-        const Socket kNoSocket = -1;
-        void CloseSocket(Socket socket) { ::close(socket); }
-        constexpr int kSendEnd = SHUT_WR;
-#ifdef MSG_NOSIGNAL
-        constexpr int kSendFlags = MSG_NOSIGNAL;
-#else
-        constexpr int kSendFlags = 0;
-#endif
-
-        bool StartSockets()
-        {
-            return true;
-        }
-
-        void SetTimeout(Socket socket, int milliseconds)
-        {
-            timeval value{};
-            value.tv_sec = milliseconds / 1000;
-            value.tv_usec = (milliseconds % 1000) * 1000;
-            ::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &value, sizeof(value));
-            ::setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, &value, sizeof(value));
-        }
-#endif
+        using Net::CloseSocket;
+        using Net::kNoSocket;
+        using Net::kSendEnd;
+        using Net::SendAll;
+        using Net::SetTimeout;
+        using Net::Socket;
+        using Net::StartSockets;
 
         constexpr std::size_t kLongestLine = 1u << 16;
 
@@ -81,19 +35,6 @@ namespace Idler::Cli
             std::memset(&address, 0, sizeof(address));
             address.sun_family = AF_UNIX;
             std::memcpy(address.sun_path, text.data(), text.size());
-            return true;
-        }
-
-        bool SendAll(Socket socket, const std::string& text)
-        {
-            std::size_t done = 0;
-            while (done < text.size())
-            {
-                const auto sent = ::send(socket, text.data() + done, static_cast<int>(text.size() - done), kSendFlags);
-                if (sent <= 0)
-                    return false;
-                done += static_cast<std::size_t>(sent);
-            }
             return true;
         }
 

@@ -15,6 +15,8 @@ namespace Idler::Cli
         bool Ok = true;
         std::string Text;
         bool Quit = false;
+        std::vector<std::string> Columns;
+        std::vector<std::vector<std::string>> Rows;
     };
 
     CommandResult RunCommand(IdlerModel& model, const std::vector<std::string>& words);

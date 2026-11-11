@@ -3,6 +3,7 @@
 #include "Ipc.h"
 #include "Paths.h"
 #include "Request.h"
+#include "Web.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -66,14 +67,15 @@ namespace Idler::Cli
         return name;
     }
 
-    std::string ServiceUnit(const std::filesystem::path& program, const std::filesystem::path& settings, bool start)
+    std::string ServiceUnit(const std::filesystem::path& program, const std::filesystem::path& settings, bool start, std::string_view web)
     {
         std::string unit;
         unit += "[Unit]\n";
         unit += "Description=Manifold Idler\n";
         unit += "\n";
         unit += "[Service]\n";
-        unit += "ExecStart=" + QuoteForUnit(PathToUtf8(program)) + " --settings " + QuoteForUnit(PathToUtf8(settings)) + " serve" + (start ? " --start" : "") + "\n";
+        unit += "ExecStart=" + QuoteForUnit(PathToUtf8(program)) + " --settings " + QuoteForUnit(PathToUtf8(settings)) + " serve" + (start ? " --start" : "") +
+            (web.empty() ? std::string() : " --web " + std::string(web)) + "\n";
         unit += "Restart=on-failure\n";
         unit += "RestartSec=10\n";
         unit += "\n";
@@ -83,7 +85,7 @@ namespace Idler::Cli
     }
 
 #ifdef _WIN32
-    int InstallService(const std::filesystem::path&, bool)
+    int InstallService(const std::filesystem::path&, bool, bool, const std::string&)
     {
         std::fprintf(stderr, "A service is for Linux. On Windows a task at logon can run: idler serve\n");
         return 1;
@@ -150,8 +152,21 @@ namespace Idler::Cli
         }
     }
 
-    int InstallService(const std::filesystem::path& settingsFile, bool start)
+    int InstallService(const std::filesystem::path& settingsFile, bool start, bool web, const std::string& webAddress)
     {
+        std::string webText;
+        if (web)
+        {
+            WebAddress address;
+            std::string problem;
+            if (!ParseWebAddress(webAddress, address, problem))
+            {
+                std::fprintf(stderr, "%s\n", problem.c_str());
+                return 1;
+            }
+            webText = AddressText(address);
+        }
+
         const std::filesystem::path settings = Absolute(settingsFile);
         const std::filesystem::path program = ThisProgram();
         if (program.empty())
@@ -175,7 +190,7 @@ namespace Idler::Cli
         const std::filesystem::path file = folder / unitName;
         {
             std::ofstream out(file, std::ios::binary | std::ios::trunc);
-            out << ServiceUnit(program, settings, start);
+            out << ServiceUnit(program, settings, start, webText);
             if (!out)
             {
                 std::fprintf(stderr, "%s could not be written.\n", PathToUtf8(file).c_str());
@@ -199,6 +214,8 @@ namespace Idler::Cli
         std::printf("It starts %s: leave the program there, or move it (to ~/.local/bin, say) and install again.\n", PathToUtf8(program).c_str());
         std::printf("Commands work from any terminal, for example: %s status\n", command.c_str());
         std::printf("Its log: journalctl --user -u %s -f\n", name.c_str());
+        if (web)
+            std::printf("Its web page, with the token: %s web\n", command.c_str());
         std::printf("Without a login session, for example on a server: loginctl enable-linger $USER\n");
         std::printf("Remove it with: %s service remove\n", command.c_str());
         return 0;

@@ -85,4 +85,9 @@ namespace Idler::Cli
         return std::filesystem::temp_directory_path(ignored) / (std::to_string(::getuid()) + "-" + name);
 #endif
     }
+
+    std::filesystem::path WebTokenFile(const std::filesystem::path& settings)
+    {
+        return std::filesystem::path(settings).replace_extension(".web-token");
+    }
 }

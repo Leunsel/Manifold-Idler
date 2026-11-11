@@ -8,6 +8,8 @@
 #include "Ipc.h"
 #include "Paths.h"
 #include "Request.h"
+#include "Web.h"
+#include "WebServer.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -134,6 +136,23 @@ namespace Idler::Cli
             return 1;
         }
 
+        WebServer web;
+        WebConfig webConfig;
+        WebAddress webAddress;
+        std::string pageAddress;
+        if (options.Web)
+        {
+            if (!ParseWebAddress(options.WebAddress, webAddress, error) || !LoadWebToken(WebTokenFile(options.Settings), webConfig.Token, error) ||
+                !web.Open(webAddress, error))
+            {
+                std::fprintf(stderr, "%s\n", error.c_str());
+                return 1;
+            }
+            webConfig.Names = ComputerNames();
+            const std::string computer = webConfig.Names.empty() ? std::string("<this computer>") : webConfig.Names.front();
+            pageAddress = PageAddress(IsWildcard(webAddress) ? computer + ":" + std::to_string(webAddress.Port) : AddressText(webAddress), webConfig.Token);
+        }
+
         WatchForTheEnd();
         RuntimeLog::OpenFile(std::filesystem::path(options.Settings).replace_extension(L".log"));
 
@@ -146,8 +165,17 @@ namespace Idler::Cli
         LogEcho echo;
         bool startPending = options.Start;
         bool quit = false;
-        std::printf("Settings: %s\nEnds with Ctrl+C or: idler quit\n", PathToUtf8(options.Settings).c_str());
+        std::printf("Settings: %s\n", PathToUtf8(options.Settings).c_str());
+        if (options.Web)
+        {
+            std::printf("Web page: %s\n", pageAddress.c_str());
+            if (!IsLoopback(webAddress))
+                std::fprintf(stderr, "The web page answers other computers too, over plain HTTP: whoever sees the traffic sees the token. An SSH tunnel is safer.\n");
+        }
+        std::printf("Ends with Ctrl+C or: idler quit\n");
         std::fflush(stdout);
+
+        const CommandRunner run = [&](const std::vector<std::string>& words) { return RunCommand(model, words); };
 
         while (!quit && !g_quit)
         {
@@ -161,9 +189,14 @@ namespace Idler::Cli
                     LOG_WARN("Nothing in the queue can run");
             }
             echo.Print();
-            listener.Serve(kCommandWaitMilliseconds, [&](const std::string& line)
+            if (options.Web)
+                web.Serve(kCommandWaitMilliseconds, [&](const HttpRequest& request) { return AnswerWeb(request, webConfig, run); }, listener.Handle());
+            listener.Serve(options.Web ? 0 : kCommandWaitMilliseconds, [&](const std::string& line)
                 {
-                    const CommandResult result = RunCommand(model, SplitRequest(line));
+                    const std::vector<std::string> words = SplitRequest(line);
+                    if (!words.empty() && words[0] == "web")
+                        return pageAddress.empty() ? MakeReply(false, "The web page is off. It comes with: idler serve --web") : MakeReply(true, pageAddress + "\n");
+                    const CommandResult result = RunCommand(model, words);
                     quit = quit || result.Quit;
                     return MakeReply(result.Ok, result.Text);
                 });

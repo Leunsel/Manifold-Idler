@@ -13,4 +13,5 @@ namespace Idler::Cli
 
     std::string SocketName(const std::filesystem::path& settings);
     std::filesystem::path SocketFile(const std::filesystem::path& settings);
+    std::filesystem::path WebTokenFile(const std::filesystem::path& settings);
 }

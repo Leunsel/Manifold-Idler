@@ -18,6 +18,7 @@ namespace Idler::Cli
 
         bool Open(const std::filesystem::path& file, std::string& error);
         void Serve(int milliseconds, const std::function<std::string(const std::string&)>& answer);
+        std::uintptr_t Handle() const { return m_socket; }
 
     private:
         std::uintptr_t m_socket = ~std::uintptr_t{ 0 };
