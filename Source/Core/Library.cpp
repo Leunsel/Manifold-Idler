@@ -78,9 +78,11 @@ namespace Idler
                         const Vdf::Node* value = node.Find(key);
                         return value ? ParseUnsigned(Trim(value->Value)).value_or(0) : 0;
                     };
-                registry.ProcessId = number("pid");
-                registry.Account = number("ActiveUser");
-                if (const Vdf::Node* library = node.Find("SteamClientDll64"))
+                if (const std::uint32_t processId = number("pid"))
+                    registry.ProcessId = processId;
+                if (const std::uint32_t account = number("ActiveUser"))
+                    registry.Account = account;
+                if (const Vdf::Node* library = node.Find("SteamClientDll64"); library && !library->Value.empty())
                     registry.ClientLibrary = library->Value;
             }
             else if (EqualsIgnoreCase(node.Key, "Apps"))
@@ -105,6 +107,30 @@ namespace Idler
         SteamRegistry registry;
         ReadRegistryNode(root, registry);
         return registry;
+    }
+
+    std::uint32_t ParseMostRecentAccount(std::string_view loginUsers)
+    {
+        constexpr std::uint64_t kSteamIdBase = 76561197960265728ull;
+        Vdf::Node root;
+        if (!Vdf::Parse(loginUsers, root))
+            return 0;
+        const Vdf::Node* users = root.Find("users");
+        if (!users)
+            return 0;
+        for (const Vdf::Node& user : users->Children)
+        {
+            const Vdf::Node* recent = user.Find("MostRecent");
+            if (!recent || Trim(recent->Value) != "1")
+                continue;
+            std::uint64_t steamId = 0;
+            const std::string_view id = Trim(user.Key);
+            const auto [end, error] = std::from_chars(id.data(), id.data() + id.size(), steamId);
+            if (error != std::errc{} || end != id.data() + id.size() || steamId <= kSteamIdBase || steamId - kSteamIdBase > 0xFFFFFFFFull)
+                return 0;
+            return static_cast<std::uint32_t>(steamId - kSteamIdBase);
+        }
+        return 0;
     }
 
     AchievementCount ParseAchievementCounts(std::string_view json)

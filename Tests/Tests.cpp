@@ -2699,6 +2699,34 @@ namespace
         CHECK(nothing.ProcessId == 0 && nothing.Account == 0 && nothing.ClientLibrary.empty() && nothing.RunningApps.empty());
         const SteamRegistry damaged = ParseSteamRegistry("\"Registry\" { \"ActiveProcess\" { \"pid\" \"not a number\" ");
         CHECK(damaged.ProcessId == 0);
+
+        const SteamRegistry twice = ParseSteamRegistry(R"("Registry"
+{
+    "HKCU" { "Software" { "Valve" { "Steam" { "ActiveProcess" { "pid" "4242" "ActiveUser" "12345" "SteamClientDll64" "/x/steamclient.so" } } } } }
+    "HKLM" { "Software" { "Valve" { "Steam" { "ActiveProcess" { "SteamClientDll64" "" } } } } }
+})");
+        CHECK(twice.ProcessId == 4242 && twice.Account == 12345 && twice.ClientLibrary == "/x/steamclient.so");
+
+        constexpr std::string_view kLoginUsers = R"("users"
+{
+    "76561197960265729"
+    {
+        "AccountName"   "older"
+        "MostRecent"    "0"
+        "Timestamp"     "1700000000"
+    }
+    "76561198000000000"
+    {
+        "AccountName"   "current"
+        "MostRecent"    "1"
+        "Timestamp"     "1800000000"
+    }
+})";
+        CHECK(ParseMostRecentAccount(kLoginUsers) == 39734272u);
+        CHECK(ParseMostRecentAccount("\"users\" { \"76561197960265729\" { \"MostRecent\" \"0\" } }") == 0);
+        CHECK(ParseMostRecentAccount("\"users\" { \"not an id\" { \"MostRecent\" \"1\" } }") == 0);
+        CHECK(ParseMostRecentAccount("") == 0);
+        CHECK(ParseMostRecentAccount("\"users\" { \"7656119") == 0);
     }
 
     void TestLocalTime()

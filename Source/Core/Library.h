@@ -73,6 +73,7 @@ namespace Idler
         std::vector<std::uint32_t> RunningApps;
     };
     SteamRegistry ParseSteamRegistry(std::string_view text);
+    std::uint32_t ParseMostRecentAccount(std::string_view loginUsers);
 
     bool IsLibraryType(std::string_view type);
 

@@ -160,6 +160,8 @@ namespace Idler::Steam
         {
             status.ProcessId = processId;
             status.Account = registry.Account;
+            if (status.Account == 0 && !status.Root.empty())
+                status.Account = ParseMostRecentAccount(ReadTextFile(status.Root / "config" / "loginusers.vdf"));
         }
         return status;
     }
