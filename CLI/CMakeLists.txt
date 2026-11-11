@@ -64,7 +64,8 @@ idler_flags(idler_engine)
 add_library(idler_cli_base STATIC
     src/Ipc.cpp
     src/Paths.cpp
-    src/Request.cpp)
+    src/Request.cpp
+    src/Service.cpp)
 target_include_directories(idler_cli_base PUBLIC src)
 target_link_libraries(idler_cli_base PUBLIC idler_core)
 if(WIN32)

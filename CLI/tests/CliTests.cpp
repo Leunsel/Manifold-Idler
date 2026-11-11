@@ -1,5 +1,6 @@
 #include "Paths.h"
 #include "Request.h"
+#include "Service.h"
 
 #include <cstdio>
 #include <string>
@@ -74,6 +75,17 @@ int main()
     CHECK(SocketName("a/idler.ini") != SocketName("b/idler.ini"));
     CHECK(SocketName("a/idler.ini").size() < 50);
     CHECK(SocketFile("a/idler.ini").filename().string().find(SocketName("a/idler.ini")) != std::string::npos);
+
+    CHECK(QuoteForUnit("/home/x/idler") == "\"/home/x/idler\"");
+    CHECK(QuoteForUnit("/home/a b/100%/$HOME/\"q\"\\") == "\"/home/a b/100%%/$$HOME/\\\"q\\\"\\\\\"");
+    CHECK(ServiceName("/home/x/.config/manifold-idler/idler.ini", "/home/x/.config/manifold-idler/idler.ini") == "manifold-idler");
+    CHECK(ServiceName("/home/x/.config/manifold-idler/./idler.ini", "/home/x/.config/manifold-idler/idler.ini") == "manifold-idler");
+    CHECK(ServiceName("/srv/night shift.ini", "/home/x/.config/manifold-idler/idler.ini") == "manifold-idler-night-shift");
+    const std::string unit = ServiceUnit("/home/x/bin/idler", "/home/x/.config/manifold-idler/idler.ini", false);
+    CHECK(unit.find("ExecStart=\"/home/x/bin/idler\" --settings \"/home/x/.config/manifold-idler/idler.ini\" serve\n") != std::string::npos);
+    CHECK(unit.find("Restart=on-failure\n") != std::string::npos);
+    CHECK(unit.find("WantedBy=default.target\n") != std::string::npos);
+    CHECK(ServiceUnit("/home/x/bin/idler", "/home/x/idler.ini", true).find(" serve --start\n") != std::string::npos);
 
     std::printf("%d checks, %d failed\n", g_checks, g_failed);
     return g_failed == 0 ? 0 : 1;

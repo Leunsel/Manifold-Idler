@@ -3,6 +3,7 @@
 #include "Paths.h"
 #include "Request.h"
 #include "Serve.h"
+#include "Service.h"
 #include "Steam/Worker.h"
 
 #include "CLI11.hpp"
@@ -155,9 +156,21 @@ int main(int argc, char** argv)
     log->add_option("lines", logLines, "How many lines")->check(CLI::PositiveNumber);
     log->callback([&]() { request = { "log", std::to_string(logLines) }; });
 
+    bool serviceStart = false;
+    CLI::App* service = app.add_subcommand("service", "Run the server as a systemd user service, Linux only");
+    service->require_subcommand(1);
+    CLI::App* serviceInstall = service->add_subcommand("install", "Install and start it; it starts again at every login");
+    serviceInstall->add_flag("--start", serviceStart, "Start the queue as soon as the library is read");
+    CLI::App* serviceRemove = service->add_subcommand("remove", "Stop and remove it");
+
     CLI11_PARSE(app, argc, argv);
 
     const std::filesystem::path settings = settingsText.empty() ? Idler::Cli::DefaultSettingsFile() : Idler::Cli::PathFromUtf8(settingsText);
+
+    if (serviceInstall->parsed())
+        return Idler::Cli::InstallService(settings, serviceStart);
+    if (serviceRemove->parsed())
+        return Idler::Cli::RemoveService(settings);
 
     if (serve->parsed())
     {
