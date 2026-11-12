@@ -70,7 +70,6 @@ namespace Idler
 
     void CreatorApplication::DrawFrame()
     {
-        UI::IdleAnimation::BeginFrame();
         m_screen.Draw(m_host);
     }
 

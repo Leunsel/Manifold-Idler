@@ -192,6 +192,9 @@
     <ClCompile Include="..\Source\UI\TerrariumView.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\UI\SceneKit.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\App\Application.cpp">
       <Filter>Windows\Source\App</Filter>
     </ClCompile>
@@ -363,6 +366,9 @@
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\StageScene.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\SceneKit.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\TerrariumView.h">

@@ -31,6 +31,9 @@
     <Filter Include="Source\UI">
       <UniqueIdentifier>{b8271103-7aa4-5dbb-b5a8-06507a054a4d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\UI\Scenes">
+      <UniqueIdentifier>{9fd4dcc7-3ffc-568b-92b5-ce019f406958}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Windows">
       <UniqueIdentifier>{2ba19679-d13b-518d-907c-fe3f264d63a9}</UniqueIdentifier>
     </Filter>
@@ -87,11 +90,41 @@
     <ClCompile Include="..\Source\SpriteCreator\CreatorScreen.cpp">
       <Filter>Source\SpriteCreator</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\SpriteCreator\CreatureLibrary.cpp">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\SpriteCreator\ScenePreview.cpp">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\UI\Fonts.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\UI\IdleAnimation.cpp">
       <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\SceneKit.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Scenes\HomeAutumn.cpp">
+      <Filter>Source\UI\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Scenes\HomeSpring.cpp">
+      <Filter>Source\UI\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Scenes\HomeSummer.cpp">
+      <Filter>Source\UI\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Scenes\HomeWinter.cpp">
+      <Filter>Source\UI\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Scenes\StageClouds.cpp">
+      <Filter>Source\UI\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Scenes\StageMeadow.cpp">
+      <Filter>Source\UI\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Scenes\StageUnderwater.cpp">
+      <Filter>Source\UI\Scenes</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\UI\SpriteView.cpp">
       <Filter>Source\UI</Filter>
@@ -143,7 +176,13 @@
     <ClInclude Include="..\Source\Core\Json.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\Core\Settings.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\Core\SpriteFile.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Terrarium.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Core\Text.h">
@@ -158,16 +197,31 @@
     <ClInclude Include="..\Source\SpriteCreator\CreatorScreen.h">
       <Filter>Source\SpriteCreator</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\SpriteCreator\CreatureLibrary.h">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\SpriteCreator\ScenePreview.h">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\UI\CreatureSprites.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\Fonts.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\UI\HomeScene.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\UI\IdleAnimation.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\UI\SceneKit.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\UI\SpriteView.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\StageScene.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\Theme.h">

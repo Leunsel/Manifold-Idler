@@ -24,6 +24,7 @@ namespace Idler
         void SetScaleOverride(float scale) { m_host.SetScaleOverride(scale); }
         void SetCapture(std::filesystem::path file) { m_captureFile = std::move(file); }
         void SetCreatureFolder(std::filesystem::path folder) { m_screen.SetCreatureFolder(std::move(folder)); }
+        SpriteCreator::Screen& Screen() { return m_screen; }
         const wchar_t* LastError() const { return m_host.LastError(); }
 
     private:

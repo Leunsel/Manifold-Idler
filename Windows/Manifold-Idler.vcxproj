@@ -108,6 +108,7 @@
     <ClCompile Include="..\Source\Core\Stats.cpp" />
     <ClCompile Include="..\Source\Core\Terrarium.cpp" />
     <ClCompile Include="..\Source\UI\TerrariumView.cpp" />
+    <ClCompile Include="..\Source\UI\SceneKit.cpp" />
     <ClCompile Include="..\Source\Core\Text.cpp" />
     <ClCompile Include="..\Source\Core\Vdf.cpp" />
     <ClCompile Include="..\Source\Steam\LibraryScan.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="..\Source\UI\MenuWidgets.h" />
     <ClInclude Include="..\Source\UI\HomeScene.h" />
     <ClInclude Include="..\Source\UI\StageScene.h" />
+    <ClInclude Include="..\Source\UI\SceneKit.h" />
     <ClInclude Include="..\Source\UI\MiniGameView.h" />
     <ClInclude Include="..\Source\UI\ScreenMain.h" />
     <ClInclude Include="..\Source\UI\Theme.h" />

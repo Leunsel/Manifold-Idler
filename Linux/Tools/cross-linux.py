@@ -20,7 +20,7 @@ ROOT = os.path.abspath(os.path.join(HERE, ".."))
 TARGET = "x86_64-linux-gnu.2.31"
 CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "SteamWebNone", "Worker", "WorkerProcessPosix"]
-UI = ["Covers", "Fonts", "IdleAnimation", "MenuWidgets", "MiniGameView", "ScreenMain", "SpriteView", "TerrariumView",
+UI = ["Covers", "Fonts", "IdleAnimation", "MenuWidgets", "MiniGameView", "SceneKit", "ScreenMain", "SpriteView", "TerrariumView",
       "Scenes/HomeAutumn", "Scenes/HomeSpring", "Scenes/HomeSummer", "Scenes/HomeWinter", "Scenes/StageClouds", "Scenes/StageMeadow", "Scenes/StageUnderwater"]
 APP = ["IdlerModel", "CardService"]
 OWN = ["MainSdl", "App/SdlApplication", "App/Gl", "App/WebPanelNone", "App/DesktopLinux", "UI/CoversSdl"]

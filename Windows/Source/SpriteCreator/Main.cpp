@@ -1,4 +1,5 @@
 #include "App/CommandLine.h"
+#include "Core/Text.h"
 #include "SpriteCreator/CreatorApplication.h"
 
 #include <windows.h>
@@ -54,6 +55,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPWSTR c
         folder = Idler::SpriteCreator::FindCreatureFolder(std::filesystem::current_path(ignored));
     }
     app.SetCreatureFolder(folder);
+
+    if (const std::wstring key = Idler::CommandLine::Argument(commandLine, L"--select="); !key.empty())
+        app.Screen().Select(Idler::WideToUtf8(key));
+    if (const std::wstring scene = Idler::CommandLine::Argument(commandLine, L"--scene="); !scene.empty())
+    {
+        for (const Idler::SpriteCreator::Backdrop backdrop : Idler::SpriteCreator::kBackdrops)
+        {
+            if (Idler::WideToUtf8(scene) == Idler::SpriteCreator::BackdropKey(backdrop))
+                app.Screen().SetBackdrop(backdrop);
+        }
+    }
+    if (const std::wstring light = Idler::CommandLine::Argument(commandLine, L"--light="); !light.empty())
+        app.Screen().SetDaylight(light == L"night" ? 0.0f : light == L"dawn" ? 0.55f : light == L"dusk" ? 0.45f : 1.0f);
 
     if (!app.Initialise(instance, showCommand))
     {

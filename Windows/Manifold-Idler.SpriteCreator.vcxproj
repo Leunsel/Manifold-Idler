@@ -86,6 +86,8 @@
     <ClCompile Include="Source\SpriteCreator\CreatorApplication.cpp" />
     <ClCompile Include="Source\App\WindowHost.cpp" />
     <ClCompile Include="..\Source\SpriteCreator\CreatorScreen.cpp" />
+    <ClCompile Include="..\Source\SpriteCreator\CreatureLibrary.cpp" />
+    <ClCompile Include="..\Source\SpriteCreator\ScenePreview.cpp" />
     <ClCompile Include="..\Source\App\Desktop.cpp" />
     <ClCompile Include="..\Source\Core\Creatures.cpp" />
     <ClCompile Include="..\Source\Core\Errors.cpp" />
@@ -95,11 +97,21 @@
     <ClCompile Include="..\Source\UI\Fonts.cpp" />
     <ClCompile Include="..\Source\UI\IdleAnimation.cpp" />
     <ClCompile Include="..\Source\UI\SpriteView.cpp" />
+    <ClCompile Include="..\Source\UI\SceneKit.cpp" />
+    <ClCompile Include="..\Source\UI\Scenes\HomeAutumn.cpp" />
+    <ClCompile Include="..\Source\UI\Scenes\HomeSpring.cpp" />
+    <ClCompile Include="..\Source\UI\Scenes\HomeSummer.cpp" />
+    <ClCompile Include="..\Source\UI\Scenes\HomeWinter.cpp" />
+    <ClCompile Include="..\Source\UI\Scenes\StageClouds.cpp" />
+    <ClCompile Include="..\Source\UI\Scenes\StageMeadow.cpp" />
+    <ClCompile Include="..\Source\UI\Scenes\StageUnderwater.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\SpriteCreator\CreatorApplication.h" />
     <ClInclude Include="Source\App\WindowHost.h" />
     <ClInclude Include="..\Source\SpriteCreator\CreatorScreen.h" />
+    <ClInclude Include="..\Source\SpriteCreator\CreatureLibrary.h" />
+    <ClInclude Include="..\Source\SpriteCreator\ScenePreview.h" />
     <ClInclude Include="..\Source\App\CommandLine.h" />
     <ClInclude Include="..\Source\App\Desktop.h" />
     <ClInclude Include="..\Source\App\WindowCommon.h" />
@@ -117,6 +129,11 @@
     <ClInclude Include="..\Source\UI\SpriteView.h" />
     <ClInclude Include="..\Source\UI\Theme.h" />
     <ClInclude Include="..\Source\UI\UiScale.h" />
+    <ClInclude Include="..\Source\UI\HomeScene.h" />
+    <ClInclude Include="..\Source\UI\SceneKit.h" />
+    <ClInclude Include="..\Source\UI\StageScene.h" />
+    <ClInclude Include="..\Source\Core\Settings.h" />
+    <ClInclude Include="..\Source\Core\Terrarium.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\ImGui\imgui.cpp">
