@@ -267,6 +267,7 @@ namespace Idler::SpriteCreator
             return;
         m_selected = index;
         m_paint.Frame = 0;
+        m_timeline.Step = -1;
     }
 
     CreatureFile* Screen::Selected()
@@ -389,6 +390,8 @@ namespace Idler::SpriteCreator
         }
         if (io.KeyAlt)
             return;
+        if (ImGui::IsKeyPressed(ImGuiKey_Space, false))
+            TogglePlaying(m_timeline);
         const struct
         {
             ImGuiKey Key;
@@ -601,7 +604,9 @@ namespace Idler::SpriteCreator
 
         const float tileHeight = std::round(Px(3.0f)) * static_cast<float>(UI::CreatureSprites::kRows) + Px(14.0f) + ImGui::GetTextLineHeight() + Px(8.0f);
         const float boxWidth = ImGui::GetContentRegionAvail().x;
-        const float boxHeight = std::max(Px(90.0f), std::min(ImGui::GetContentRegionAvail().y - tileHeight * 2.0f - Px(12.0f), boxWidth * 0.62f));
+        const float spacing = ImGui::GetStyle().ItemSpacing.y;
+        const float reserve = tileHeight * 2.0f + spacing * 4.0f + Px(4.0f);
+        const float boxHeight = std::max(Px(90.0f), std::min(ImGui::GetContentRegionAvail().y - reserve, boxWidth * 0.62f));
         const ImVec2 min = ImGui::GetCursorScreenPos();
         DrawScenePreview(min, ImVec2(min.x + boxWidth, min.y + boxHeight), sprite, habit, m_backdrop, m_daylight, seed);
         ImGui::Dummy(ImVec2(boxWidth, boxHeight));
@@ -834,10 +839,14 @@ namespace Idler::SpriteCreator
 
         const float explorer = std::round(Px(270.0f));
         const float side = std::round(Px(330.0f));
-        const float timeline = std::round(Px(130.0f));
+        const float timeline = std::round(Px(200.0f));
         const float upper = std::max(Px(200.0f), height - timeline - gap);
         const float paint = std::max(Px(160.0f), width - explorer - side - gap * 2.0f);
-        const float previewHeight = std::round(upper * 0.6f);
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float tileHeight = std::round(Px(3.0f)) * static_cast<float>(UI::CreatureSprites::kRows) + Px(14.0f) + ImGui::GetTextLineHeight() + Px(8.0f);
+        const float previewBox = (side - Px(28.0f)) * 0.62f;
+        const float previewNeeds = Px(24.0f) + ImGui::GetTextLineHeight() + Px(4.0f) + style.ItemSpacing.y * 6.0f + previewBox + tileHeight * 2.0f + Px(4.0f);
+        const float previewHeight = std::round(std::min(upper * 0.7f, previewNeeds));
         const float middleX = start.x + explorer + gap;
         const float sideX = middleX + paint + gap;
 
@@ -863,8 +872,7 @@ namespace Idler::SpriteCreator
         DrawProperties(side, upper - previewHeight - gap);
 
         ImGui::SetCursorScreenPos(ImVec2(middleX, start.y + upper + gap));
-        BeginCard("##timeline", ICON_FA_FILM, "Timeline", ImVec2(paint + gap + side, timeline));
-        EndCard();
+        DrawTimelineCard(Selected(), m_paint, m_timeline, ImVec2(paint + gap + side, timeline));
 
         DrawUnsavedQuestion();
         ImGui::End();

@@ -42,4 +42,17 @@ namespace Idler::SpriteCreator
     bool StepBack(CreatureFile& file);
     bool StepForward(CreatureFile& file);
     bool SaveCreature(CreatureFile& file, std::string& problem);
+
+    template <typename Edit>
+    bool Change(CreatureFile& file, Edit&& edit)
+    {
+        if (!file.Sprite)
+            return false;
+        Remember(file);
+        const bool changed = edit(*file.Sprite);
+        Forget(file);
+        if (changed)
+            Refresh(file);
+        return changed;
+    }
 }

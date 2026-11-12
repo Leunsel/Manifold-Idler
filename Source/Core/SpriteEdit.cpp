@@ -152,4 +152,129 @@ namespace Idler::SpriteEdit
     {
         return SpriteFile::Frame(static_cast<std::size_t>(SpriteFile::kRows), std::string(static_cast<std::size_t>(SpriteFile::kColumns), '.'));
     }
+
+    bool InsertFrame(SpriteFile::Sprite& sprite, int at, SpriteFile::Frame frame)
+    {
+        const int count = static_cast<int>(sprite.Frames.size());
+        if (count >= SpriteFile::kMaxFrames)
+            return false;
+        at = std::clamp(at, 0, count);
+        sprite.Frames.insert(sprite.Frames.begin() + at, std::move(frame));
+        for (SpriteFile::Step& step : sprite.Steps)
+        {
+            if (step.Frame >= at)
+                ++step.Frame;
+        }
+        if (count > 0 && sprite.Sleep >= at)
+            ++sprite.Sleep;
+        if (sprite.Steps.empty())
+            sprite.Steps.push_back({ 0, 0, 0, false, kStartTicks });
+        return true;
+    }
+
+    bool RemoveFrame(SpriteFile::Sprite& sprite, int at)
+    {
+        const int count = static_cast<int>(sprite.Frames.size());
+        if (count <= 1 || at < 0 || at >= count)
+            return false;
+        sprite.Frames.erase(sprite.Frames.begin() + at);
+        std::erase_if(sprite.Steps, [&](const SpriteFile::Step& step) { return step.Frame == at; });
+        for (SpriteFile::Step& step : sprite.Steps)
+        {
+            if (step.Frame > at)
+                --step.Frame;
+        }
+        if (sprite.Steps.empty())
+            sprite.Steps.push_back({ 0, 0, 0, false, kStartTicks });
+        if (sprite.Sleep == at)
+            sprite.Sleep = std::max(0, at - 1);
+        else if (sprite.Sleep > at)
+            --sprite.Sleep;
+        return true;
+    }
+
+    bool MoveFrame(SpriteFile::Sprite& sprite, int from, int to)
+    {
+        const int count = static_cast<int>(sprite.Frames.size());
+        if (from < 0 || from >= count || to < 0 || to >= count || from == to)
+            return false;
+        std::vector<int> order(static_cast<std::size_t>(count));
+        for (int index = 0; index < count; ++index)
+            order[static_cast<std::size_t>(index)] = index;
+        const int moved = order[static_cast<std::size_t>(from)];
+        order.erase(order.begin() + from);
+        order.insert(order.begin() + to, moved);
+
+        std::vector<int> place(static_cast<std::size_t>(count));
+        std::vector<SpriteFile::Frame> frames;
+        frames.reserve(static_cast<std::size_t>(count));
+        for (int index = 0; index < count; ++index)
+        {
+            const int old = order[static_cast<std::size_t>(index)];
+            place[static_cast<std::size_t>(old)] = index;
+            frames.push_back(std::move(sprite.Frames[static_cast<std::size_t>(old)]));
+        }
+        sprite.Frames = std::move(frames);
+        for (SpriteFile::Step& step : sprite.Steps)
+        {
+            if (step.Frame >= 0 && step.Frame < count)
+                step.Frame = place[static_cast<std::size_t>(step.Frame)];
+        }
+        if (sprite.Sleep >= 0 && sprite.Sleep < count)
+            sprite.Sleep = place[static_cast<std::size_t>(sprite.Sleep)];
+        return true;
+    }
+
+    bool InsertStep(SpriteFile::Sprite& sprite, int at, SpriteFile::Step step)
+    {
+        at = std::clamp(at, 0, static_cast<int>(sprite.Steps.size()));
+        sprite.Steps.insert(sprite.Steps.begin() + at, step);
+        return true;
+    }
+
+    bool RemoveStep(SpriteFile::Sprite& sprite, int at)
+    {
+        const int count = static_cast<int>(sprite.Steps.size());
+        if (count <= 1 || at < 0 || at >= count)
+            return false;
+        sprite.Steps.erase(sprite.Steps.begin() + at);
+        return true;
+    }
+
+    bool MoveStep(SpriteFile::Sprite& sprite, int from, int to)
+    {
+        const int count = static_cast<int>(sprite.Steps.size());
+        if (from < 0 || from >= count || to < 0 || to >= count || from == to)
+            return false;
+        const SpriteFile::Step step = sprite.Steps[static_cast<std::size_t>(from)];
+        sprite.Steps.erase(sprite.Steps.begin() + from);
+        sprite.Steps.insert(sprite.Steps.begin() + to, step);
+        return true;
+    }
+
+    int TotalTicks(const SpriteFile::Sprite& sprite)
+    {
+        int total = 0;
+        for (const SpriteFile::Step& step : sprite.Steps)
+            total += std::max(0, step.Ticks);
+        return total;
+    }
+
+    int StepAtTick(const SpriteFile::Sprite& sprite, long long tick)
+    {
+        const int total = TotalTicks(sprite);
+        if (total <= 0)
+            return sprite.Steps.empty() ? -1 : 0;
+        tick %= total;
+        if (tick < 0)
+            tick += total;
+        for (std::size_t index = 0; index < sprite.Steps.size(); ++index)
+        {
+            const int ticks = std::max(0, sprite.Steps[index].Ticks);
+            if (tick < ticks)
+                return static_cast<int>(index);
+            tick -= ticks;
+        }
+        return static_cast<int>(sprite.Steps.size()) - 1;
+    }
 }

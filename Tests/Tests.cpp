@@ -3410,6 +3410,65 @@ namespace
             CHECK(SpriteFile::IsCell(kind.Cell));
     }
 
+    void TestSpriteTimeline()
+    {
+        using namespace SpriteEdit;
+        const auto marked = [](int column)
+            {
+                SpriteFile::Frame frame = EmptyFrame();
+                SetCell(frame, 0, column, '#');
+                return frame;
+            };
+        const auto steps = [](const SpriteFile::Sprite& sprite)
+            {
+                std::vector<int> frames;
+                for (const SpriteFile::Step& step : sprite.Steps)
+                    frames.push_back(step.Frame);
+                return frames;
+            };
+
+        SpriteFile::Sprite sprite;
+        sprite.Frames = { marked(0), marked(1), marked(2) };
+        sprite.Steps = { { 0, 0, 0, false, 4 }, { 1, 0, 0, false, 4 }, { 2, 0, 0, false, 4 }, { 1, 0, 0, true, 2 } };
+        sprite.Sleep = 2;
+
+        CHECK(TotalTicks(sprite) == 14);
+        CHECK(StepAtTick(sprite, 0) == 0 && StepAtTick(sprite, 3) == 0 && StepAtTick(sprite, 4) == 1 && StepAtTick(sprite, 12) == 3 && StepAtTick(sprite, 14) == 0);
+        CHECK(StepAtTick(sprite, -1) == 3);
+
+        CHECK(InsertFrame(sprite, 1, marked(3)));
+        CHECK(sprite.Frames.size() == 4 && sprite.Frames[1] == marked(3) && sprite.Frames[2] == marked(1));
+        CHECK(steps(sprite) == std::vector<int>({ 0, 2, 3, 2 }) && sprite.Sleep == 3);
+
+        CHECK(RemoveFrame(sprite, 2));
+        CHECK(sprite.Frames.size() == 3 && sprite.Frames[2] == marked(2));
+        CHECK(steps(sprite) == std::vector<int>({ 0, 2 }) && sprite.Sleep == 2);
+
+        CHECK(MoveFrame(sprite, 2, 0));
+        CHECK(sprite.Frames[0] == marked(2) && sprite.Frames[1] == marked(0) && sprite.Frames[2] == marked(3));
+        CHECK(steps(sprite) == std::vector<int>({ 1, 0 }) && sprite.Sleep == 0);
+        CHECK(!MoveFrame(sprite, 0, 3) && !MoveFrame(sprite, 1, 1));
+
+        CHECK(RemoveFrame(sprite, 0));
+        CHECK(steps(sprite) == std::vector<int>({ 0 }) && sprite.Sleep == 0);
+        CHECK(RemoveFrame(sprite, 0));
+        CHECK(sprite.Frames.size() == 1 && sprite.Frames[0] == marked(3));
+        CHECK(sprite.Steps.size() == 1 && sprite.Steps[0].Frame == 0 && sprite.Steps[0].Ticks == kStartTicks);
+        CHECK(!RemoveFrame(sprite, 0));
+
+        while (sprite.Frames.size() < static_cast<std::size_t>(SpriteFile::kMaxFrames))
+            CHECK(InsertFrame(sprite, static_cast<int>(sprite.Frames.size()), EmptyFrame()));
+        CHECK(!InsertFrame(sprite, 0, EmptyFrame()));
+
+        CHECK(InsertStep(sprite, 1, { 3, 1, -1, true, 5 }));
+        CHECK(InsertStep(sprite, 99, { 4, 0, 0, false, 1 }));
+        CHECK(steps(sprite) == std::vector<int>({ 0, 3, 4 }));
+        CHECK(MoveStep(sprite, 2, 0) && steps(sprite) == std::vector<int>({ 4, 0, 3 }));
+        CHECK(RemoveStep(sprite, 1) && steps(sprite) == std::vector<int>({ 4, 3 }));
+        CHECK(RemoveStep(sprite, 0) && !RemoveStep(sprite, 0) && sprite.Steps.size() == 1);
+        CHECK(sprite.Steps[0].Lift == 1 && sprite.Steps[0].Shift == -1 && sprite.Steps[0].Blink && sprite.Steps[0].Ticks == 5);
+    }
+
     std::filesystem::path FindCreatureFolder()
     {
         const std::filesystem::path reference = FindErrorReference();
@@ -4359,6 +4418,7 @@ int main()
         { "Json", TestJson },
         { "SpriteFile", TestSpriteFile },
         { "SpriteEdit", TestSpriteEdit },
+        { "SpriteTimeline", TestSpriteTimeline },
         { "CreatureFiles", TestCreatureFiles },
         { "FileLock", TestFileLock },
     };

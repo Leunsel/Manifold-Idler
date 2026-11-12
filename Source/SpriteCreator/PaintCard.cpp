@@ -206,6 +206,7 @@ namespace Idler::SpriteCreator
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::BeginChild("##palette", size, ImGuiChildFlags_None, ImGuiWindowFlags_None);
             ImGui::PopStyleColor();
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, std::round(Px(2.0f))));
             const float rowHeight = std::round(Px(22.0f));
             const float side = std::round(Px(14.0f));
             ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -245,6 +246,7 @@ namespace Idler::SpriteCreator
                     drawList->AddText(ImVec2(max.x - tagsWidth - Px(5.0f), textY), Color(ManifoldTheme::Accent), tags.c_str());
                 ImGui::PopID();
             }
+            ImGui::PopStyleVar();
             ImGui::EndChild();
         }
 

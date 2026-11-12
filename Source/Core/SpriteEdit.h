@@ -22,8 +22,8 @@ namespace Idler::SpriteEdit
         { 'l', "Second light" },
         { 'c', "Third" },
         { 'C', "Third shade" },
-        { '*', "Eye on the body" },
-        { 'e', "Eye on the second" },
+        { '*', "Eye on body" },
+        { 'e', "Eye on second" },
         { 'r', "Red" },
         { 'y', "Yellow" },
         { 'w', "White" },
@@ -43,4 +43,15 @@ namespace Idler::SpriteEdit
     SpriteFile::Frame Shifted(const SpriteFile::Frame& frame, int rows, int columns);
     void FlipHorizontal(SpriteFile::Frame& frame);
     SpriteFile::Frame EmptyFrame();
+
+    inline constexpr int kStartTicks = 8;
+
+    bool InsertFrame(SpriteFile::Sprite& sprite, int at, SpriteFile::Frame frame);
+    bool RemoveFrame(SpriteFile::Sprite& sprite, int at);
+    bool MoveFrame(SpriteFile::Sprite& sprite, int from, int to);
+    bool InsertStep(SpriteFile::Sprite& sprite, int at, SpriteFile::Step step);
+    bool RemoveStep(SpriteFile::Sprite& sprite, int at);
+    bool MoveStep(SpriteFile::Sprite& sprite, int from, int to);
+    int StepAtTick(const SpriteFile::Sprite& sprite, long long tick);
+    int TotalTicks(const SpriteFile::Sprite& sprite);
 }

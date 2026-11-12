@@ -89,6 +89,7 @@
     <ClCompile Include="..\Source\SpriteCreator\CreatureLibrary.cpp" />
     <ClCompile Include="..\Source\SpriteCreator\PaintCard.cpp" />
     <ClCompile Include="..\Source\SpriteCreator\ScenePreview.cpp" />
+    <ClCompile Include="..\Source\SpriteCreator\TimelineCard.cpp" />
     <ClCompile Include="..\Source\SpriteCreator\Widgets.cpp" />
     <ClCompile Include="..\Source\Core\SpriteEdit.cpp" />
     <ClCompile Include="..\Source\App\Desktop.cpp" />
@@ -116,6 +117,7 @@
     <ClInclude Include="..\Source\SpriteCreator\CreatureLibrary.h" />
     <ClInclude Include="..\Source\SpriteCreator\PaintCard.h" />
     <ClInclude Include="..\Source\SpriteCreator\ScenePreview.h" />
+    <ClInclude Include="..\Source\SpriteCreator\TimelineCard.h" />
     <ClInclude Include="..\Source\SpriteCreator\Widgets.h" />
     <ClInclude Include="..\Source\Core\SpriteEdit.h" />
     <ClInclude Include="..\Source\App\CommandLine.h" />

@@ -4,6 +4,7 @@
 #include "SpriteCreator/CreatureLibrary.h"
 #include "SpriteCreator/PaintCard.h"
 #include "SpriteCreator/ScenePreview.h"
+#include "SpriteCreator/TimelineCard.h"
 
 #include <array>
 #include <filesystem>
@@ -30,6 +31,7 @@ namespace Idler::SpriteCreator
         void Select(std::string_view key);
         void SetBackdrop(Backdrop backdrop) { m_backdrop = backdrop; }
         void SetDaylight(float daylight) { m_daylight = daylight; }
+        void SelectStep(int step) { m_timeline.Step = step; }
 
         void Draw(WindowControls& window);
         void RequestClose();
@@ -69,6 +71,7 @@ namespace Idler::SpriteCreator
         float m_daylight = 1.0f;
         std::array<char, 64> m_search{};
         PaintState m_paint;
+        TimelineState m_timeline;
         Pending m_pending = Pending::None;
         bool m_quit = false;
         std::string m_message;

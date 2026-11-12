@@ -102,6 +102,9 @@
     <ClCompile Include="..\Source\SpriteCreator\ScenePreview.cpp">
       <Filter>Source\SpriteCreator</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\SpriteCreator\TimelineCard.cpp">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\SpriteCreator\Widgets.cpp">
       <Filter>Source\SpriteCreator</Filter>
     </ClCompile>
@@ -216,6 +219,9 @@
       <Filter>Source\SpriteCreator</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\SpriteCreator\ScenePreview.h">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\SpriteCreator\TimelineCard.h">
       <Filter>Source\SpriteCreator</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\SpriteCreator\Widgets.h">
