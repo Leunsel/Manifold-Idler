@@ -44,13 +44,19 @@ namespace Idler::Cli
     {
         std::string Token;
         std::vector<std::string> Names;
+        std::function<std::filesystem::path(std::uint32_t)> Cover;
     };
 
     using CommandRunner = std::function<CommandResult(const std::vector<std::string>&)>;
 
     std::string WebPage(std::string_view nonce);
-    std::string_view WebFontFaces();
+    std::string WebFontFaces();
+    std::string WebLogo();
+    std::string WebPageHtml();
+    std::string WebPageStyle();
+    std::string WebPageScript();
     std::string ResultJson(const CommandResult& result);
     HttpResponse PlainResponse(int status, std::string_view text);
+    HttpResponse PictureResponse(const std::filesystem::path& file);
     HttpResponse AnswerWeb(const HttpRequest& request, const WebConfig& config, const CommandRunner& run);
 }

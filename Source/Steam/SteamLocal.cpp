@@ -272,4 +272,37 @@ namespace Idler::Steam
             return {};
         return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     }
+
+    std::filesystem::path LibraryPicture(const std::filesystem::path& root, std::uint32_t appId)
+    {
+        const std::filesystem::path folder = root / L"appcache" / L"librarycache" / std::to_wstring(appId);
+        std::error_code error;
+        if (root.empty() || !std::filesystem::is_directory(folder, error))
+            return {};
+
+        std::vector<std::filesystem::path> folders{ folder };
+        for (const auto& item : std::filesystem::directory_iterator(folder, error))
+        {
+            if (item.is_directory(error))
+                folders.push_back(item.path());
+        }
+        for (const wchar_t* name : { L"header.jpg", L"library_header.jpg", L"library_hero.jpg", L"library_600x900.jpg" })
+        {
+            for (const auto& place : folders)
+            {
+                const auto file = place / name;
+                if (std::filesystem::is_regular_file(file, error))
+                    return file;
+            }
+        }
+        for (const auto& place : folders)
+        {
+            for (const auto& item : std::filesystem::directory_iterator(place, error))
+            {
+                if (item.path().filename().wstring().starts_with(L"header") && item.path().extension() == L".jpg")
+                    return item.path();
+            }
+        }
+        return {};
+    }
 }

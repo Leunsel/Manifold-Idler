@@ -1,0 +1,1041 @@
+"use strict";
+(() => {
+const token = new URLSearchParams(location.search).get("token") || "";
+const $ = (id) => document.getElementById(id);
+const pollMilliseconds = 2000;
+const retryMilliseconds = 5000;
+const statsMilliseconds = 30000;
+const libraryStep = 120;
+const svgSpace = "http://www.w3.org/2000/svg";
+
+class TokenError extends Error {}
+
+let timer = 0;
+let refreshing = false;
+let again = false;
+let failing = false;
+let locked = false;
+let active = false;
+let page = "idling";
+let statusRows = [];
+let editing = null;
+let queueEntries = [];
+let listSignature = "";
+let listRows = [];
+let toastTimer = 0;
+let library = [];
+let libraryShown = 0;
+let libraryNumber = 0;
+let librarySearchTimer = 0;
+let libraryLoaded = "";
+let selected = "";
+let detailNumber = 0;
+let statsTab = "overview";
+let statsAt = 0;
+let historyDay = "";
+let logRows = [];
+let settingsRows = [];
+const queueItems = new Map();
+
+const icons = {
+  idling: ["X......", "XXX....", "XXXXX..", "XXXXXXX", "XXXXX..", "XXX....", "X......"],
+  library: ["XXX.XXX", "XXX.XXX", "XXX.XXX", ".......", "XXX.XXX", "XXX.XXX", "XXX.XXX"],
+  statistics: ["......X", "......X", "...X..X", "...X..X", "X..X..X", "X..X..X", "XXXXXXX"],
+  log: ["X......", ".X.....", "..X....", ".X.....", "X......", ".......", "...XXXX"],
+  settings: ["...X...", ".X.X.X.", "..XXX..", "XXX.XXX", "..XXX..", ".X.X.X.", "...X..."],
+  up: ["...X...", "..XXX..", ".XXXXX.", "XXXXXXX", "...X...", "...X...", "...X..."],
+  down: ["...X...", "...X...", "...X...", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."],
+  close: ["X.....X", ".X...X.", "..X.X..", "...X...", "..X.X..", ".X...X.", "X.....X"]
+};
+
+const screens = {
+  synthwave: { name: "Synthwave", colors: ["#22e6ff", "#ff3fd2", "#ffe95c", "#62ffb0"] },
+  classic: { name: "Classic", colors: ["#f2f2f2", "#ffd84d", "#6fd6ff", "#ff7aa8"] },
+  phosphor: { name: "Phosphor", colors: ["#4dff88", "#d4ff5c", "#2fe0c4", "#b6ffd0"] },
+  amber: { name: "Amber", colors: ["#ffb31a", "#fff0c2", "#ff6a3d", "#ffd36b"] },
+  idler: { name: "Idler", colors: ["#2edb9e", "#e6e8ed", "#80858f", "#f2b352"] }
+};
+const screenOrder = Object.keys(screens);
+
+const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const ranks = ["1ST", "2ND", "3RD"];
+
+function el(tag, props, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props || {})) {
+    if (value === undefined || value === null || value === false) continue;
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else node.setAttribute(key, value === true ? "" : value);
+  }
+  for (const child of children) if (child !== null && child !== undefined) node.append(child);
+  return node;
+}
+
+function icon(name) {
+  const svg = document.createElementNS(svgSpace, "svg");
+  svg.setAttribute("viewBox", "0 0 7 7");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("aria-hidden", "true");
+  let shape = "";
+  icons[name].forEach((row, y) => {
+    for (let x = 0; x < row.length; ++x) if (row[x] === "X") shape += "M" + x + " " + y + "h1v1h-1z";
+  });
+  const path = document.createElementNS(svgSpace, "path");
+  path.setAttribute("d", shape);
+  svg.append(path);
+  return svg;
+}
+
+function setText(node, text) {
+  if (node.textContent !== text) node.textContent = text;
+}
+
+function find(rows, key) {
+  return (rows.find((row) => row.key === key) || {}).value || "";
+}
+
+function duration(seconds) {
+  const whole = Math.max(0, Math.floor(Number(seconds) || 0));
+  if (whole < 60) return whole + " s";
+  if (whole < 3600) return Math.floor(whole / 60) + " min";
+  return Math.floor(whole / 3600) + " h " + Math.floor(whole % 3600 / 60) + " min";
+}
+
+function shortDuration(seconds) {
+  const value = Number(seconds) || 0;
+  return value < 100 * 3600 ? duration(value) : Math.floor(value / 3600) + " h";
+}
+
+function roughDuration(seconds) {
+  const value = Number(seconds) || 0;
+  return value < 3600 ? duration(value) : Math.round(value / 3600) + " h";
+}
+
+function plural(count, one, many) {
+  return count + " " + (Number(count) === 1 ? one : many);
+}
+
+function coverUrl(app) {
+  return "/cover/" + encodeURIComponent(app) + "?token=" + encodeURIComponent(token);
+}
+
+function cover(app, className) {
+  const picture = el("img", { class: className, src: coverUrl(app), alt: "", loading: "lazy", decoding: "async", width: "460", height: "215" });
+  picture.addEventListener("error", () => picture.replaceWith(el("div", { class: className, "aria-hidden": "true" })), { once: true });
+  return picture;
+}
+
+async function call(words) {
+  let response;
+  try {
+    response = await fetch("/api", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Idler-Token": token },
+      body: JSON.stringify(words),
+      cache: "no-store",
+      credentials: "omit",
+      redirect: "error"
+    });
+  } catch (error) {
+    throw new Error({{MI-7015}});
+  }
+  if (response.status === 401) throw new TokenError();
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error({{MI-7016}}.replace("{}", String(response.status)));
+  }
+  const columns = Array.isArray(data.columns) ? data.columns : [];
+  const rows = Array.isArray(data.rows) ? data.rows.map((row) => Object.fromEntries(columns.map((name, index) => [name, row[index] ?? ""]))) : [];
+  return { ok: data.ok === true, text: String(data.text || "").trim(), rows };
+}
+
+function showBanner(text) {
+  const banner = $("banner");
+  banner.textContent = text;
+  banner.hidden = false;
+}
+
+function hideBanner() {
+  $("banner").hidden = true;
+}
+
+function toast(text, ok) {
+  const box = $("toast");
+  box.textContent = text;
+  box.classList.toggle("failed", !ok);
+  box.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => box.classList.remove("show"), ok ? 3500 : 6000);
+}
+
+function lockPage() {
+  locked = true;
+  clearTimeout(timer);
+  for (const control of document.querySelectorAll("button:not(#screen), input, select")) control.disabled = true;
+  setPill("No token", "bad");
+  showBanner({{MI-7010}});
+}
+
+function trouble(error) {
+  if (error instanceof TokenError) {
+    lockPage();
+    return;
+  }
+  failing = true;
+  setPill("Not answering", "bad");
+  $("toggle").disabled = true;
+  showBanner(error.message);
+}
+
+async function act(words, quiet) {
+  if (locked) return { ok: false, text: "", rows: [] };
+  try {
+    const result = await call(words);
+    if (!quiet || !result.ok) toast(result.text || (result.ok ? "Done." : "That did not work."), result.ok);
+    return result;
+  } catch (error) {
+    trouble(error);
+    return { ok: false, text: "", rows: [] };
+  }
+}
+
+function tone(state) {
+  const text = state.toLowerCase();
+  if (text.startsWith("idling")) return "good";
+  if (text.startsWith("failed") || text.startsWith("waiting: steam")) return "bad";
+  if (text.startsWith("stopped") || text.startsWith("finished")) return "muted";
+  return "warn";
+}
+
+function setPill(text, kind) {
+  const pill = $("state");
+  pill.textContent = text;
+  pill.title = text;
+  pill.className = "pill " + kind;
+}
+
+function fact(label, value) {
+  return el("div", { class: "fact" }, el("dt", { text: label }), el("dd", { text: value }));
+}
+
+function confirmButton(label, words, done, className) {
+  const button = el("button", { type: "button", class: className || "small", text: label });
+  let armed = 0;
+  const disarm = () => {
+    clearTimeout(armed);
+    armed = 0;
+    button.textContent = label;
+    button.classList.remove("armed");
+  };
+  button.addEventListener("click", async () => {
+    if (!armed) {
+      button.textContent = "Sure?";
+      button.classList.add("armed");
+      armed = setTimeout(disarm, 3000);
+      return;
+    }
+    disarm();
+    button.disabled = true;
+    const result = await act(words, false);
+    button.disabled = false;
+    if (done) done(result);
+  });
+  button.addEventListener("blur", () => { if (armed) disarm(); });
+  return button;
+}
+
+function armStatic(button, words, done) {
+  const label = button.textContent;
+  let armed = 0;
+  const disarm = () => {
+    clearTimeout(armed);
+    armed = 0;
+    button.textContent = label;
+    button.classList.remove("armed");
+  };
+  button.addEventListener("click", async () => {
+    if (!armed) {
+      button.textContent = "Sure?";
+      button.classList.add("armed");
+      armed = setTimeout(disarm, 3000);
+      return;
+    }
+    disarm();
+    await act(words(), false);
+    if (done) done();
+  });
+  button.addEventListener("blur", () => { if (armed) disarm(); });
+}
+
+function ask(options) {
+  const dialog = $("ask");
+  const field = $("ask-input");
+  const note = $("ask-note");
+  $("ask-title").textContent = options.title;
+  note.textContent = options.note || "";
+  note.hidden = !options.note;
+  field.hidden = options.input === false;
+  field.value = options.value || "";
+  $("ask-ok").textContent = options.ok || "OK";
+  dialog.showModal();
+  if (!field.hidden) {
+    field.focus();
+    field.select();
+  }
+  return new Promise((resolve) => {
+    const form = $("ask-form");
+    const cancel = $("ask-cancel");
+    const finish = (answer) => {
+      form.removeEventListener("submit", submit);
+      cancel.removeEventListener("click", stop);
+      dialog.removeEventListener("cancel", stop);
+      dialog.close();
+      resolve(answer);
+    };
+    const submit = (event) => {
+      event.preventDefault();
+      finish(field.hidden ? true : field.value.trim());
+    };
+    const stop = (event) => {
+      if (event) event.preventDefault();
+      finish(null);
+    };
+    form.addEventListener("submit", submit);
+    cancel.addEventListener("click", stop);
+    dialog.addEventListener("cancel", stop);
+  });
+}
+
+function goalPicker(kindValue, hoursValue, withUsual) {
+  const kind = el("select", { "aria-label": "Goal" },
+    withUsual ? el("option", { value: "", text: "The usual goal" }) : null,
+    el("option", { value: "none", text: "No limit" }),
+    el("option", { value: "for", text: "For hours" }),
+    el("option", { value: "until", text: "Until hours played" }));
+  kind.value = kindValue;
+  const hours = el("input", { type: "number", min: "0.1", step: "any", inputmode: "decimal", value: hoursValue || "3", "aria-label": "Hours" });
+  const fit = () => { hours.hidden = kind.value === "" || kind.value === "none"; };
+  kind.addEventListener("change", fit);
+  fit();
+  const words = () => kind.value === "" ? [] : kind.value === "none" ? ["none"] : [kind.value, hours.value];
+  return { kind, hours, words };
+}
+
+function barChart(values, labels, highlight) {
+  const top = Math.max(0, ...values);
+  const chart = el("div", { class: "chart" });
+  values.forEach((value, index) => {
+    const fill = el("span");
+    fill.style.setProperty("--v", top > 0 ? String(value / top) : "0");
+    chart.append(el("div", { class: "bar-col" + (value > 0 ? "" : " empty") + (index === highlight ? " today" : ""), title: labels[index] + ": " + duration(value) }, fill));
+  });
+  return chart;
+}
+
+function chartBlock(target, values, labels, highlight, first, last) {
+  const top = Math.max(0, ...values);
+  if (top <= 0) {
+    target.replaceWith(el("div", { id: target.id }, el("p", { class: "quiet", text: "Nothing idled yet." })));
+    return;
+  }
+  target.replaceWith(el("div", { id: target.id },
+    el("span", { class: "chart-top", text: top > 0 ? "Top " + shortDuration(top) : "" }),
+    barChart(values, labels, highlight),
+    el("div", { class: "axis" }, el("span", { text: first }), el("span", { text: last }))));
+}
+
+function drawStatus(rows) {
+  statusRows = rows;
+  const facts = rows.filter((row) => row.label && row.key !== "slots");
+  $("status").replaceChildren(...facts.map((row) => fact(row.label, row.value)));
+  const state = find(rows, "state");
+  setPill(state || "Unknown", tone(state));
+  active = find(rows, "active") === "yes";
+  const toggle = $("toggle");
+  toggle.textContent = active ? "Stop" : "Start";
+  toggle.classList.toggle("primary", !active);
+  toggle.disabled = false;
+  const slots = $("slots");
+  if (document.activeElement !== slots) slots.value = find(rows, "slots");
+  $("undo").hidden = find(rows, "undo") !== "yes";
+  $("account").replaceChildren(el("small", { text: "Steam" }), document.createTextNode(find(rows, "steam") || "unknown"));
+  if (page === "settings") drawSteamFacts();
+}
+
+function goalCell(item) {
+  const entry = item.entry;
+  if (editing !== entry.app) {
+    return el("button", { type: "button", class: "link", text: entry.goal, title: "Change the goal", "aria-label": "Goal of " + entry.name + ": " + entry.goal + ". Change it", onclick: () => { editing = entry.app; drawQueue(); } });
+  }
+  const picker = goalPicker(entry.kind === "for" || entry.kind === "until" ? entry.kind : "none", entry.hours, false);
+  const close = () => { editing = null; drawQueue(); };
+  const form = el("form", { class: "goal-edit" }, picker.kind, picker.hours,
+    el("button", { type: "submit", class: "small primary", text: "Save" }),
+    el("button", { type: "button", class: "small", text: "Cancel", onclick: close }));
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const result = await act(["goal", entry.app, ...picker.words()], true);
+    if (result.ok) {
+      close();
+      refresh();
+    }
+  });
+  form.addEventListener("keydown", (event) => { if (event.key === "Escape") close(); });
+  setTimeout(() => picker.kind.focus(), 0);
+  return form;
+}
+
+function iconButton(name, label, onclick) {
+  return el("button", { type: "button", class: "small icon-button", title: label, "aria-label": label, onclick }, icon(name));
+}
+
+function entryActions(item, index, count, flags) {
+  const app = item.entry.app;
+  const after = () => refresh();
+  const up = iconButton("up", "Move up", async () => { await act(["move", app, String(index)], true); after(); });
+  const down = iconButton("down", "Move down", async () => { await act(["move", app, String(index + 2)], true); after(); });
+  up.disabled = index === 0;
+  down.disabled = index === count - 1;
+  const buttons = [up, down];
+  if (flags.includes("failed")) buttons.push(el("button", { type: "button", class: "small", text: "Try again", onclick: async () => { await act(["retry", app], false); after(); } }));
+  if (flags.includes("held")) buttons.push(confirmButton("Past refund", ["refund", app], after));
+  if (!flags.includes("running") && !flags.includes("failed") && !flags.includes("held")) buttons.push(el("button", { type: "button", class: "small", text: "Idle now", onclick: async () => { await act(["now", app], false); after(); } }));
+  buttons.push(confirmButton("Remove", ["remove", app], () => { markQueued(app, false); after(); }));
+  return buttons;
+}
+
+function makeEntry(entry) {
+  const item = { entry, editing: false, actionSignature: "" };
+  item.name = el("span", { class: "name" });
+  item.app = el("span", { class: "app" });
+  item.state = el("span", { class: "state" });
+  item.goal = el("span", { class: "goal" });
+  item.idled = el("span", { class: "meta" });
+  item.left = el("span", { class: "meta" });
+  item.fill = el("span");
+  item.meter = el("div", { class: "meter", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100" }, item.fill);
+  item.actions = el("div", { class: "entry-actions" });
+  item.li = el("li", { class: "entry" }, cover(entry.app, "thumb"),
+    el("div", { class: "entry-main" },
+      el("div", { class: "entry-title" }, item.name, item.app),
+      el("div", { class: "entry-line" }, item.state, item.goal, item.idled, item.left),
+      item.meter),
+    item.actions);
+  return item;
+}
+
+function fillEntry(item, entry, index, count) {
+  const goalChanged = item.entry.goal !== entry.goal || item.entry.kind !== entry.kind || item.entry.hours !== entry.hours;
+  const editingNow = editing === entry.app;
+  const flags = entry.flags.split(" ").filter(Boolean);
+  item.entry = entry;
+  setText(item.name, entry.name);
+  setText(item.app, entry.app);
+  setText(item.state, entry.state);
+  item.state.className = "state " + tone(entry.state);
+  setText(item.idled, "Idled " + entry.idled);
+  setText(item.left, entry.left ? entry.left + " left" : "");
+  item.left.hidden = !entry.left;
+  item.meter.hidden = entry.progress === "";
+  if (entry.progress !== "") {
+    const share = Math.max(0, Math.min(1, Number(entry.progress) || 0));
+    item.fill.style.setProperty("--p", String(share));
+    item.meter.setAttribute("aria-valuenow", String(Math.round(share * 100)));
+    item.meter.setAttribute("aria-label", "Goal of " + entry.name + ": " + Math.round(share * 100) + " %");
+  }
+  item.li.className = "entry" + flags.map((flag) => " " + flag).join("");
+  if (!item.goal.firstChild || item.editing !== editingNow || (!editingNow && goalChanged)) {
+    item.goal.replaceChildren(goalCell(item));
+    item.editing = editingNow;
+  }
+  const signature = index + "|" + count + "|" + entry.flags;
+  if (item.actionSignature !== signature) {
+    item.actionSignature = signature;
+    item.actions.replaceChildren(...entryActions(item, index, count, flags));
+  }
+}
+
+function drawQueue() {
+  const list = $("queue");
+  const seen = new Set();
+  queueEntries.forEach((entry, index) => {
+    seen.add(entry.app);
+    let item = queueItems.get(entry.app);
+    if (!item) {
+      item = makeEntry(entry);
+      queueItems.set(entry.app, item);
+    }
+    fillEntry(item, entry, index, queueEntries.length);
+    if (list.children[index] !== item.li) list.insertBefore(item.li, list.children[index] || null);
+  });
+  for (const [app, item] of queueItems) {
+    if (seen.has(app)) continue;
+    item.li.remove();
+    queueItems.delete(app);
+    if (editing === app) editing = null;
+  }
+  list.hidden = queueEntries.length === 0;
+  $("queue-empty").hidden = queueEntries.length !== 0;
+}
+
+function drawLists(rows) {
+  listRows = rows;
+  const select = $("lists");
+  const signature = JSON.stringify(rows);
+  if (signature === listSignature || document.activeElement === select) return;
+  listSignature = signature;
+  select.replaceChildren(...rows.map((row) => {
+    const option = el("option", { value: row.name, text: row.name + " (" + row.games + ")" });
+    option.selected = row.active === "yes";
+    return option;
+  }));
+  select.disabled = rows.length < 2;
+  $("list-delete").disabled = rows.length < 2;
+}
+
+function currentList() {
+  return (listRows.find((row) => row.active === "yes") || {}).name || "";
+}
+
+async function loadQueue() {
+  const [queue, lists] = await Promise.all([call(["queue"]), call(["lists"])]);
+  queueEntries = queue.rows;
+  drawQueue();
+  drawLists(lists.rows);
+}
+
+function libraryWords() {
+  return ["library", $("lib-filter").value, $("lib-sort").value, $("lib-rating").value, $("lib-search").value.trim()];
+}
+
+function tile(game) {
+  const button = el("button", { type: "button", class: "tile", "aria-pressed": String(game.app === selected), "data-app": game.app },
+    cover(game.app, "tile-art"),
+    el("span", { class: "tile-name", text: game.name }),
+    el("span", { class: "tile-meta" }, el("span", { text: game.playtime }), game.queued === "yes" ? el("span", { class: "tag", text: "In queue" }) : null));
+  button.addEventListener("click", () => selectGame(game.app));
+  return button;
+}
+
+function watchMore() {
+  moreWatcher.unobserve($("lib-more"));
+  moreWatcher.observe($("lib-more"));
+}
+
+function showMoreGames() {
+  const next = library.slice(libraryShown, libraryShown + libraryStep);
+  $("lib-grid").append(...next.map(tile));
+  libraryShown += next.length;
+  if (libraryShown < library.length) watchMore();
+}
+
+const moreWatcher = new IntersectionObserver((entries) => {
+  if (entries.some((entry) => entry.isIntersecting) && page === "library" && libraryShown < library.length) showMoreGames();
+}, { rootMargin: "800px" });
+
+async function loadLibrary(force) {
+  clearTimeout(librarySearchTimer);
+  const words = libraryWords();
+  const key = JSON.stringify(words);
+  if (!force && key === libraryLoaded) return;
+  const number = ++libraryNumber;
+  const result = await call(words);
+  if (number !== libraryNumber) return;
+  const grid = $("lib-grid");
+  if (!result.ok) {
+    library = [];
+    libraryLoaded = "";
+    grid.replaceChildren();
+    $("lib-count").textContent = result.text;
+    librarySearchTimer = setTimeout(() => { if (page === "library") loadLibrary(true).catch(trouble); }, retryMilliseconds);
+    return;
+  }
+  libraryLoaded = key;
+  library = result.rows;
+  libraryShown = 0;
+  grid.replaceChildren();
+  $("lib-count").textContent = plural(library.length, "game", "games");
+  showMoreGames();
+}
+
+function markQueued(app, queued) {
+  const game = library.find((row) => row.app === app);
+  if (!game) return;
+  game.queued = queued ? "yes" : "no";
+  const old = $("lib-grid").querySelector('.tile[data-app="' + CSS.escape(app) + '"]');
+  if (old) old.replaceWith(tile(game));
+}
+
+async function selectGame(app) {
+  selected = app;
+  for (const node of $("lib-grid").querySelectorAll(".tile")) node.setAttribute("aria-pressed", String(node.dataset.app === app));
+  const panel = $("detail");
+  panel.classList.remove("closed");
+  const number = ++detailNumber;
+  let result;
+  try {
+    result = await call(["game", app]);
+  } catch (error) {
+    trouble(error);
+    return;
+  }
+  if (number !== detailNumber) return;
+  if (!result.ok) {
+    panel.replaceChildren(el("p", { class: "quiet", text: result.text }));
+    return;
+  }
+  drawDetail(app, result.rows);
+}
+
+function drawDetail(app, rows) {
+  const panel = $("detail");
+  const queued = find(rows, "queued") === "yes";
+  const facts = rows.filter((row) => row.label && row.key !== "name" && row.key !== "day");
+  const days = rows.filter((row) => row.key === "day");
+  const picker = goalPicker("", "3", true);
+  const add = el("button", { type: "button", class: "primary", text: queued ? "In the queue" : "Add to the queue" });
+  add.disabled = queued;
+  add.addEventListener("click", async () => {
+    add.disabled = true;
+    const result = await act(["add", ...picker.words(), "--", app], false);
+    if (result.ok) markQueued(app, true);
+    refresh();
+    selectGame(app);
+  });
+  const now = el("button", { type: "button", text: "Idle now", onclick: async () => {
+    const result = await act(["now", app], false);
+    if (result.ok) markQueued(app, true);
+    refresh();
+    selectGame(app);
+  } });
+  const remove = queued ? confirmButton("Remove from the queue", ["remove", app], () => { markQueued(app, false); refresh(); selectGame(app); }, "wide") : null;
+  const values = days.map((row) => Number(row.value) || 0);
+  const chart = el("div", { id: "detail-chart" });
+  panel.replaceChildren(
+    iconButton("close", "Close", () => panel.classList.add("closed")),
+    cover(app, "detail-art"),
+    el("h3", { text: find(rows, "name") }),
+    el("dl", { class: "facts" }, ...facts.map((row) => fact(row.label, row.value))),
+    el("h2", { text: "Idled, last 30 days" }),
+    chart,
+    el("div", { class: "detail-actions" }, queued ? null : el("div", { class: "goal-edit" }, picker.kind, picker.hours), add, now, remove));
+  panel.firstChild.classList.add("detail-close");
+  chartBlock(chart, values, days.map((row) => row.label), values.length - 1, days.length ? days[0].label.slice(5) : "", "Today");
+}
+
+function series(rows, name) {
+  return rows.filter((row) => row.series === name);
+}
+
+function statTile(label, value, note) {
+  return el("div", { class: "tile-stat" }, el("small", { text: label }), el("strong", { text: value, title: value }), el("span", { text: note }));
+}
+
+function drawOverview(rows) {
+  const tiles = series(rows, "tile");
+  const number = (key) => Number(find(tiles, key)) || 0;
+  const extra = (list, key) => (list.find((row) => row.key === key) || {}).extra || "";
+  const records = series(rows, "record");
+  const record = (key) => Number(find(records, key)) || 0;
+  const week = number("week");
+  const before = number("weekbefore");
+  const trend = before > 0 ? (week >= before ? "+" : "") + Math.round((week / before - 1) * 100) + " %" : week > 0 ? "Nothing before" : "";
+  const first = extra(tiles, "total");
+  $("tiles").replaceChildren(
+    statTile("Today", shortDuration(number("today")), "Yesterday " + roughDuration(number("yesterday"))),
+    statTile("Last 7 days", shortDuration(week), trend),
+    statTile("All time", shortDuration(number("total")), first ? "Since " + first : "Nothing yet"),
+    statTile("Games", String(number("games")), "On " + plural(number("days"), "day", "days")),
+    statTile("Sessions", String(number("sessions")), record("longest") > 0 ? "Longest " + roughDuration(record("longest")) : "None yet"),
+    statTile("Days in a row", String(number("streak")), "Best " + number("beststreak")));
+
+  const days = series(rows, "day");
+  const month = days.slice(-30);
+  chartBlock($("chart-days"), month.map((row) => Number(row.value) || 0), month.map((row) => row.key), month.length - 1, month.length ? month[0].key.slice(5) : "", "Today");
+
+  const podium = series(rows, "top");
+  $("podium").replaceChildren(...podium.map((row, index) => el("li", {},
+    el("span", { class: "rank", text: ranks[index] }),
+    el("span", {}, el("span", { class: "name", text: row.extra }), el("br"), el("span", { class: "meta", text: shortDuration(row.value) })))));
+  if (!podium.length) $("podium").append(el("li", {}, el("span", { class: "quiet", text: "Nothing idled yet." })));
+
+  drawCalendar(days);
+
+  const recordList = $("records");
+  if (!records.length) {
+    recordList.replaceChildren(el("p", { class: "quiet", text: "Nothing idled yet." }));
+  } else {
+    recordList.replaceChildren(
+      fact("Best day", shortDuration(record("bestday")) + ", " + extra(records, "bestday")),
+      fact("Most games", record("mostgames") + " on " + extra(records, "mostgames")),
+      fact("Most in a row", plural(number("beststreak"), "day", "days")),
+      fact("Average day", shortDuration(record("average"))),
+      record("longest") > 0 ? fact("Longest run", shortDuration(record("longest")) + ", " + extra(records, "longest")) : "",
+      record("mostsessions") > 0 ? fact("Most sessions", record("mostsessions") + ", " + extra(records, "mostsessions")) : "");
+  }
+
+  const weekdayRows = series(rows, "weekday");
+  chartBlock($("chart-weekdays"), weekdayRows.map((row) => Number(row.value) || 0), weekdays, -1, "Monday", "Sunday");
+  const hourRows = series(rows, "hour");
+  chartBlock($("chart-hours"), hourRows.map((row) => Number(row.value) || 0), hourRows.map((row) => row.key + ":00"), new Date().getHours(), "0:00", "23:00");
+}
+
+function drawCalendar(days) {
+  const calendar = $("calendar");
+  const values = days.map((row) => Number(row.value) || 0);
+  const top = Math.max(0, ...values);
+  const cells = [];
+  if (days.length) {
+    const [year, month, day] = days[0].key.split("-").map(Number);
+    const offset = (new Date(year, month - 1, day).getDay() + 6) % 7;
+    for (let index = 0; index < offset; ++index) cells.push(el("span", { class: "blank", "aria-hidden": "true" }));
+  }
+  days.forEach((row, index) => {
+    const value = values[index];
+    const level = value <= 0 || top <= 0 ? 0 : value >= top * 0.75 ? 4 : value >= top * 0.5 ? 3 : value >= top * 0.25 ? 2 : 1;
+    cells.push(el("span", { class: level ? "l" + level : "", title: row.key + ": " + duration(value) }));
+  });
+  calendar.replaceChildren(...cells);
+  const wrap = calendar.parentElement;
+  wrap.scrollLeft = wrap.scrollWidth;
+}
+
+function drawGameFigures(rows) {
+  $("stats-table").replaceChildren(...rows.map((row) => el("tr", {},
+    el("td", {}, el("span", { class: "name", text: row.name }), el("br"), el("span", { class: "app", text: row.app })),
+    el("td", { class: "num", "data-label": "Idled", text: shortDuration(row.seconds) }),
+    el("td", { class: "num", "data-label": "Sessions", text: row.sessions }),
+    el("td", { class: "num", "data-label": "Longest", text: shortDuration(row.longest) }),
+    el("td", { class: "num", "data-label": "Days", text: row.days }),
+    el("td", { "data-label": "Last", text: row.last }))));
+  $("stats-empty").hidden = rows.length !== 0;
+}
+
+async function loadDay(day) {
+  historyDay = day;
+  for (const button of $("history-days").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.day === day));
+  const result = await call(["history", day]);
+  $("history-title").textContent = day;
+  $("history-games").replaceChildren(...result.rows.map((row) => el("li", {}, el("span", { text: row.name }), el("span", { class: "meta", text: shortDuration(row.seconds) }))));
+  if (!result.rows.length) $("history-games").append(el("li", {}, el("span", { class: "quiet", text: result.text })));
+}
+
+async function loadStats() {
+  statsAt = Date.now();
+  for (const tab of document.querySelectorAll(".tabs [data-tab]")) tab.setAttribute("aria-selected", String(tab.dataset.tab === statsTab));
+  $("stats-overview").hidden = statsTab !== "overview";
+  $("stats-games").hidden = statsTab !== "games";
+  $("stats-history").hidden = statsTab !== "history";
+  if (statsTab === "overview") {
+    drawOverview((await call(["stats"])).rows);
+  } else if (statsTab === "games") {
+    drawGameFigures((await call(["stats", "games", $("stats-order").value])).rows);
+  } else {
+    const result = await call(["history"]);
+    $("history-days").replaceChildren(...result.rows.map((row) => el("li", {},
+      el("button", { type: "button", "data-day": row.day, "aria-pressed": "false", onclick: () => loadDay(row.day).catch(trouble) },
+        el("span", { text: row.day }), el("span", { text: shortDuration(row.seconds) }), el("span", { class: "meta", text: plural(row.games, "game", "games") })))));
+    if (!result.rows.length) {
+      $("history-days").append(el("li", {}, el("span", { class: "quiet", text: "Nothing idled yet." })));
+      $("history-games").replaceChildren();
+      return;
+    }
+    await loadDay(result.rows.some((row) => row.day === historyDay) ? historyDay : result.rows[0].day);
+  }
+}
+
+function drawLog(stick) {
+  const list = $("log");
+  const level = $("log-level").value;
+  const search = $("log-search").value.trim().toLowerCase();
+  const shown = logRows.filter((row) => (level === "all" || row.level === "ERROR" || (level === "warn" && row.level === "WARN")) &&
+    (!search || row.message.toLowerCase().includes(search)));
+  const tones = { ERROR: "bad", WARN: "warn", SUCCESS: "good" };
+  list.replaceChildren(...shown.map((row) => {
+    const code = row.message.match(/\((MI-\d{4})\)\s*$/);
+    const text = code ? row.message.slice(0, code.index) : row.message;
+    return el("li", {},
+      el("span", { class: "when", text: row.time }),
+      el("span", { class: "level " + (tones[row.level] || "muted"), text: row.level }),
+      el("span", { class: "text" }, text, code ? el("span", { class: "code", text: "(" + code[1] + ")" }) : null));
+  }));
+  if (!shown.length) list.append(el("li", {}, el("span", { class: "text muted", text: logRows.length ? "No entry fits." : "Nothing yet." })));
+  if (stick) list.scrollTop = list.scrollHeight;
+}
+
+async function loadLog() {
+  const list = $("log");
+  const atEnd = list.scrollTop + list.clientHeight >= list.scrollHeight - 8;
+  logRows = (await call(["log", $("log-lines").value])).rows;
+  drawLog(atEnd);
+}
+
+const settingGroups = {
+  idling: ["pause", "resume", "awake", "refund", "invisible", "vary", "spread"],
+  when: ["away", "awayminutes", "hours", "from", "until"],
+  goal: ["goal"]
+};
+const settingParents = { spread: "vary", awayminutes: "away", from: "hours", until: "hours" };
+const settingUnits = { spread: "%", awayminutes: "min", from: ":00", until: ":00" };
+
+async function saveSetting(key, values) {
+  await act(["set", key, ...values], false);
+  await loadSettings();
+}
+
+function settingControl(row) {
+  if (row.kind === "bool") {
+    const on = row.value === "yes";
+    return [el("button", { type: "button", class: "switch", role: "switch", "aria-checked": String(on), "aria-label": row.label, onclick: () => saveSetting(row.key, [on ? "off" : "on"]) })];
+  }
+  if (row.kind === "goal") {
+    const [kind, hours] = row.value.split(" ");
+    const picker = goalPicker(kind || "none", hours, false);
+    const save = () => saveSetting("goal", picker.words());
+    picker.kind.addEventListener("change", save);
+    picker.hours.addEventListener("change", save);
+    return [picker.kind, picker.hours];
+  }
+  const input = el("input", { type: "number", min: row.min, max: row.max, step: row.step, value: row.value, inputmode: "decimal", "aria-label": row.label });
+  input.addEventListener("change", () => saveSetting(row.key, [input.value]));
+  return settingUnits[row.key] ? [input, el("span", { class: "muted", text: settingUnits[row.key] })] : [input];
+}
+
+function drawSettings() {
+  const value = (key) => find(settingsRows, key);
+  for (const [group, keys] of Object.entries(settingGroups)) {
+    const box = $("set-" + group);
+    const rows = keys.map((key) => settingsRows.find((row) => row.key === key)).filter(Boolean);
+    box.closest(".card").hidden = rows.length === 0;
+    box.replaceChildren(...rows.filter((row) => !settingParents[row.key] || value(settingParents[row.key]) === "yes").map((row) =>
+      el("div", { class: "setting" + (settingParents[row.key] ? " sub" : "") },
+        el("strong", { text: row.label }),
+        el("p", { text: row.note }),
+        el("div", { class: "control" }, ...settingControl(row)))));
+  }
+}
+
+function drawSteamFacts() {
+  $("steam-facts").replaceChildren(...statusRows.filter((row) => row.key === "steam" || row.key === "library").map((row) => fact(row.label, row.value)));
+}
+
+function currentScreen() {
+  const screen = document.documentElement.dataset.screen;
+  return screen in screens ? screen : "synthwave";
+}
+
+function setScreen(next) {
+  if (next === "synthwave") delete document.documentElement.dataset.screen;
+  else document.documentElement.dataset.screen = next;
+  try { localStorage.setItem("manifold-idler.screen", next); } catch (error) {}
+  nameScreen();
+  drawScreens();
+}
+
+function nameScreen() {
+  const name = screens[currentScreen()].name;
+  $("screen").title = "Look: " + name;
+  $("screen").setAttribute("aria-label", "Look: " + name + ". Switch to the next one");
+}
+
+function drawScreens() {
+  const current = currentScreen();
+  $("screens").replaceChildren(...screenOrder.map((key) => {
+    const swatch = el("span", { class: "swatch", "aria-hidden": "true" });
+    for (const color of screens[key].colors) {
+      const square = el("i");
+      square.style.setProperty("background", color);
+      swatch.append(square);
+    }
+    return el("button", { type: "button", "aria-pressed": String(key === current), onclick: () => setScreen(key) }, swatch, el("span", { text: screens[key].name }));
+  }));
+}
+
+async function loadSettings() {
+  settingsRows = (await call(["settings"])).rows;
+  drawSettings();
+  drawSteamFacts();
+  drawScreens();
+}
+
+const pages = {
+  idling: { title: "Idling", load: loadQueue },
+  library: { title: "Library", load: () => loadLibrary(false) },
+  statistics: { title: "Statistics", load: loadStats },
+  log: { title: "Log", load: loadLog },
+  settings: { title: "Settings", load: loadSettings }
+};
+
+function route() {
+  const wanted = location.hash.replace(/^#/, "");
+  page = Object.prototype.hasOwnProperty.call(pages, wanted) ? wanted : "idling";
+  for (const section of document.querySelectorAll(".page")) section.hidden = section.dataset.page !== page;
+  for (const link of document.querySelectorAll(".nav a")) {
+    if (link.dataset.page === page) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  }
+  $("page-title").textContent = pages[page].title;
+  document.title = pages[page].title + " - Manifold Idler";
+  if (!locked && token) pages[page].load().catch(trouble);
+}
+
+function schedule() {
+  clearTimeout(timer);
+  if (!locked && !document.hidden) timer = setTimeout(refresh, failing ? retryMilliseconds : pollMilliseconds);
+}
+
+async function refresh() {
+  if (locked) return;
+  if (refreshing) {
+    again = true;
+    return;
+  }
+  refreshing = true;
+  try {
+    const status = await call(["status"]);
+    const wasFailing = failing;
+    failing = false;
+    hideBanner();
+    drawStatus(status.rows);
+    if (page === "idling") await loadQueue();
+    else if (page === "log") await loadLog();
+    else if (page === "statistics" && statsTab === "overview" && Date.now() - statsAt > statsMilliseconds) await loadStats();
+    if (wasFailing && page !== "idling" && page !== "log") pages[page].load().catch(trouble);
+  } catch (error) {
+    trouble(error);
+  } finally {
+    refreshing = false;
+    if (again) {
+      again = false;
+      refresh();
+    } else {
+      schedule();
+    }
+  }
+}
+
+for (const link of document.querySelectorAll(".nav a[data-icon]")) link.prepend(icon(link.dataset.icon));
+if (window.matchMedia("(max-width: 1100px)").matches) $("detail").classList.add("closed");
+try { if (localStorage.getItem("manifold-idler.library-view") === "list") $("lib-grid").classList.add("list"); } catch (error) {}
+$("lib-view").textContent = $("lib-grid").classList.contains("list") ? "Covers" : "List";
+
+$("toggle").addEventListener("click", async () => {
+  $("toggle").disabled = true;
+  await act([active ? "stop" : "start"]);
+  refresh();
+});
+
+$("screen").addEventListener("click", () => setScreen(screenOrder[(screenOrder.indexOf(currentScreen()) + 1) % screenOrder.length]));
+
+$("slots-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const slots = $("slots");
+  await act(["slots", slots.value]);
+  slots.blur();
+  refresh();
+});
+
+$("lists").addEventListener("change", async () => {
+  const select = $("lists");
+  await act(["use", select.value]);
+  select.blur();
+  listSignature = "";
+  libraryLoaded = "";
+  refresh();
+});
+
+$("list-new").addEventListener("click", async () => {
+  const name = await ask({ title: "New list", note: "It becomes the queue.", ok: "Create" });
+  if (!name) return;
+  await act(["list", "new", name]);
+  listSignature = "";
+  refresh();
+});
+
+$("list-rename").addEventListener("click", async () => {
+  const old = currentList();
+  const name = await ask({ title: "Rename the list", value: old, ok: "Rename" });
+  if (!name || name === old) return;
+  await act(["list", "rename", old, name]);
+  listSignature = "";
+  refresh();
+});
+
+$("list-delete").addEventListener("click", async () => {
+  const name = currentList();
+  const sure = await ask({ title: "Delete " + name + "?", note: "Its games go with it. Undo brings them back.", input: false, ok: "Delete" });
+  if (!sure) return;
+  await act(["list", "delete", name]);
+  listSignature = "";
+  refresh();
+});
+
+$("sort").addEventListener("change", async () => {
+  const select = $("sort");
+  if (!select.value) return;
+  await act(["sort", select.value]);
+  select.value = "";
+  refresh();
+});
+
+armStatic($("clear-finished"), () => ["clear", "finished"], () => { libraryLoaded = ""; refresh(); });
+armStatic($("clear-all"), () => ["clear", "all"], () => { libraryLoaded = ""; refresh(); });
+
+$("undo").addEventListener("click", async () => {
+  await act(["undo"]);
+  libraryLoaded = "";
+  refresh();
+});
+
+$("lib-search").addEventListener("input", () => {
+  clearTimeout(librarySearchTimer);
+  librarySearchTimer = setTimeout(() => loadLibrary(false).catch(trouble), 250);
+});
+for (const id of ["lib-filter", "lib-rating", "lib-sort"]) $(id).addEventListener("change", () => loadLibrary(false).catch(trouble));
+$("lib-view").addEventListener("click", () => {
+  const list = $("lib-grid").classList.toggle("list");
+  $("lib-view").textContent = list ? "Covers" : "List";
+  try { localStorage.setItem("manifold-idler.library-view", list ? "list" : "covers"); } catch (error) {}
+});
+moreWatcher.observe($("lib-more"));
+
+for (const tab of document.querySelectorAll(".tabs [data-tab]")) {
+  tab.addEventListener("click", () => {
+    statsTab = tab.dataset.tab;
+    loadStats().catch(trouble);
+  });
+}
+$("stats-order").addEventListener("change", () => loadStats().catch(trouble));
+
+$("log-level").addEventListener("change", () => drawLog(true));
+$("log-search").addEventListener("input", () => drawLog(true));
+$("log-lines").addEventListener("change", () => loadLog().catch(trouble));
+
+$("rescan").addEventListener("click", async () => {
+  await act(["rescan"]);
+  libraryLoaded = "";
+  refresh();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("ask").open) $("detail").classList.add("closed");
+});
+window.addEventListener("hashchange", route);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearTimeout(timer);
+  else refresh();
+});
+
+nameScreen();
+if (!token) {
+  lockPage();
+  route();
+} else {
+  route();
+  refresh();
+}
+})();

@@ -1,5 +1,6 @@
 #include "UI/Covers.h"
 
+#include "Steam/SteamLocal.h"
 #include "UI/CoverPlatform.h"
 
 #include <algorithm>
@@ -78,39 +79,6 @@ namespace Idler::UI::Covers
             return (key & kFileKey) != 0 ? Kind::File : (key & 1) != 0 ? Kind::Full : Kind::Thumb;
         }
 
-        std::filesystem::path FindPicture(const std::filesystem::path& root, std::uint32_t appId)
-        {
-            const std::filesystem::path folder = root / L"appcache" / L"librarycache" / std::to_wstring(appId);
-            std::error_code error;
-            if (!std::filesystem::is_directory(folder, error))
-                return {};
-
-            std::vector<std::filesystem::path> folders{ folder };
-            for (const auto& item : std::filesystem::directory_iterator(folder, error))
-            {
-                if (item.is_directory(error))
-                    folders.push_back(item.path());
-            }
-            for (const wchar_t* name : { L"header.jpg", L"library_header.jpg", L"library_hero.jpg", L"library_600x900.jpg" })
-            {
-                for (const auto& place : folders)
-                {
-                    const auto file = place / name;
-                    if (std::filesystem::is_regular_file(file, error))
-                        return file;
-                }
-            }
-            for (const auto& place : folders)
-            {
-                for (const auto& item : std::filesystem::directory_iterator(place, error))
-                {
-                    if (item.path().filename().wstring().starts_with(L"header") && item.path().extension() == L".jpg")
-                        return item.path();
-                }
-            }
-            return {};
-        }
-
         void Work()
         {
             CoverPlatform::BeginWorker();
@@ -154,7 +122,7 @@ namespace Idler::UI::Covers
                 {
                     const bool full = KindOf(key) == Kind::Full;
                     const auto appId = static_cast<std::uint32_t>(key >> 1);
-                    if (const auto file = FindPicture(root, appId); !file.empty())
+                    if (const auto file = Steam::LibraryPicture(root, appId); !file.empty())
                         decoded = CoverPlatform::Decode(file, static_cast<unsigned>(static_cast<float>(full ? kFullWidth : kThumbWidth) * scale), static_cast<unsigned>(static_cast<float>(full ? kFullHeight : kThumbHeight) * scale), kAspect, pixels);
                 }
 

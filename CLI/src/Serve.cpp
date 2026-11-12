@@ -9,6 +9,7 @@
 #include "Ipc.h"
 #include "Paths.h"
 #include "Request.h"
+#include "Steam/SteamLocal.h"
 #include "Web.h"
 #include "WebServer.h"
 
@@ -177,6 +178,7 @@ namespace Idler::Cli
         std::fflush(stdout);
 
         const CommandRunner run = [&](const std::vector<std::string>& words) { return RunCommand(model, words); };
+        webConfig.Cover = [&](std::uint32_t appId) { return Steam::LibraryPicture(model.SteamStatus().Root, appId); };
 
         while (!quit && !g_quit)
         {

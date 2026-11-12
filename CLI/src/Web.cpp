@@ -28,7 +28,10 @@ namespace Idler::Cli
     namespace
     {
         constexpr std::string_view kLockedPolicy = "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
-        constexpr std::array<std::string_view, 13> kWebCommands{ "ping", "status", "queue", "add", "remove", "goal", "games", "lists", "use", "log", "start", "stop", "slots" };
+        constexpr std::string_view kWebCommands[] = { "ping", "status", "queue", "add", "remove", "goal", "games", "lists", "use", "log", "start", "stop", "slots",
+            "move", "sort", "retry", "now", "refund", "clear", "undo", "list", "rescan", "library", "game", "stats", "history", "settings", "set" };
+        constexpr std::string_view kCoverPath = "/cover/";
+        constexpr std::uintmax_t kLargestPicture = 8u * 1024u * 1024u;
 
         std::string LowerAscii(std::string_view text)
         {
@@ -446,6 +449,29 @@ namespace Idler::Cli
         return response;
     }
 
+    HttpResponse PictureResponse(const std::filesystem::path& file)
+    {
+        std::error_code error;
+        const std::string extension = LowerAscii(PathToUtf8(file.extension()));
+        const char* type = extension == ".jpg" || extension == ".jpeg" ? "image/jpeg" : extension == ".png" ? "image/png" : nullptr;
+        const std::uintmax_t size = file.empty() ? 0 : std::filesystem::file_size(file, error);
+        if (!type || error || size == 0 || size > kLargestPicture)
+            return PlainResponse(404, "No picture.");
+        std::ifstream in(file, std::ios::binary);
+        std::string body((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        if (body.size() != size)
+            return PlainResponse(404, "No picture.");
+        HttpResponse response;
+        response.Type = type;
+        response.Body = std::move(body);
+        response.Headers.emplace_back("Content-Security-Policy", std::string(kLockedPolicy));
+        response.Headers.emplace_back("Cache-Control", "private, max-age=86400");
+        response.Headers.emplace_back("X-Content-Type-Options", "nosniff");
+        response.Headers.emplace_back("Referrer-Policy", "no-referrer");
+        response.Headers.emplace_back("Cross-Origin-Resource-Policy", "same-origin");
+        return response;
+    }
+
     HttpResponse AnswerWeb(const HttpRequest& request, const WebConfig& config, const CommandRunner& run)
     {
         const std::string* host = request.Header("host");
@@ -472,7 +498,7 @@ namespace Idler::Cli
             response.Type = "text/html; charset=utf-8";
             response.Body = WebPage(nonce);
             AddSafetyHeaders(response, "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'nonce-" + nonce +
-                "'; connect-src 'self'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+                "'; connect-src 'self'; img-src data: 'self'; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
             return response;
         }
 
@@ -489,6 +515,14 @@ namespace Idler::Cli
             if (!WebAllows(words[0]))
                 return JsonProblem(403, ErrorMessage(ErrorCode::NotFromPage, words[0]));
             return JsonResponse(200, ResultJson(run(words)));
+        }
+
+        if (std::string_view(request.Path).starts_with(kCoverPath))
+        {
+            if (request.Method != "GET")
+                return WrongMethod("GET");
+            const auto appId = ParseUnsigned(std::string_view(request.Path).substr(kCoverPath.size()));
+            return PictureResponse(appId && config.Cover ? config.Cover(*appId) : std::filesystem::path());
         }
 
         return PlainResponse(404, "Nothing here.");

@@ -38,4 +38,5 @@ namespace Idler::Steam
     std::vector<StatSchema> ReadStatSchema(const Status& status, std::uint32_t appId);
     void ReadUnlockRules(const Status& status, std::vector<Game>& games);
     std::vector<SteamCollection> ReadCollections(const Status& status);
+    std::filesystem::path LibraryPicture(const std::filesystem::path& root, std::uint32_t appId);
 }

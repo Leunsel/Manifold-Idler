@@ -5,11 +5,15 @@
 #include "Service.h"
 #include "Web.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -70,6 +74,42 @@ namespace
             return {};
         const std::size_t from = at + start.size();
         return policy.substr(from, policy.find('\'', from) - from);
+    }
+
+    std::string ReadSource(const std::filesystem::path& file)
+    {
+        std::ifstream in(file, std::ios::binary);
+        std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        text.erase(std::remove(text.begin(), text.end(), '\r'), text.end());
+        return text;
+    }
+
+    void PageSourceChecks()
+    {
+        std::error_code ignored;
+        std::filesystem::path web;
+        for (std::filesystem::path folder = std::filesystem::current_path(ignored); !folder.empty(); folder = folder.parent_path())
+        {
+            if (std::filesystem::exists(folder / "CLI" / "web" / "page.js", ignored))
+            {
+                web = folder / "CLI" / "web";
+                break;
+            }
+            if (std::filesystem::exists(folder / "web" / "page.js", ignored))
+            {
+                web = folder / "web";
+                break;
+            }
+            if (folder == folder.parent_path())
+                break;
+        }
+        const bool current = !web.empty() && ReadSource(web / "page.html") == WebPageHtml() && ReadSource(web / "page.css") == WebPageStyle() &&
+            ReadSource(web / "page.js") == WebPageScript();
+        if (!current)
+            std::printf("  src/WebAssets.cpp is not the one of CLI/web: run tools/web-assets.py\n");
+        CHECK(current);
+        CHECK(WebLogo().rfind("data:image/png;base64,iVBORw0KGgo", 0) == 0);
+        CHECK(WebFontFaces().find("font-family:\"Idler Pixel\"") != std::string::npos);
     }
 
     void HttpChecks()
@@ -249,6 +289,8 @@ namespace
         CHECK(!TokenMatches("", ""));
 
         CHECK(WebAllows("status") && WebAllows("add") && WebAllows("slots") && WebAllows("log"));
+        CHECK(WebAllows("library") && WebAllows("game") && WebAllows("stats") && WebAllows("history") && WebAllows("settings") && WebAllows("set"));
+        CHECK(WebAllows("move") && WebAllows("sort") && WebAllows("retry") && WebAllows("now") && WebAllows("refund") && WebAllows("clear") && WebAllows("undo") && WebAllows("list"));
         CHECK(!WebAllows("quit") && !WebAllows("web") && !WebAllows("") && !WebAllows("Status"));
     }
 
@@ -386,6 +428,31 @@ namespace
         CHECK(embedded && fonts == 2);
         CHECK(html.find("font-family:\"Idler Pixel\"") != std::string::npos && html.find("font-family:\"Idler Text\"") != std::string::npos);
         CHECK(html.find("<button id=\"screen\"") != std::string::npos);
+        CHECK(html.find("<img class=\"logo\" src=\"data:image/png;base64,") != std::string::npos && html.find("<link rel=\"icon\" href=\"data:image/png;base64,") != std::string::npos);
+        for (const char* view : { "idling", "library", "statistics", "log", "settings" })
+            CHECK(html.find(std::string("<a href=\"#") + view + "\" data-page=\"" + view + "\"") != std::string::npos);
+
+        const std::filesystem::path picture = std::filesystem::temp_directory_path() / "manifold-idler-cover-test.jpg";
+        {
+            std::ofstream out(picture, std::ios::binary | std::ios::trunc);
+            out << "\xFF\xD8\xFF picture";
+        }
+        config.Cover = [&](std::uint32_t appId) { return appId == 620 ? picture : std::filesystem::path(); };
+        const HttpResponse coverResponse = answer(Asked("GET", "/cover/620?token=" + config.Token, { host, { "sec-fetch-site", "same-origin" } }));
+        CHECK(coverResponse.Status == 200 && coverResponse.Type == "image/jpeg" && coverResponse.Body == "\xFF\xD8\xFF picture");
+        CHECK(coverResponse.Header("Cache-Control") && coverResponse.Header("Cache-Control")->find("max-age") != std::string::npos);
+        CHECK(answer(Asked("GET", "/cover/621?token=" + config.Token, { host })).Status == 404);
+        CHECK(answer(Asked("GET", "/cover/abc?token=" + config.Token, { host })).Status == 404);
+        CHECK(answer(Asked("GET", "/cover/620", { host })).Status == 401);
+        CHECK(answer(Asked("POST", "/cover/620?token=" + config.Token, { host })).Status == 405);
+        CHECK(answer(Asked("GET", "/cover/620?token=" + config.Token, { host, { "sec-fetch-site", "cross-site" } })).Status == 403);
+        config.Cover = [&](std::uint32_t) { return picture.parent_path() / "manifold-idler-cover-test.txt"; };
+        CHECK(answer(Asked("GET", "/cover/620?token=" + config.Token, { host })).Status == 404);
+        std::error_code ignored;
+        std::filesystem::remove(picture, ignored);
+        const HttpResponse again = answer(Asked("GET", "/?token=" + config.Token, { host }));
+        const std::string* pagePolicy = again.Header("Content-Security-Policy");
+        CHECK(pagePolicy && pagePolicy->find("img-src data: 'self';") != std::string::npos);
         CHECK(html.find(" style=\"") == std::string::npos && html.find("innerHTML") == std::string::npos);
         CHECK(html.find("{{") == std::string::npos);
         CHECK(html.find("new Error(\"The idler does not answer. It may have ended; this page keeps trying. (MI-7015)\")") != std::string::npos);
@@ -456,6 +523,7 @@ int main()
     CHECK(ServiceUnit("/home/x/bin/idler", "/home/x/idler.ini", true, "127.0.0.1:8090").find(" serve --start --web 127.0.0.1:8090\n") != std::string::npos);
     CHECK(ServiceUnit("/home/x/bin/idler", "/home/x/idler.ini", false, "[::1]:8091").find(" serve --web [::1]:8091\n") != std::string::npos);
 
+    PageSourceChecks();
     HttpChecks();
     JsonChecks();
     AddressChecks();

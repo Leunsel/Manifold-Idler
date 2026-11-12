@@ -69,7 +69,7 @@ add_library(idler_cli_base STATIC
     src/Request.cpp
     src/Service.cpp
     src/Web.cpp
-    src/WebFonts.cpp
+    src/WebAssets.cpp
     src/WebPage.cpp
     src/WebServer.cpp)
 target_include_directories(idler_cli_base PUBLIC src)
@@ -82,6 +82,7 @@ idler_flags(idler_cli_base)
 add_executable(idler
     src/main.cpp
     src/Commands.cpp
+    src/PageCommands.cpp
     src/Serve.cpp)
 target_include_directories(idler BEFORE PRIVATE src/shim)
 target_include_directories(idler SYSTEM PRIVATE third_party/CLI11)

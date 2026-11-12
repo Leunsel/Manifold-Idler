@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<title>Manifold Idler</title>
+<link rel="icon" href="{{logo}}">
+<script nonce="{{nonce}}">
+try { const screen = localStorage.getItem("manifold-idler.screen"); if (["classic", "phosphor", "amber", "idler"].includes(screen)) document.documentElement.dataset.screen = screen; } catch (error) {}
+</script>
+<style nonce="{{nonce}}">
+{{style}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="side">
+<a class="brand" href="#idling"><img class="logo" src="{{logo}}" alt="" width="40" height="40"><span class="brand-name">Manifold<span>Idler</span></span></a>
+<nav class="nav" aria-label="Pages">
+<a href="#idling" data-page="idling" data-icon="idling"><span class="long">Idling</span><span class="short">Idling</span></a>
+<a href="#library" data-page="library" data-icon="library"><span class="long">Library</span><span class="short">Library</span></a>
+<a href="#statistics" data-page="statistics" data-icon="statistics"><span class="long">Statistics</span><span class="short">Stats</span></a>
+<a href="#log" data-page="log" data-icon="log"><span class="long">Log</span><span class="short">Log</span></a>
+<a href="#settings" data-page="settings" data-icon="settings"><span class="long">Settings</span><span class="short">Setup</span></a>
+</nav>
+<div class="account" id="account"></div>
+</aside>
+<div class="main">
+<header class="top">
+<a class="top-brand" href="#idling" aria-label="Manifold Idler"><img class="logo" src="{{logo}}" alt="" width="32" height="32"></a>
+<h1 id="page-title">Idling</h1>
+<div class="run"><span id="state" class="pill muted">Connecting</span><button id="screen" class="screen" type="button" title="Screen" aria-label="Screen"><span></span><span></span><span></span><span></span></button><button id="toggle" class="primary" type="button" disabled>Start</button></div>
+</header>
+<div class="banner-wrap"><div id="banner" class="banner" role="alert" hidden></div></div>
+<noscript><div class="banner-wrap"><div class="banner">This page needs JavaScript.</div></div></noscript>
+<main id="view">
+
+<section class="page" data-page="idling" aria-label="Idling">
+<div class="card status-card">
+<dl id="status" class="facts"></dl>
+<form id="slots-form" class="inline">
+<label for="slots">Games at once</label>
+<input id="slots" type="number" min="1" max="32" step="1" inputmode="numeric" required>
+<button type="submit">Set</button>
+</form>
+</div>
+<div class="card">
+<div class="head">
+<h2>Queue</h2>
+<div class="tools">
+<label class="list-pick">List <select id="lists"></select></label>
+<button id="list-new" class="small" type="button">New</button>
+<button id="list-rename" class="small" type="button">Rename</button>
+<button id="list-delete" class="small" type="button">Delete</button>
+</div>
+</div>
+<div class="bar">
+<label class="pick">Sort <select id="sort">
+<option value="">Choose</option>
+<option value="name">Name</option>
+<option value="left">Time left</option>
+<option value="least">Least played first</option>
+<option value="most">Most played first</option>
+</select></label>
+<button id="clear-finished" class="small" type="button">Remove finished</button>
+<button id="clear-all" class="small" type="button">Remove all</button>
+<button id="undo" class="small" type="button" hidden>Undo</button>
+<a class="button small" href="#library">Add games</a>
+</div>
+<ol id="queue" class="queue"></ol>
+<p id="queue-empty" class="quiet" hidden>The queue is empty. Games come in from the Library.</p>
+</div>
+</section>
+
+<section class="page library" data-page="library" aria-label="Library" hidden>
+<div class="card">
+<div class="bar library-bar">
+<input id="lib-search" type="search" placeholder="Name or app id" autocomplete="off" spellcheck="false" aria-label="Find a game by name or app id">
+<select id="lib-filter" aria-label="Which games">
+<option value="all">All games</option>
+<option value="cards">With cards</option>
+<option value="installed">Installed</option>
+<option value="played">Played</option>
+<option value="notplayed">Not played</option>
+</select>
+<select id="lib-rating" aria-label="Rating">
+<option value="0">Any rating</option>
+<option value="70">70 %+</option>
+<option value="80">80 %+</option>
+<option value="90">90 %+</option>
+</select>
+<select id="lib-sort" aria-label="Sort">
+<option value="name">Name</option>
+<option value="playtime">Playtime</option>
+<option value="last">Last played</option>
+<option value="purchased">Bought</option>
+<option value="reviews">Reviews</option>
+<option value="metacritic">Metacritic</option>
+<option value="released">Released</option>
+<option value="achievements">Achievements</option>
+</select>
+<button id="lib-view" class="small" type="button">List</button>
+</div>
+<p id="lib-count" class="quiet top-note"></p>
+<div id="lib-grid" class="grid"></div>
+<div id="lib-more" class="more" aria-hidden="true"></div>
+</div>
+<aside id="detail" class="card detail" aria-label="Selected game">
+<p class="quiet">Pick a game to see it here.</p>
+</aside>
+</section>
+
+<section class="page" data-page="statistics" aria-label="Statistics" hidden>
+<div class="tabs" role="tablist" aria-label="Statistics">
+<button type="button" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+<button type="button" role="tab" data-tab="games" aria-selected="false">Games</button>
+<button type="button" role="tab" data-tab="history" aria-selected="false">History</button>
+</div>
+<div id="stats-overview" class="stack">
+<div id="tiles" class="tiles"></div>
+<div class="cols wide-left">
+<div class="card"><h2>Last 30 days</h2><div id="chart-days" class="chart"></div></div>
+<div class="card"><h2>Most idled</h2><ol id="podium" class="podium"></ol></div>
+</div>
+<div class="cols wide-left">
+<div class="card"><h2>The last year</h2><div class="calendar-wrap"><div id="calendar" class="calendar"></div></div></div>
+<div class="card"><h2>Records</h2><dl id="records" class="facts records"></dl></div>
+</div>
+<div class="cols">
+<div class="card"><h2>By day of the week</h2><div id="chart-weekdays" class="chart"></div></div>
+<div class="card"><h2>By hour of the day</h2><div id="chart-hours" class="chart"></div></div>
+</div>
+</div>
+<div id="stats-games" class="card" hidden>
+<div class="head"><h2>Games</h2><label class="pick">Order <select id="stats-order">
+<option value="time">Most time</option>
+<option value="sessions">Most sessions</option>
+<option value="longest">Longest run</option>
+<option value="days">Most days</option>
+<option value="recent">Most recent</option>
+</select></label></div>
+<table class="rows">
+<thead><tr><th>Game</th><th class="num">Idled</th><th class="num">Sessions</th><th class="num">Longest run</th><th class="num">Days</th><th>Last</th></tr></thead>
+<tbody id="stats-table"></tbody>
+</table>
+<p id="stats-empty" class="quiet" hidden>Nothing idled yet.</p>
+</div>
+<div id="stats-history" class="cols" hidden>
+<div class="card"><h2>Days</h2><ol id="history-days" class="days"></ol></div>
+<div class="card"><h2 id="history-title">A day</h2><ol id="history-games" class="day-games"></ol></div>
+</div>
+</section>
+
+<section class="page" data-page="log" aria-label="Log" hidden>
+<div class="card">
+<div class="bar">
+<select id="log-level" aria-label="Which entries">
+<option value="all">All entries</option>
+<option value="warn">Warnings and errors</option>
+<option value="error">Errors</option>
+</select>
+<input id="log-search" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search the log">
+<select id="log-lines" aria-label="How many lines">
+<option value="200">Last 200</option>
+<option value="1000">Last 1000</option>
+</select>
+</div>
+<ol id="log" class="log"></ol>
+</div>
+</section>
+
+<section class="page" data-page="settings" aria-label="Settings" hidden>
+<div class="cols">
+<div class="stack">
+<div class="card"><h2>Idling</h2><div id="set-idling" class="settings"></div></div>
+<div class="card"><h2>When to idle</h2><div id="set-when" class="settings"></div></div>
+</div>
+<div class="stack">
+<div class="card"><h2>New games in the queue</h2><div id="set-goal" class="settings"></div></div>
+<div class="card"><h2>Steam</h2><dl id="steam-facts" class="facts"></dl><button id="rescan" type="button">Read library again</button></div>
+<div class="card"><h2>Look</h2><div id="screens" class="screens"></div></div>
+</div>
+</div>
+</section>
+
+</main>
+</div>
+</div>
+<dialog id="ask" class="ask">
+<form id="ask-form" method="dialog">
+<h2 id="ask-title">Name</h2>
+<p id="ask-note" class="quiet"></p>
+<input id="ask-input" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-labelledby="ask-title">
+<div class="ask-buttons"><button id="ask-ok" class="primary" type="submit" value="ok">OK</button><button id="ask-cancel" type="button">Cancel</button></div>
+</form>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script nonce="{{nonce}}">
+{{script}}
+</script>
+</body>
+</html>

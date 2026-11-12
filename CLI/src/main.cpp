@@ -17,6 +17,7 @@
 #endif
 
 #include <cstdio>
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -180,6 +181,47 @@ int main(int argc, char** argv)
     CLI::App* log = app.add_subcommand("log", "What the idler did last");
     log->add_option("lines", logLines, "How many lines")->check(CLI::PositiveNumber);
     log->callback([&]() { request = { "log", std::to_string(logLines) }; });
+
+    std::deque<std::vector<std::string>> passedWords;
+    const auto passing = [&](const char* name, const char* help, const char* wordsHelp, bool required)
+        {
+            std::vector<std::string>& words = passedWords.emplace_back();
+            CLI::App* command = app.add_subcommand(name, help);
+            CLI::Option* option = command->add_option("words", words, wordsHelp);
+            if (required)
+                option->required();
+            command->callback([&request, &words, name]()
+                {
+                    request = { name };
+                    request.insert(request.end(), words.begin(), words.end());
+                });
+            return command;
+        };
+    passing("move", "Move a game in the queue: move <appid> <place>", "The app id and the place, from 1", true);
+    passing("sort", "Sort the queue by name, left, least or most", "name, left, least or most", true);
+    passing("now", "Put a game first and start the queue", "The app id", true);
+    passing("retry", "Try a game again that did not start", "The app id", true);
+    passing("refund", "Let a game idle past the refund limit", "The app id", true);
+    passing("clear", "Take games out of the queue: finished or all", "finished or all", true);
+    simple("undo", "Undo the last removal, sort or deleted list");
+    passing("list", "Change the saved lists: list new <name>, list rename <name> <new name>, list delete <name>", "new, rename or delete, then the names", true);
+    simple("rescan", "Read the library again");
+    passing("game", "Everything about one game", "The app id", true);
+    passing("stats", "What was idled; stats games [time, sessions, longest, days or recent] lists the games", "Nothing, or games and an order", false);
+    passing("history", "Idle time by day; with a day such as 2026-11-12, that day's games", "A day", false);
+    simple("settings", "The settings the server goes by; set changes them");
+    passing("set", "Change a setting: set <setting> <value>", "The setting and its value", true);
+
+    std::string libraryShow = "all";
+    std::string librarySort = "name";
+    std::string librarySearch;
+    int libraryRating = 0;
+    CLI::App* libraryCommand = app.add_subcommand("library", "The games of this account, filtered and sorted as in the window");
+    libraryCommand->add_option("search", librarySearch, "A part of the name, or an app id");
+    libraryCommand->add_option("--show", libraryShow, "all, cards, installed, played or notplayed");
+    libraryCommand->add_option("--sort", librarySort, "name, playtime, last, purchased, reviews, metacritic, released or achievements");
+    libraryCommand->add_option("--rating", libraryRating, "At least this many percent positive reviews")->check(CLI::Range(0, 100));
+    libraryCommand->callback([&]() { request = { "library", libraryShow, librarySort, std::to_string(libraryRating), librarySearch }; });
 
     bool serviceStart = false;
     std::string serviceWebAddress;
