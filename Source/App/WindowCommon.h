@@ -34,11 +34,16 @@ namespace Idler::WindowCommon
         return false;
     }
 
-    inline float ZoomFor(float width, float height, float scale)
+    inline float ZoomFor(float width, float height, float scale, float baseWidth, float baseHeight)
     {
-        const float growth = std::min(width / (kClientWidth * scale), height / (kClientHeight * scale));
+        const float growth = std::min(width / (baseWidth * scale), height / (baseHeight * scale));
         const float wanted = 1.0f + std::max(0.0f, growth - 1.0f) * kZoomShare;
         return std::min(kMaxZoom, std::floor(wanted / kZoomStep) * kZoomStep);
+    }
+
+    inline float ZoomFor(float width, float height, float scale)
+    {
+        return ZoomFor(width, height, scale, static_cast<float>(kClientWidth), static_cast<float>(kClientHeight));
     }
 
     inline void ScaleStyle(const ImGuiStyle& base, float scale)

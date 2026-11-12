@@ -1,5 +1,6 @@
 #pragma once
 
+#include "App/CommandLine.h"
 #include "App/Desktop.h"
 #include "UI/ScreenMain.h"
 #include "UI/TerrariumView.h"
@@ -11,30 +12,8 @@
 
 namespace Idler::StartOptions
 {
-    inline std::wstring Argument(const wchar_t* commandLine, const wchar_t* name)
-    {
-        const wchar_t* found = commandLine ? std::wcsstr(commandLine, name) : nullptr;
-        if (!found)
-            return {};
-        found += std::wcslen(name);
-        std::wstring value;
-        if (*found == L'"')
-        {
-            for (++found; *found && *found != L'"'; ++found)
-                value.push_back(*found);
-        }
-        else
-        {
-            for (; *found && *found != L' '; ++found)
-                value.push_back(*found);
-        }
-        return value;
-    }
-
-    inline bool Has(const wchar_t* commandLine, const wchar_t* flag)
-    {
-        return commandLine && std::wcsstr(commandLine, flag);
-    }
+    using CommandLine::Argument;
+    using CommandLine::Has;
 
     template <typename App>
     void Apply(App& app, const wchar_t* commandLine, const std::wstring& settings, const std::wstring& capture)

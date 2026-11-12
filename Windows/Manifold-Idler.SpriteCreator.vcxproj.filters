@@ -1,0 +1,201 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Dependencies">
+      <UniqueIdentifier>{48f7c8b3-cb47-5bda-9fab-f6e4fe98199d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dependencies\ImGui">
+      <UniqueIdentifier>{549ed395-2fef-58ed-bc1c-9556e0197aef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dependencies\ImGui\backends">
+      <UniqueIdentifier>{20167496-fb7e-5b99-8990-e5549e1bf8e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{d12a8a9a-c680-5030-838f-5b45217653b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\App">
+      <UniqueIdentifier>{628dac3d-a3e5-5867-b6f3-2cac208a58d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Core">
+      <UniqueIdentifier>{b12d670b-b6fe-5017-9906-1b1413ec25c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Generated">
+      <UniqueIdentifier>{7bb18a91-90bb-5c91-b5ea-efd95d8a1a30}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Resources">
+      <UniqueIdentifier>{fff20f65-a9f3-50b8-ad06-4f115174e0ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\SpriteCreator">
+      <UniqueIdentifier>{972a5bae-2083-5b98-b811-cef50c11b2f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\UI">
+      <UniqueIdentifier>{b8271103-7aa4-5dbb-b5a8-06507a054a4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows">
+      <UniqueIdentifier>{2ba19679-d13b-518d-907c-fe3f264d63a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Resources">
+      <UniqueIdentifier>{9840f371-7f8c-5b60-a3ac-33644c49123d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Source">
+      <UniqueIdentifier>{d5d72e90-6273-5c6b-9bec-023ea3ba7678}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Source\App">
+      <UniqueIdentifier>{63206d98-07bf-5e53-86c1-960a6aa74aa9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Source\SpriteCreator">
+      <UniqueIdentifier>{cbd8460a-18a1-563f-bd04-a8fb4070d231}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Dependencies\ImGui\backends\imgui_impl_dx11.cpp">
+      <Filter>Dependencies\ImGui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\backends\imgui_impl_win32.cpp">
+      <Filter>Dependencies\ImGui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\imgui.cpp">
+      <Filter>Dependencies\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\imgui_draw.cpp">
+      <Filter>Dependencies\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\imgui_tables.cpp">
+      <Filter>Dependencies\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\imgui_widgets.cpp">
+      <Filter>Dependencies\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\App\Desktop.cpp">
+      <Filter>Source\App</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Creatures.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Errors.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Json.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\SpriteFile.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Text.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\SpriteCreator\CreatorScreen.cpp">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Fonts.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\IdleAnimation.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\SpriteView.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\App\WindowHost.cpp">
+      <Filter>Windows\Source\App</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SpriteCreator\CreatorApplication.cpp">
+      <Filter>Windows\Source\SpriteCreator</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SpriteCreator\Main.cpp">
+      <Filter>Windows\Source\SpriteCreator</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Dependencies\ImGui\backends\imgui_impl_dx11.h">
+      <Filter>Dependencies\ImGui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\ImGui\backends\imgui_impl_win32.h">
+      <Filter>Dependencies\ImGui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\ImGui\imconfig.h">
+      <Filter>Dependencies\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\ImGui\imgui.h">
+      <Filter>Dependencies\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\ImGui\imgui_internal.h">
+      <Filter>Dependencies\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\App\CommandLine.h">
+      <Filter>Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\App\Desktop.h">
+      <Filter>Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\App\WindowCommon.h">
+      <Filter>Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\App\WindowControls.h">
+      <Filter>Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Creatures.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Errors.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Json.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\SpriteFile.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Text.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Generated\IconsFontAwesome5.h">
+      <Filter>Source\Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Resource.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\SpriteCreator\CreatorScreen.h">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\CreatureSprites.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\Fonts.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\IdleAnimation.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\SpriteView.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\Theme.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\UiScale.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\App\WindowHost.h">
+      <Filter>Windows\Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpriteCreator\CreatorApplication.h">
+      <Filter>Windows\Source\SpriteCreator</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\SpriteCreator.rc">
+      <Filter>Windows\Resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\App.manifest">
+      <Filter>Windows\Resources</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\Source\Resources\icon.ico">
+      <Filter>Source\Resources</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{cdcd4f02-280f-573b-924e-4262ebfabdc3}</ProjectGuid>
+    <RootNamespace>ManifoldIdlerSpriteCreator</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Manifold-Idler.SpriteCreator</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <TargetName>Manifold-Idler-Sprite-Creator</TargetName>
+    <OutDir>$(ProjectDir)..\Build\Windows\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)..\Build\Windows\obj\$(Configuration)\SpriteCreator\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(ProjectDir)..\Source;$(ProjectDir)..\Dependencies\ImGui;$(ProjectDir)..\Dependencies\ImGui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_WINDOWS;WIN32_LEAN_AND_MEAN;NOMINMAX;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dwmapi.lib;shell32.lib;ole32.lib;advapi32.lib;user32.lib;gdi32.lib;windowscodecs.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Manifest>
+      <EnableDpiAwareness>false</EnableDpiAwareness>
+      <AdditionalManifestFiles>$(ProjectDir)Resources\App.manifest</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\SpriteCreator\Main.cpp" />
+    <ClCompile Include="Source\SpriteCreator\CreatorApplication.cpp" />
+    <ClCompile Include="Source\App\WindowHost.cpp" />
+    <ClCompile Include="..\Source\SpriteCreator\CreatorScreen.cpp" />
+    <ClCompile Include="..\Source\App\Desktop.cpp" />
+    <ClCompile Include="..\Source\Core\Creatures.cpp" />
+    <ClCompile Include="..\Source\Core\Errors.cpp" />
+    <ClCompile Include="..\Source\Core\Json.cpp" />
+    <ClCompile Include="..\Source\Core\SpriteFile.cpp" />
+    <ClCompile Include="..\Source\Core\Text.cpp" />
+    <ClCompile Include="..\Source\UI\Fonts.cpp" />
+    <ClCompile Include="..\Source\UI\IdleAnimation.cpp" />
+    <ClCompile Include="..\Source\UI\SpriteView.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\SpriteCreator\CreatorApplication.h" />
+    <ClInclude Include="Source\App\WindowHost.h" />
+    <ClInclude Include="..\Source\SpriteCreator\CreatorScreen.h" />
+    <ClInclude Include="..\Source\App\CommandLine.h" />
+    <ClInclude Include="..\Source\App\Desktop.h" />
+    <ClInclude Include="..\Source\App\WindowCommon.h" />
+    <ClInclude Include="..\Source\App\WindowControls.h" />
+    <ClInclude Include="..\Source\Core\Creatures.h" />
+    <ClInclude Include="..\Source\Core\Errors.h" />
+    <ClInclude Include="..\Source\Core\Json.h" />
+    <ClInclude Include="..\Source\Core\SpriteFile.h" />
+    <ClInclude Include="..\Source\Core\Text.h" />
+    <ClInclude Include="..\Source\Generated\IconsFontAwesome5.h" />
+    <ClInclude Include="..\Source\Resource.h" />
+    <ClInclude Include="..\Source\UI\CreatureSprites.h" />
+    <ClInclude Include="..\Source\UI\Fonts.h" />
+    <ClInclude Include="..\Source\UI\IdleAnimation.h" />
+    <ClInclude Include="..\Source\UI\SpriteView.h" />
+    <ClInclude Include="..\Source\UI\Theme.h" />
+    <ClInclude Include="..\Source\UI\UiScale.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Dependencies\ImGui\imgui.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\imgui_draw.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\imgui_tables.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\imgui_widgets.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\backends\imgui_impl_win32.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\ImGui\backends\imgui_impl_dx11.cpp">
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <ClInclude Include="..\Dependencies\ImGui\imconfig.h" />
+    <ClInclude Include="..\Dependencies\ImGui\imgui.h" />
+    <ClInclude Include="..\Dependencies\ImGui\imgui_internal.h" />
+    <ClInclude Include="..\Dependencies\ImGui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="..\Dependencies\ImGui\backends\imgui_impl_dx11.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\SpriteCreator.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\App.manifest" />
+    <Image Include="..\Source\Resources\icon.ico" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

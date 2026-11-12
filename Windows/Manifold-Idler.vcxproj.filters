@@ -195,6 +195,9 @@
     <ClCompile Include="Source\App\Application.cpp">
       <Filter>Windows\Source\App</Filter>
     </ClCompile>
+    <ClCompile Include="Source\App\WindowHost.cpp">
+      <Filter>Windows\Source\App</Filter>
+    </ClCompile>
     <ClCompile Include="Source\App\Splash.cpp">
       <Filter>Windows\Source\App</Filter>
     </ClCompile>
@@ -234,6 +237,9 @@
       <Filter>Source\App</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\App\Shell.h">
+      <Filter>Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\App\WindowControls.h">
       <Filter>Source\App</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\App\StartOptions.h">
@@ -369,6 +375,9 @@
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\App\Application.h">
+      <Filter>Windows\Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\App\WindowHost.h">
       <Filter>Windows\Source\App</Filter>
     </ClInclude>
     <ClInclude Include="Source\App\Splash.h">

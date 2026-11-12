@@ -1,0 +1,41 @@
+#include <windows.h>
+#include "..\..\Source\Resource.h"
+
+#pragma code_page(65001)
+
+IDR_FONT_FA_SOLID        RCDATA "..\\..\\Dependencies\\Fonts\\fa-solid-900.ttf"
+
+IDI_APPICON ICON "..\\..\\Source\\Resources\\icon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    0,1,0,0
+ PRODUCTVERSION 0,1,0,0
+ FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS      VS_FF_DEBUG
+#else
+ FILEFLAGS      0x0L
+#endif
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       VFT_APP
+ FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "CompanyName",      "Manifold"
+            VALUE "Comments",         "Draws and animates the creatures of Manifold Idler."
+            VALUE "FileDescription",  "Manifold Idler Sprite Creator"
+            VALUE "FileVersion",      "0.1.0.0"
+            VALUE "InternalName",     "Manifold-Idler-Sprite-Creator"
+            VALUE "OriginalFilename", "Manifold-Idler-Sprite-Creator.exe"
+            VALUE "ProductName",      "Manifold Idler Sprite Creator"
+            VALUE "ProductVersion",   "0.1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END

@@ -86,6 +86,7 @@
   <ItemGroup>
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\App\Application.cpp" />
+    <ClCompile Include="Source\App\WindowHost.cpp" />
     <ClCompile Include="Source\App\WebPanel.cpp" />
     <ClCompile Include="Source\App\Splash.cpp" />
     <ClCompile Include="..\Source\Core\WebPolicy.cpp" />
@@ -134,7 +135,9 @@
   <ItemGroup>
     <ClInclude Include="..\Source\Resource.h" />
     <ClInclude Include="Source\App\Application.h" />
+    <ClInclude Include="Source\App\WindowHost.h" />
     <ClInclude Include="..\Source\App\Shell.h" />
+    <ClInclude Include="..\Source\App\WindowControls.h" />
     <ClInclude Include="..\Source\App\StartOptions.h" />
     <ClInclude Include="..\Source\App\WindowCommon.h" />
     <ClInclude Include="..\Source\App\CardService.h" />

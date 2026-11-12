@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Manifold-Idler", "Windows\M
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Manifold-Idler.Tests", "Windows\Manifold-Idler.Tests.vcxproj", "{C7D2E914-6A3B-4F58-8C21-9B0E5D7A1F63}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Manifold-Idler.SpriteCreator", "Windows\Manifold-Idler.SpriteCreator.vcxproj", "{CDCD4F02-280F-573B-924E-4262EBFABDC3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{C7D2E914-6A3B-4F58-8C21-9B0E5D7A1F63}.Debug|x64.Build.0 = Debug|x64
 		{C7D2E914-6A3B-4F58-8C21-9B0E5D7A1F63}.Release|x64.ActiveCfg = Release|x64
 		{C7D2E914-6A3B-4F58-8C21-9B0E5D7A1F63}.Release|x64.Build.0 = Release|x64
+		{CDCD4F02-280F-573B-924E-4262EBFABDC3}.Debug|x64.ActiveCfg = Debug|x64
+		{CDCD4F02-280F-573B-924E-4262EBFABDC3}.Debug|x64.Build.0 = Debug|x64
+		{CDCD4F02-280F-573B-924E-4262EBFABDC3}.Release|x64.ActiveCfg = Release|x64
+		{CDCD4F02-280F-573B-924E-4262EBFABDC3}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
