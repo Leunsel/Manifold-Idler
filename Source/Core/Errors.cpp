@@ -11,7 +11,7 @@ namespace Idler
     {
         constexpr std::string_view kPrefix = "MI-";
         constexpr std::string_view kPlace = "{}";
-        constexpr std::string_view kReference = "https://github.com/Leunsel/Manifold-Idler/blob/main/docs/ERRORS.md";
+        constexpr std::string_view kReference = "https://github.com/Leunsel/Manifold-Idler/blob/main/Docs/ERRORS.md";
 
         constexpr std::string_view kNewerSteam = "Look for a newer Manifold Idler. If there is none, report the code with the Steam version from Steam > About Steam.";
         constexpr std::string_view kHelper = "Allow Manifold Idler in the antivirus, and start it from the folder it lives in.";
@@ -202,6 +202,9 @@ namespace Idler
             { ErrorCode::ClockRunsOff, "The program's own clock runs at {} times real time, a speedhack perhaps. Idle time, timers, creatures and mini-games keep to real time.",
                 "The clock the program reads runs faster or slower than the system time. A speedhack or a debugger does that.",
                 "Nothing to do: everything that counts keeps to real time." },
+            { ErrorCode::SettingsInUse, "Another Manifold Idler uses these settings: the window program, or idler serve.",
+                "Only one program may use a settings file at a time; two would idle the same queue twice and overwrite each other's statistics.",
+                "Close the other window, or end the server with idler quit. To run both, give one of them settings of its own with --settings." },
 
             { ErrorCode::NoServer, "No idler runs with these settings. Start one with: idler serve",
                 "The command found no running server for this settings file.",
@@ -209,8 +212,8 @@ namespace Idler
             { ErrorCode::BadReply, "The idler gave an answer that makes no sense.",
                 "The server answered with something that is not a reply. Another version of the program may run as the server.",
                 "End the server with idler quit and start it again with this program." },
-            { ErrorCode::WindowProgramRuns, "The window program runs: two idlers would idle the same queue twice. Close it first.",
-                "The window program uses the same settings and queue as this server would.",
+            { ErrorCode::WindowProgramRuns, "The window program uses these settings: two idlers would idle the same queue twice. Close it first.",
+                "The window program, or a server that does not answer yet, holds the same settings file and queue as this server would.",
                 "Close the window program, or give the server settings of its own with --settings." },
             { ErrorCode::ServerRuns, "An idler already runs with these settings.",
                 "Another server runs with the same settings file.",

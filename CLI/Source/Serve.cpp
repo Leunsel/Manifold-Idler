@@ -3,6 +3,7 @@
 #include "App/IdlerModel.h"
 #include "Commands.h"
 #include "Core/Errors.h"
+#include "Core/FileLock.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Settings.h"
 #include "Core/Text.h"
@@ -52,18 +53,6 @@ namespace Idler::Cli
             ::SetConsoleCtrlHandler(OnConsoleEvent, TRUE);
         }
 
-        bool WindowProgramRuns()
-        {
-            for (const wchar_t* name : { L"Local\\ManifoldIdler", L"Local\\ManifoldIdlerAlt" })
-            {
-                if (HANDLE mutex = ::OpenMutexW(SYNCHRONIZE, FALSE, name))
-                {
-                    ::CloseHandle(mutex);
-                    return true;
-                }
-            }
-            return false;
-        }
 #else
         void OnSignal(int)
         {
@@ -77,11 +66,6 @@ namespace Idler::Cli
             sigemptyset(&action.sa_mask);
             for (const int signal : { SIGINT, SIGTERM, SIGHUP })
                 ::sigaction(signal, &action, nullptr);
-        }
-
-        bool WindowProgramRuns()
-        {
-            return false;
         }
 #endif
 
@@ -115,15 +99,16 @@ namespace Idler::Cli
     {
         const std::filesystem::path socketFile = SocketFile(options.Settings);
 
-        if (!options.Pretend && WindowProgramRuns())
-        {
-            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::WindowProgramRuns).c_str());
-            return 1;
-        }
         std::string reply;
         if (Ask(socketFile, "ping", reply))
         {
             std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::ServerRuns).c_str());
+            return 1;
+        }
+        FileLock settingsLock;
+        if (!settingsLock.Take(SettingsLockFile(options.Settings)))
+        {
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::WindowProgramRuns).c_str());
             return 1;
         }
 

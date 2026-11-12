@@ -36,8 +36,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <TargetName>Manifold-Idler.Tests</TargetName>
-    <OutDir>$(ProjectDir)..\x64\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)..\x64\obj\$(Configuration)\Tests\</IntDir>
+    <OutDir>$(ProjectDir)..\Build\Windows\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)..\Build\Windows\obj\$(Configuration)\Tests\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -68,12 +68,13 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Tests.cpp" />
+    <ClCompile Include="..\Tests\Tests.cpp" />
     <ClCompile Include="..\Source\Core\AppInfo.cpp" />
     <ClCompile Include="..\Source\Core\Cards.cpp" />
     <ClCompile Include="..\Source\Core\Library.cpp" />
     <ClCompile Include="..\Source\Core\Creatures.cpp" />
     <ClCompile Include="..\Source\Core\Errors.cpp" />
+    <ClCompile Include="..\Source\Core\FileLock.cpp" />
     <ClCompile Include="..\Source\Core\MiniGames.cpp" />
     <ClCompile Include="..\Source\Core\Queue.cpp" />
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp" />

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the Linux window program from any system, with Zig as a cross compiler. It lands in build/linux-x86_64.
+"""Builds the Linux window program from any system, with Zig as a cross compiler. It lands in Build/Linux/linux-x86_64.
 
 The sources are those of CMakeLists.txt. glibc and SDL3 stay dynamic: SDL3 comes from the system at run time, and a stub
 made from the vendored SDL3 headers stands in for it while linking. The C++ library is linked in.
@@ -15,11 +15,12 @@ from concurrent.futures import ThreadPoolExecutor
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
 TARGET = "x86_64-linux-gnu.2.31"
-CORE = ["AppInfo", "Cards", "Creatures", "Errors", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
-STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "Worker", "WorkerProcessPosix"]
-UI = ["Covers", "CoversSdl", "Fonts", "IdleAnimation", "MenuWidgets", "MiniGameView", "ScreenMain", "TerrariumView",
+CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
+STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "SteamWebNone", "Worker", "WorkerProcessPosix"]
+UI = ["Covers", "Fonts", "IdleAnimation", "MenuWidgets", "MiniGameView", "ScreenMain", "TerrariumView",
       "Scenes/HomeAutumn", "Scenes/HomeSpring", "Scenes/HomeSummer", "Scenes/HomeWinter", "Scenes/StageClouds", "Scenes/StageMeadow", "Scenes/StageUnderwater"]
-APP = ["IdlerModel", "CardService", "WebPanelNone", "SdlApplication", "Gl", "DesktopLinux"]
+APP = ["IdlerModel", "CardService"]
+OWN = ["MainSdl", "App/SdlApplication", "App/Gl", "App/WebPanelNone", "App/DesktopLinux", "UI/CoversSdl"]
 IMGUI = ["imgui", "imgui_draw", "imgui_tables", "imgui_widgets", "backends/imgui_impl_sdl3", "backends/imgui_impl_opengl3"]
 FONTS = [("Text", "NotoSans-Regular.ttf"), ("Bold", "NotoSans-Bold.ttf"), ("Icons", "fa-solid-900.ttf")]
 
@@ -36,7 +37,7 @@ def write_if_changed(path, text):
 def font_data(target):
     lines = ['#include "UI/FontData.h"', "", "namespace Idler::FontData", "{", "    namespace", "    {"]
     for name, file in FONTS:
-        with open(os.path.join(ROOT, "Resources", "Fonts", file), "rb") as f:
+        with open(os.path.join(ROOT, "Dependencies", "Fonts", file), "rb") as f:
             data = f.read()
         lines.append("        const unsigned char k%s[] = {" % name)
         for start in range(0, len(data), 32):
@@ -53,7 +54,7 @@ def font_data(target):
 
 def sdl_stub(zig, folder):
     names = set()
-    headers = os.path.join(ROOT, "SDL3", "include", "SDL3")
+    headers = os.path.join(ROOT, "Dependencies", "SDL3", "include", "SDL3")
     for header in os.listdir(headers):
         with open(os.path.join(headers, header), encoding="utf-8", errors="replace") as f:
             text = f.read()
@@ -77,7 +78,9 @@ def main():
         sys.exit("Zig was not found. Give it with --zig.")
 
     source = os.path.join(ROOT, "Source")
-    out = os.path.join(HERE, "build", "linux-x86_64")
+    linux = os.path.join(HERE, "Source")
+    dependencies = os.path.join(ROOT, "Dependencies")
+    out = os.path.join(ROOT, "Build", "Linux", "linux-x86_64")
     objects = os.path.join(out, "obj")
     generated = os.path.join(out, "generated")
     stub = os.path.join(out, "stub")
@@ -88,16 +91,15 @@ def main():
     font_data(font_file)
     print("SDL3 stub with %d functions" % sdl_stub(arguments.zig, stub))
 
-    own = [os.path.join(source, "MainSdl.cpp"), font_file]
+    own = [os.path.join(linux, name.replace("/", os.sep) + ".cpp") for name in OWN] + [font_file]
     own += [os.path.join(source, "Core", name + ".cpp") for name in CORE]
     own += [os.path.join(source, "Steam", name + ".cpp") for name in STEAM]
     own += [os.path.join(source, "UI", name.replace("/", os.sep) + ".cpp") for name in UI]
     own += [os.path.join(source, "App", name + ".cpp") for name in APP]
-    own += [os.path.join(ROOT, "CLI", "src", "SteamWebNone.cpp")]
-    imgui = [os.path.join(ROOT, "ImGui", name.replace("/", os.sep) + ".cpp") for name in IMGUI]
+    imgui = [os.path.join(dependencies, "ImGui", name.replace("/", os.sep) + ".cpp") for name in IMGUI]
 
-    includes = ["-I", source, "-I", os.path.join(ROOT, "ImGui"), "-I", os.path.join(ROOT, "ImGui", "backends"),
-                "-isystem", os.path.join(ROOT, "SDL3", "include"), "-isystem", os.path.join(ROOT, "stb")]
+    includes = ["-I", linux, "-I", source, "-I", os.path.join(dependencies, "ImGui"), "-I", os.path.join(dependencies, "ImGui", "backends"),
+                "-isystem", os.path.join(dependencies, "SDL3", "include"), "-isystem", os.path.join(dependencies, "stb")]
     common = ["-target", TARGET, "-std=c++20", "-O2"]
 
     def compile_one(job):

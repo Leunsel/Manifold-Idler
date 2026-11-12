@@ -6,4 +6,4 @@ if not defined MSBUILD (
     echo MSBuild was not found.
     exit /b 1
 )
-"%MSBUILD%" "%~dp0..\Manifold-Idler.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:CardFarm=true "/p:OutDir=%~dp0..\x64\Alt\\" "/p:IntDir=%~dp0..\x64\obj\Alt\\" /v:minimal /nologo
+"%MSBUILD%" "%~dp0..\Manifold-Idler.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:CardFarm=true "/p:OutDir=%~dp0..\..\Build\Windows\Alt\\" "/p:IntDir=%~dp0..\..\Build\Windows\obj\Alt\\" /v:minimal /nologo

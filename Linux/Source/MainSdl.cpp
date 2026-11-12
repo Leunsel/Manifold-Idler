@@ -1,6 +1,8 @@
 #include "App/Desktop.h"
 #include "App/SdlApplication.h"
 #include "App/StartOptions.h"
+#include "Core/Errors.h"
+#include "Core/FileLock.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
 #include "Steam/Worker.h"
@@ -81,6 +83,12 @@ int main(int argc, char** argv)
     const std::wstring capture = Idler::StartOptions::Argument(commandLine.c_str(), L"--capture=");
 
     const std::filesystem::path settingsFile = settings.empty() ? Idler::Desktop::SettingsPath() : PathOf(settings);
+    Idler::FileLock settingsLock;
+    if (capture.empty() && !settingsLock.Take(Idler::SettingsLockFile(settingsFile)))
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Manifold Idler runs already", Idler::ErrorMessage(Idler::ErrorCode::SettingsInUse).c_str(), nullptr);
+        return 1;
+    }
     if (capture.empty() || !settings.empty())
         Idler::RuntimeLog::OpenFile(std::filesystem::path(settingsFile).replace_extension(".log"));
 

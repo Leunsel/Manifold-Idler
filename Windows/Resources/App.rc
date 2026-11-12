@@ -1,11 +1,11 @@
 #include <windows.h>
-#include "..\Source\Resource.h"
+#include "..\..\Source\Resource.h"
 
 #pragma code_page(65001)
 
-IDR_FONT_FA_SOLID        RCDATA "Fonts\\fa-solid-900.ttf"
+IDR_FONT_FA_SOLID        RCDATA "..\\..\\Dependencies\\Fonts\\fa-solid-900.ttf"
 
-IDI_APPICON ICON "icon.ico"
+IDI_APPICON ICON "..\\..\\Source\\Resources\\icon.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION    0,1,0,0

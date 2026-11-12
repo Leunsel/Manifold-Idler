@@ -3,6 +3,7 @@
 #include "Core/Clock.h"
 #include "Core/Creatures.h"
 #include "Core/Errors.h"
+#include "Core/FileLock.h"
 #include "Core/Library.h"
 #include "Core/Queue.h"
 #include "Core/RuntimeLog.h"
@@ -3160,7 +3161,7 @@ namespace
         for (std::filesystem::path folder = std::filesystem::current_path(ignored); !folder.empty(); folder = folder.parent_path())
         {
             if (std::filesystem::exists(folder / "Source" / "Core" / "Errors.h", ignored))
-                return folder / "docs" / "ERRORS.md";
+                return folder / "Docs" / "ERRORS.md";
             if (folder == folder.parent_path())
                 break;
         }
@@ -3237,8 +3238,29 @@ namespace
         written.erase(std::remove(written.begin(), written.end(), '\r'), written.end());
         const bool current = !file.empty() && written == markdown;
         if (!current)
-            std::printf("  docs/ERRORS.md is not the table's: write it again with idler explain --markdown\n");
+            std::printf("  Docs/ERRORS.md is not the table's: write it again with idler explain --markdown\n");
         CHECK(current);
+    }
+
+    void TestFileLock()
+    {
+        const std::filesystem::path settings = TestFile("-lock.ini");
+        const std::filesystem::path lockFile = SettingsLockFile(settings);
+        CHECK(lockFile.extension() == ".lock" && lockFile.parent_path() == settings.parent_path());
+        CHECK(!SettingsInUse(settings));
+        {
+            FileLock first;
+            CHECK(first.Take(lockFile) && first.Held());
+            FileLock second;
+            CHECK(!second.Take(lockFile) && !second.Held());
+            CHECK(SettingsInUse(settings));
+            first.Release();
+            CHECK(!first.Held());
+            CHECK(second.Take(lockFile) && second.Held());
+        }
+        CHECK(!SettingsInUse(settings));
+        std::error_code ignored;
+        std::filesystem::remove(lockFile, ignored);
     }
 
     void TestText()
@@ -4059,6 +4081,7 @@ int main()
         { "Settings", TestSettings },
         { "Text", TestText },
         { "Errors", TestErrors },
+        { "FileLock", TestFileLock },
     };
     for (const auto& test : tests)
     {

@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(IDLER_CLI)
-#error "The CLI takes App/CardService.h from CLI/src/shim: put src/shim first in the include path"
+#error "The CLI takes App/CardService.h from CLI/Shim: put CLI/Shim first in the include path"
 #endif
 
 #include "App/WebPanel.h"

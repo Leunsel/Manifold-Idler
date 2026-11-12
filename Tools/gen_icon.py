@@ -6,8 +6,8 @@ import struct
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FONT = os.path.join(ROOT, "Resources", "Fonts", "fa-solid-900.ttf")
-ICO = os.path.join(ROOT, "Resources", "icon.ico")
+FONT = os.path.join(ROOT, "Dependencies", "Fonts", "fa-solid-900.ttf")
+ICO = os.path.join(ROOT, "Source", "Resources", "icon.ico")
 
 SIZES = [16, 20, 24, 32, 40, 48, 64, 128, 256]
 PNG_FROM = 128

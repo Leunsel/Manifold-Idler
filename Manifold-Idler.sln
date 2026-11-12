@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.37314.3 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Manifold-Idler", "Manifold-Idler.vcxproj", "{5A1F3C7E-8B42-4D19-9E6A-3F7C2B1D8E40}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Manifold-Idler", "Windows\Manifold-Idler.vcxproj", "{5A1F3C7E-8B42-4D19-9E6A-3F7C2B1D8E40}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Manifold-Idler.Tests", "Tests\Manifold-Idler.Tests.vcxproj", "{C7D2E914-6A3B-4F58-8C21-9B0E5D7A1F63}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Manifold-Idler.Tests", "Windows\Manifold-Idler.Tests.vcxproj", "{C7D2E914-6A3B-4F58-8C21-9B0E5D7A1F63}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

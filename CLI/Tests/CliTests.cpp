@@ -90,14 +90,9 @@ namespace
         std::filesystem::path web;
         for (std::filesystem::path folder = std::filesystem::current_path(ignored); !folder.empty(); folder = folder.parent_path())
         {
-            if (std::filesystem::exists(folder / "CLI" / "web" / "page.js", ignored))
+            if (std::filesystem::exists(folder / "CLI" / "Web" / "page.js", ignored))
             {
-                web = folder / "CLI" / "web";
-                break;
-            }
-            if (std::filesystem::exists(folder / "web" / "page.js", ignored))
-            {
-                web = folder / "web";
+                web = folder / "CLI" / "Web";
                 break;
             }
             if (folder == folder.parent_path())
@@ -106,7 +101,7 @@ namespace
         const bool current = !web.empty() && ReadSource(web / "page.html") == WebPageHtml() && ReadSource(web / "page.css") == WebPageStyle() &&
             ReadSource(web / "page.js") == WebPageScript();
         if (!current)
-            std::printf("  src/WebAssets.cpp is not the one of CLI/web: run tools/web-assets.py\n");
+            std::printf("  CLI/Source/WebAssets.cpp is not the one of CLI/Web: run CLI/Tools/web-assets.py\n");
         CHECK(current);
         CHECK(WebLogo().rfind("data:image/png;base64,iVBORw0KGgo", 0) == 0);
         CHECK(WebFontFaces().find("font-family:\"Idler Pixel\"") != std::string::npos);

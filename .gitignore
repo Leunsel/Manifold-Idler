@@ -6,6 +6,7 @@
 *.VC.VC.opendb
 ipch/
 
+/Build/
 /x64/
 
 /Source/codelines.cmd

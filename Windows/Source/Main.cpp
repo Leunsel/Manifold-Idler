@@ -3,8 +3,11 @@
 #include "App/Splash.h"
 #include "App/StartOptions.h"
 #include "Core/Cards.h"
+#include "Core/Errors.h"
+#include "Core/FileLock.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Settings.h"
+#include "Core/Text.h"
 #include "Steam/Worker.h"
 
 #include <windows.h>
@@ -45,6 +48,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPWSTR c
     }
 
     const std::filesystem::path settingsFile = settings.empty() ? Idler::Desktop::SettingsPath() : std::filesystem::path(settings);
+    Idler::FileLock settingsLock;
+    if (capture.empty() && !settingsLock.Take(Idler::SettingsLockFile(settingsFile)))
+    {
+        const std::wstring text = Idler::Utf8ToWide(Idler::ErrorMessage(Idler::ErrorCode::SettingsInUse));
+        ::MessageBoxW(nullptr, text.c_str(), L"Manifold Idler runs already", MB_ICONINFORMATION | MB_OK);
+        if (single)
+            ::CloseHandle(single);
+        return 1;
+    }
     const int takenOver = settings.empty() ? Idler::TakeOverOldName(settingsFile) : 0;
     if (capture.empty() || !settings.empty())
         Idler::RuntimeLog::OpenFile(std::filesystem::path(settingsFile).replace_extension(L".log"));

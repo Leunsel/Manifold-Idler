@@ -21,13 +21,13 @@ jobs:
         run: msbuild Manifold-Idler.sln /p:Configuration=Release /p:Platform=x64 /m /nologo /v:minimal
 
       - name: Run the tests
-        run: .\x64\Release\Manifold-Idler.Tests.exe
+        run: .\Build\Windows\Release\Manifold-Idler.Tests.exe
 
       - name: Gather the program
         shell: pwsh
         run: |
           New-Item -ItemType Directory dist | Out-Null
-          Copy-Item x64\Release\Manifold-Idler.exe, LICENSE, README.md dist\
+          Copy-Item Build\Windows\Release\Manifold-Idler.exe, LICENSE, README.md dist\
           Copy-Item Licenses dist\Licenses -Recurse
 
       - uses: actions/upload-artifact@v7
@@ -44,29 +44,29 @@ jobs:
         include:
           - os: windows-2022
             artifact: idler-windows-x64
-            binary: CLI/build/Release/idler.exe
+            binary: Build/CLI/Release/idler.exe
           - os: ubuntu-24.04
             artifact: idler-linux-x86_64
-            binary: CLI/build/idler
+            binary: Build/CLI/idler
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
 
       - name: Configure
-        run: cmake -S CLI -B CLI/build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S CLI -B Build/CLI -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build CLI/build --config Release --parallel
+        run: cmake --build Build/CLI --config Release --parallel
 
       - name: Run the tests
-        run: ctest --test-dir CLI/build -C Release --output-on-failure
+        run: ctest --test-dir Build/CLI -C Release --output-on-failure
 
       - name: Gather the program
         shell: bash
         run: |
           mkdir dist
           cp "${{ matrix.binary }}" LICENSE CLI/README.md dist/
-          cp CLI/third_party/CLI11/LICENSE dist/CLI11-LICENSE
+          cp Dependencies/CLI11/LICENSE dist/CLI11-LICENSE
           cp Licenses/Press-Start-2P.txt Licenses/VT323.txt dist/
 
       - uses: actions/upload-artifact@v7

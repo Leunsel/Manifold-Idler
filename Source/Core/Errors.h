@@ -59,6 +59,7 @@
     X(SettingsNotSaved, 5013) \
     X(StatsNotSaved, 5014) \
     X(ClockRunsOff, 5015) \
+    X(SettingsInUse, 5016) \
     X(NoServer, 6001) \
     X(BadReply, 6002) \
     X(WindowProgramRuns, 6003) \

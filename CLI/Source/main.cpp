@@ -236,14 +236,22 @@ int main(int argc, char** argv)
     bool explainMarkdown = false;
     CLI::App* explain = app.add_subcommand("explain", "What an error code means, MI-1001 for example; without one, all codes");
     explain->add_option("code", explainCode, "The code, as MI-1001 or 1001");
-    explain->add_flag("--markdown", explainMarkdown, "All codes as Markdown, as in docs/ERRORS.md");
+    explain->add_flag("--markdown", explainMarkdown, "All codes as Markdown, as in Docs/ERRORS.md");
 
     CLI11_PARSE(app, argc, argv);
 
     if (explain->parsed())
         return Explain(explainCode, explainMarkdown);
 
-    const std::filesystem::path settings = settingsText.empty() ? Idler::Cli::DefaultSettingsFile() : Idler::Cli::PathFromUtf8(settingsText);
+    if (serve->parsed() && serveOptions.Pretend && settingsText.empty())
+    {
+        std::fprintf(stderr, "--pretend is for checks, with settings of their own.\n");
+        return 1;
+    }
+
+    std::filesystem::path settings = settingsText.empty() ? Idler::Cli::DefaultSettingsFile() : Idler::Cli::PathFromUtf8(settingsText);
+    if (settingsText.empty() && (serve->parsed() || serviceInstall->parsed()))
+        settings = Idler::Cli::TakeOverOldSettings(settings);
 
     if (serviceInstall->parsed())
         return Idler::Cli::InstallService(settings, serviceStart, serviceWeb->count() > 0, serviceWebAddress);
@@ -254,11 +262,6 @@ int main(int argc, char** argv)
     {
         serveOptions.Settings = settings;
         serveOptions.Web = serveWeb->count() > 0;
-        if (serveOptions.Pretend && settingsText.empty())
-        {
-            std::fprintf(stderr, "--pretend is for checks, with settings of their own.\n");
-            return 1;
-        }
         return Idler::Cli::Serve(serveOptions);
     }
     return Ask(settings, request);

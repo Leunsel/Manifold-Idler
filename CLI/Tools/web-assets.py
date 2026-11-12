@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Writes src/WebAssets.cpp: the web page from web/page.html, page.css and page.js, its two fonts from web/fonts, and the
-program's icon from Resources/icon.ico.
+"""Writes Source/WebAssets.cpp: the web page from Web/page.html, page.css and page.js, its two fonts from
+Dependencies/Fonts, and the program's icon from Source/Resources/icon.ico.
 
-Run it again after any of these files changes; the CLI tests fail while src/WebAssets.cpp is behind them.
+Run it again after any of these files changes; the CLI tests fail while Source/WebAssets.cpp is behind them.
 """
 import argparse
 import base64
@@ -20,14 +20,14 @@ CHUNK = 12000
 
 
 def read_text(name):
-    with open(os.path.join(HERE, "web", name), encoding="utf-8") as source:
+    with open(os.path.join(HERE, "Web", name), encoding="utf-8") as source:
         return source.read().replace("\r\n", "\n")
 
 
 def font_faces():
     faces = ""
     for family, file, extra in FONTS:
-        with open(os.path.join(HERE, "web", "fonts", file), "rb") as source:
+        with open(os.path.join(ROOT, "Dependencies", "Fonts", file), "rb") as source:
             data = base64.b64encode(source.read()).decode("ascii")
         faces += ('@font-face{font-family:"' + family + '";font-style:normal;font-weight:400;font-display:block;' + extra +
                   "src:url(data:font/woff2;base64," + data + ') format("woff2")}\n')
@@ -35,7 +35,7 @@ def font_faces():
 
 
 def logo():
-    with open(os.path.join(ROOT, "Resources", "icon.ico"), "rb") as source:
+    with open(os.path.join(ROOT, "Source", "Resources", "icon.ico"), "rb") as source:
         data = source.read()
     count = struct.unpack("<HHH", data[:6])[2]
     best = None
@@ -45,7 +45,7 @@ def logo():
         if data[offset:offset + 4] == b"\x89PNG" and width <= 128 and (best is None or width > best[0]):
             best = (width, data[offset:offset + size])
     if best is None:
-        raise SystemExit("Resources/icon.ico has no PNG picture of 128 pixels or less.")
+        raise SystemExit("Source/Resources/icon.ico has no PNG picture of 128 pixels or less.")
     return "data:image/png;base64," + base64.b64encode(best[1]).decode("ascii")
 
 
@@ -97,7 +97,7 @@ def main():
     for name, function, _ in parts:
         lines += ["", "    std::string " + function + "()", "    {", "        return Join(" + name + ");", "    }"]
     lines += ["}", ""]
-    target = os.path.join(HERE, "src", "WebAssets.cpp")
+    target = os.path.join(HERE, "Source", "WebAssets.cpp")
     with open(target, "w", encoding="utf-8", newline="\n") as out:
         out.write("\n".join(lines))
     print(target)

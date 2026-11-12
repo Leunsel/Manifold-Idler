@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the Linux program from any system, with Zig as a cross compiler. It lands in build/linux-x86_64.
+"""Builds the Linux program from any system, with Zig as a cross compiler. It lands in Build/CLI/linux-x86_64.
 
 The sources are those of CMakeLists.txt. glibc stays dynamic, as Steam's client library needs it; the C++ library is linked in.
 """
@@ -13,10 +13,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = "x86_64-linux-gnu.2.31"
-CORE = ["AppInfo", "Cards", "Creatures", "Errors", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
+CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "Worker", "WorkerProcessPosix"]
 BASE = ["Http", "Ipc", "Paths", "Request", "Service", "Web", "WebAssets", "WebPage", "WebServer"]
-PROGRAM = ["main", "Commands", "PageCommands", "Serve", "Desktop", "SteamWebNone"]
+PROGRAM = ["main", "Commands", "PageCommands", "Serve", "Desktop"]
 
 
 def main():
@@ -27,20 +27,21 @@ def main():
     if not arguments.zig:
         sys.exit("Zig was not found. Give it with --zig.")
 
-    source = os.path.abspath(os.path.join(arguments.source, "Source"))
-    src = os.path.join(HERE, "src")
-    out = os.path.join(HERE, "build", "linux-x86_64")
+    root = os.path.abspath(arguments.source)
+    source = os.path.join(root, "Source")
+    src = os.path.join(HERE, "Source")
+    out = os.path.join(root, "Build", "CLI", "linux-x86_64")
     objects = os.path.join(out, "obj")
     os.makedirs(objects, exist_ok=True)
 
     core = [os.path.join(source, "Core", name + ".cpp") for name in CORE]
-    engine = [os.path.join(source, "App", "IdlerModel.cpp")] + [os.path.join(source, "Steam", name + ".cpp") for name in STEAM]
+    engine = [os.path.join(source, "App", "IdlerModel.cpp")] + [os.path.join(source, "Steam", name + ".cpp") for name in STEAM + ["SteamWebNone"]]
     base = [os.path.join(src, name + ".cpp") for name in BASE]
     program = [os.path.join(src, name + ".cpp") for name in PROGRAM]
-    cli_tests = os.path.join(HERE, "tests", "CliTests.cpp")
-    core_tests = os.path.abspath(os.path.join(arguments.source, "Tests", "Tests.cpp"))
+    cli_tests = os.path.join(HERE, "Tests", "CliTests.cpp")
+    core_tests = os.path.join(root, "Tests", "Tests.cpp")
 
-    includes = ["-I", os.path.join(src, "shim"), "-I", source, "-I", src, "-isystem", os.path.join(HERE, "third_party", "CLI11")]
+    includes = ["-I", os.path.join(HERE, "Shim"), "-I", source, "-I", src, "-isystem", os.path.join(root, "Dependencies", "CLI11")]
     flags = ["-target", TARGET, "-std=c++20", "-O2", "-Wall", "-Wextra", "-DIDLER_CLI"]
 
     def compile_one(path):

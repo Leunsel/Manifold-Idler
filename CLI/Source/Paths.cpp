@@ -1,6 +1,9 @@
 #include "Paths.h"
 
+#include "Core/FileLock.h"
 #include "Core/Text.h"
+#include "Ipc.h"
+#include "Request.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -34,7 +37,7 @@ namespace Idler::Cli
 #endif
     }
 
-    std::filesystem::path DefaultSettingsFile()
+    std::filesystem::path DefaultSettingsFolder()
     {
 #ifdef _WIN32
         std::wstring path(MAX_PATH, L'\0');
@@ -42,7 +45,7 @@ namespace Idler::Cli
         while ((length = ::GetModuleFileNameW(nullptr, path.data(), static_cast<DWORD>(path.size()))) == path.size())
             path.resize(path.size() * 2);
         path.resize(length);
-        return std::filesystem::path(path).parent_path() / L"idler.ini";
+        return std::filesystem::path(path).parent_path();
 #else
         std::filesystem::path folder;
         if (const char* config = std::getenv("XDG_CONFIG_HOME"); config && config[0])
@@ -51,8 +54,54 @@ namespace Idler::Cli
             folder = std::filesystem::path(home) / ".config";
         else
             folder = ".";
-        return folder / "manifold-idler" / "idler.ini";
+        return folder / "manifold-idler";
 #endif
+    }
+
+    std::filesystem::path OldSettingsFile()
+    {
+        return DefaultSettingsFolder() / "idler.ini";
+    }
+
+    std::filesystem::path DefaultSettingsFile()
+    {
+        const std::filesystem::path shared = DefaultSettingsFolder() / "Manifold-Idler.ini";
+        std::error_code error;
+        if (!std::filesystem::exists(shared, error) && std::filesystem::exists(OldSettingsFile(), error))
+            return OldSettingsFile();
+        return shared;
+    }
+
+    std::filesystem::path TakeOverOldSettings(const std::filesystem::path& settings)
+    {
+        const std::filesystem::path old = OldSettingsFile();
+        const std::filesystem::path shared = DefaultSettingsFolder() / "Manifold-Idler.ini";
+        std::error_code error;
+        if (settings != old || std::filesystem::exists(shared, error))
+            return settings;
+        std::string reply;
+        if (Ask(SocketFile(old), JoinRequest({ "ping" }), reply))
+            return settings;
+        FileLock oldLock;
+        if (!oldLock.Take(SettingsLockFile(old)))
+            return settings;
+
+        std::string moved;
+        for (const char* extension : { ".ini", ".stats", ".web-token", ".achievement-icons" })
+        {
+            std::filesystem::path from = old;
+            from.replace_extension(extension);
+            std::filesystem::path to = shared;
+            to.replace_extension(extension);
+            if (!std::filesystem::exists(from, error) || std::filesystem::exists(to, error))
+                continue;
+            std::filesystem::rename(from, to, error);
+            if (error)
+                return extension == std::string(".ini") ? settings : shared;
+            moved += (moved.empty() ? "" : ", ") + PathToUtf8(from.filename());
+        }
+        std::printf("Moved %s to Manifold-Idler.*, the window program's names: both share them now.\n", moved.c_str());
+        return shared;
     }
 
     std::string SocketName(const std::filesystem::path& settings)

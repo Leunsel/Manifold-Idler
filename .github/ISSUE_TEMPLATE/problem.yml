@@ -5,7 +5,7 @@ body:
     id: code
     attributes:
       label: Error code
-      description: The code at the end of the message, such as MI-1001. docs/ERRORS.md explains each one. Leave it empty if there was none.
+      description: The code at the end of the message, such as MI-1001. Docs/ERRORS.md explains each one. Leave it empty if there was none.
       placeholder: MI-1001
   - type: textarea
     id: what

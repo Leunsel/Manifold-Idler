@@ -1,6 +1,7 @@
 #include "Service.h"
 
 #include "Core/Errors.h"
+#include "Core/FileLock.h"
 #include "Ipc.h"
 #include "Paths.h"
 #include "Request.h"
@@ -182,6 +183,11 @@ namespace Idler::Cli
         if (!active && ServerAnswers(settings))
         {
             std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::ServerRunsElsewhere).c_str());
+            return 1;
+        }
+        if (!active && SettingsInUse(settings))
+        {
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::WindowProgramRuns).c_str());
             return 1;
         }
 

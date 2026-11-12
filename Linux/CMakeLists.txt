@@ -10,7 +10,9 @@ endif()
 
 set(IDLER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." CACHE PATH "The Manifold-Idler folder")
 set(SOURCE "${IDLER_ROOT}/Source")
-if(NOT EXISTS "${SOURCE}/App/SdlApplication.cpp")
+set(LINUX_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
+set(DEPENDENCIES "${IDLER_ROOT}/Dependencies")
+if(NOT EXISTS "${SOURCE}/App/IdlerModel.cpp")
     message(FATAL_ERROR "Manifold Idler's sources were not found in ${IDLER_ROOT}. Set IDLER_ROOT.")
 endif()
 
@@ -21,7 +23,7 @@ if(TARGET SDL3::SDL3)
 else()
     find_library(IDLER_SDL_LIBRARY NAMES SDL3 libSDL3.so.0 REQUIRED)
     add_library(idler_sdl INTERFACE)
-    target_include_directories(idler_sdl SYSTEM INTERFACE "${IDLER_ROOT}/SDL3/include")
+    target_include_directories(idler_sdl SYSTEM INTERFACE "${DEPENDENCIES}/SDL3/include")
     target_link_libraries(idler_sdl INTERFACE "${IDLER_SDL_LIBRARY}")
     set(IDLER_SDL idler_sdl)
 endif()
@@ -30,33 +32,37 @@ set(FONT_DATA "${CMAKE_CURRENT_BINARY_DIR}/generated/FontData.cpp")
 add_custom_command(
     OUTPUT "${FONT_DATA}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-    COMMAND "${CMAKE_COMMAND}" "-DOUT=${FONT_DATA}" "-DTEXT=${IDLER_ROOT}/Resources/Fonts/NotoSans-Regular.ttf"
-        "-DBOLD=${IDLER_ROOT}/Resources/Fonts/NotoSans-Bold.ttf" "-DICONS=${IDLER_ROOT}/Resources/Fonts/fa-solid-900.ttf"
+    COMMAND "${CMAKE_COMMAND}" "-DOUT=${FONT_DATA}" "-DTEXT=${DEPENDENCIES}/Fonts/NotoSans-Regular.ttf"
+        "-DBOLD=${DEPENDENCIES}/Fonts/NotoSans-Bold.ttf" "-DICONS=${DEPENDENCIES}/Fonts/fa-solid-900.ttf"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedFonts.cmake"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedFonts.cmake" "${IDLER_ROOT}/Resources/Fonts/NotoSans-Regular.ttf"
-        "${IDLER_ROOT}/Resources/Fonts/NotoSans-Bold.ttf" "${IDLER_ROOT}/Resources/Fonts/fa-solid-900.ttf"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedFonts.cmake" "${DEPENDENCIES}/Fonts/NotoSans-Regular.ttf"
+        "${DEPENDENCIES}/Fonts/NotoSans-Bold.ttf" "${DEPENDENCIES}/Fonts/fa-solid-900.ttf"
     VERBATIM)
 
 add_library(idler_imgui STATIC
-    "${IDLER_ROOT}/ImGui/imgui.cpp"
-    "${IDLER_ROOT}/ImGui/imgui_draw.cpp"
-    "${IDLER_ROOT}/ImGui/imgui_tables.cpp"
-    "${IDLER_ROOT}/ImGui/imgui_widgets.cpp"
-    "${IDLER_ROOT}/ImGui/backends/imgui_impl_sdl3.cpp"
-    "${IDLER_ROOT}/ImGui/backends/imgui_impl_opengl3.cpp")
-target_include_directories(idler_imgui PUBLIC "${IDLER_ROOT}/ImGui" "${IDLER_ROOT}/ImGui/backends")
+    "${DEPENDENCIES}/ImGui/imgui.cpp"
+    "${DEPENDENCIES}/ImGui/imgui_draw.cpp"
+    "${DEPENDENCIES}/ImGui/imgui_tables.cpp"
+    "${DEPENDENCIES}/ImGui/imgui_widgets.cpp"
+    "${DEPENDENCIES}/ImGui/backends/imgui_impl_sdl3.cpp"
+    "${DEPENDENCIES}/ImGui/backends/imgui_impl_opengl3.cpp")
+target_include_directories(idler_imgui PUBLIC "${DEPENDENCIES}/ImGui" "${DEPENDENCIES}/ImGui/backends")
 target_link_libraries(idler_imgui PUBLIC ${IDLER_SDL})
 if(NOT WIN32)
     target_link_libraries(idler_imgui PUBLIC ${CMAKE_DL_LIBS})
 endif()
 
-set(CORE AppInfo Cards Creatures Errors Library MiniGames Queue RuntimeLog Settings Stats Terrarium Text Vdf WebPolicy)
+set(CORE AppInfo Cards Creatures Errors FileLock Library MiniGames Queue RuntimeLog Settings Stats Terrarium Text Vdf WebPolicy)
 set(STEAM LibraryScan SteamClient SteamLocal Worker)
-set(UI Covers CoversSdl Fonts IdleAnimation MenuWidgets MiniGameView ScreenMain TerrariumView
+set(UI Covers Fonts IdleAnimation MenuWidgets MiniGameView ScreenMain TerrariumView
     Scenes/HomeAutumn Scenes/HomeSpring Scenes/HomeSummer Scenes/HomeWinter Scenes/StageClouds Scenes/StageMeadow Scenes/StageUnderwater)
-set(APP IdlerModel CardService WebPanelNone SdlApplication Gl)
+set(APP IdlerModel CardService)
+set(OWN MainSdl App/SdlApplication App/Gl App/WebPanelNone UI/CoversSdl)
 
-set(SOURCES "${SOURCE}/MainSdl.cpp" "${FONT_DATA}")
+set(SOURCES "${FONT_DATA}")
+foreach(name IN LISTS OWN)
+    list(APPEND SOURCES "${LINUX_SOURCE}/${name}.cpp")
+endforeach()
 foreach(name IN LISTS CORE)
     list(APPEND SOURCES "${SOURCE}/Core/${name}.cpp")
 endforeach()
@@ -73,12 +79,12 @@ endforeach()
 if(WIN32)
     list(APPEND SOURCES "${SOURCE}/App/Desktop.cpp" "${SOURCE}/Steam/WorkerProcess.cpp" "${SOURCE}/Steam/SteamWeb.cpp")
 else()
-    list(APPEND SOURCES "${SOURCE}/App/DesktopLinux.cpp" "${SOURCE}/Steam/WorkerProcessPosix.cpp" "${IDLER_ROOT}/CLI/src/SteamWebNone.cpp")
+    list(APPEND SOURCES "${LINUX_SOURCE}/App/DesktopLinux.cpp" "${SOURCE}/Steam/WorkerProcessPosix.cpp" "${SOURCE}/Steam/SteamWebNone.cpp")
 endif()
 
 add_executable(manifold-idler ${SOURCES})
-target_include_directories(manifold-idler PRIVATE "${SOURCE}")
-target_include_directories(manifold-idler SYSTEM PRIVATE "${IDLER_ROOT}/stb")
+target_include_directories(manifold-idler PRIVATE "${LINUX_SOURCE}" "${SOURCE}")
+target_include_directories(manifold-idler SYSTEM PRIVATE "${DEPENDENCIES}/stb")
 target_compile_definitions(manifold-idler PRIVATE IDLER_BUNDLED_FONTS)
 target_link_libraries(manifold-idler PRIVATE idler_imgui ${IDLER_SDL} Threads::Threads)
 if(MSVC)

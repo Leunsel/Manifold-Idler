@@ -14,7 +14,7 @@ This file is made from `Source/Core/Errors.cpp` with `idler explain --markdown`.
 | [Idling](#idling) | MI-2001 to MI-2007 |
 | [Library](#library) | MI-3001 to MI-3009 |
 | [Achievements and stats](#achievements-and-stats) | MI-4001 to MI-4012 |
-| [The program](#the-program) | MI-5001 to MI-5015 |
+| [The program](#the-program) | MI-5001 to MI-5016 |
 | [Command line and server](#command-line-and-server) | MI-6001 to MI-6015 |
 | [Web page](#web-page) | MI-7001 to MI-7016 |
 | [Card farm](#card-farm) | MI-8001 to MI-8009 |
@@ -453,6 +453,14 @@ What happened: The clock the program reads runs faster or slower than the system
 
 What to do: Nothing to do: everything that counts keeps to real time.
 
+### MI-5016
+
+**Another Manifold Idler uses these settings: the window program, or idler serve.**
+
+What happened: Only one program may use a settings file at a time; two would idle the same queue twice and overwrite each other's statistics.
+
+What to do: Close the other window, or end the server with idler quit. To run both, give one of them settings of its own with --settings.
+
 ## Command line and server
 
 ### MI-6001
@@ -473,9 +481,9 @@ What to do: End the server with idler quit and start it again with this program.
 
 ### MI-6003
 
-**The window program runs: two idlers would idle the same queue twice. Close it first.**
+**The window program uses these settings: two idlers would idle the same queue twice. Close it first.**
 
-What happened: The window program uses the same settings and queue as this server would.
+What happened: The window program, or a server that does not answer yet, holds the same settings file and queue as this server would.
 
 What to do: Close the window program, or give the server settings of its own with --settings.
 
