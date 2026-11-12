@@ -3,6 +3,9 @@
 
 The sources are those of CMakeLists.txt. glibc and SDL3 stay dynamic: SDL3 comes from the system at run time, and a stub
 made from the vendored SDL3 headers stands in for it while linking. The C++ library is linked in.
+
+--stub-only <folder> builds only that stub, with the C compiler given by --cc, for a CMake build on a system without SDL3:
+cmake -S Linux -B Build/Linux -DIDLER_SDL_LIBRARY=<folder>/libSDL3.so
 """
 import argparse
 import os
@@ -52,7 +55,7 @@ def font_data(target):
     write_if_changed(target, "\n".join(lines) + "\n")
 
 
-def sdl_stub(zig, folder):
+def sdl_stub(compiler, folder):
     names = set()
     headers = os.path.join(ROOT, "Dependencies", "SDL3", "include", "SDL3")
     for header in os.listdir(headers):
@@ -62,7 +65,7 @@ def sdl_stub(zig, folder):
     source = os.path.join(folder, "sdl3-stub.c")
     write_if_changed(source, "".join("void %s(void) {}\n" % name for name in sorted(names)))
     library = os.path.join(folder, "libSDL3.so")
-    run = subprocess.run([zig, "cc", "-target", TARGET, "-shared", "-fPIC", "-Wl,-soname,libSDL3.so.0", source, "-o", library],
+    run = subprocess.run(compiler + ["-shared", "-fPIC", "-Wl,-soname,libSDL3.so.0", source, "-o", library],
                          capture_output=True, text=True, encoding="utf-8", errors="replace")
     if run.returncode != 0:
         sys.exit("The SDL3 stub did not build:\n" + run.stderr)
@@ -73,7 +76,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--zig", default=shutil.which("zig"), help="zig, if it is not on the path")
     parser.add_argument("--jobs", type=int, default=min(6, os.cpu_count() or 4), help="compilers at once")
+    parser.add_argument("--stub-only", metavar="FOLDER", help="build only the SDL3 stub, into this folder")
+    parser.add_argument("--cc", default="cc", help="the C compiler for --stub-only")
     arguments = parser.parse_args()
+    if arguments.stub_only:
+        os.makedirs(arguments.stub_only, exist_ok=True)
+        count = sdl_stub([arguments.cc], arguments.stub_only)
+        print("SDL3 stub with %d functions: %s" % (count, os.path.join(arguments.stub_only, "libSDL3.so")))
+        return
     if not arguments.zig:
         sys.exit("Zig was not found. Give it with --zig.")
 
@@ -89,7 +99,7 @@ def main():
 
     font_file = os.path.join(generated, "FontData.cpp")
     font_data(font_file)
-    print("SDL3 stub with %d functions" % sdl_stub(arguments.zig, stub))
+    print("SDL3 stub with %d functions" % sdl_stub([arguments.zig, "cc", "-target", TARGET], stub))
 
     own = [os.path.join(linux, name.replace("/", os.sep) + ".cpp") for name in OWN] + [font_file]
     own += [os.path.join(source, "Core", name + ".cpp") for name in CORE]
