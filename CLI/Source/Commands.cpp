@@ -179,6 +179,7 @@ namespace Idler::Cli
             else if (forecast.Seconds > 0.0)
                 line("left", "Time left", DurationText(static_cast<std::uint64_t>(std::ceil(forecast.Seconds))) + (model.Options().VaryTimes ? " plus breaks" : ""));
             result.Rows.push_back({ "active", "", model.Active() ? "yes" : "no" });
+            result.Rows.push_back({ "persona", "", steam.LoggedOn() ? model.Persona() : std::string() });
             result.Rows.push_back({ "undo", "", model.Undoable().Any() ? "yes" : "no" });
             return result;
         }

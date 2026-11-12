@@ -30,6 +30,7 @@ let librarySearchTimer = 0;
 let libraryLoaded = "";
 let selected = "";
 let detailNumber = 0;
+let panelNumber = 0;
 let statsTab = "overview";
 let statsAt = 0;
 let historyDay = "";
@@ -116,9 +117,21 @@ function coverUrl(app) {
 }
 
 function cover(app, className) {
-  const picture = el("img", { class: className, src: coverUrl(app), alt: "", loading: "lazy", decoding: "async", width: "460", height: "215" });
-  picture.addEventListener("error", () => picture.replaceWith(el("div", { class: className, "aria-hidden": "true" })), { once: true });
-  return picture;
+  const picture = el("img", { src: coverUrl(app), alt: "", loading: "lazy", decoding: "async", width: "460", height: "215" });
+  picture.addEventListener("error", () => picture.remove(), { once: true });
+  return el("span", { class: "art " + className, "aria-hidden": "true" }, picture);
+}
+
+function gameLink(app, name) {
+  return el("button", { type: "button", class: "game-link", title: "Details", onclick: () => openGame(app) }, el("span", { class: "name", text: name }));
+}
+
+function opensGame(node, app) {
+  node.classList.add("opens");
+  node.addEventListener("click", (event) => {
+    if (!event.target.closest("button, a, input, select, form, label")) openGame(app);
+  });
+  return node;
 }
 
 async function call(words) {
@@ -358,8 +371,17 @@ function drawStatus(rows) {
   const slots = $("slots");
   if (document.activeElement !== slots) slots.value = find(rows, "slots");
   $("undo").hidden = find(rows, "undo") !== "yes";
-  $("account").replaceChildren(el("small", { text: "Steam" }), document.createTextNode(find(rows, "steam") || "unknown"));
+  drawAccount(rows);
   if (page === "settings") drawSteamFacts();
+}
+
+function drawAccount(rows) {
+  const persona = find(rows, "persona");
+  const box = $("account");
+  box.classList.toggle("signed-in", Boolean(persona));
+  box.replaceChildren(el("small", { text: "Steam" }),
+    persona ? el("strong", { class: "account-name", text: persona, title: persona }) : null,
+    persona ? el("span", { class: "account-state good", text: "Logged on" }) : el("span", { class: "account-note", text: find(rows, "steam") || "unknown" }));
 }
 
 function goalCell(item) {
@@ -415,12 +437,14 @@ function makeEntry(entry) {
   item.fill = el("span");
   item.meter = el("div", { class: "meter", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100" }, item.fill);
   item.actions = el("div", { class: "entry-actions" });
+  item.open = el("button", { type: "button", class: "entry-open", onclick: () => openGame(item.entry.app) }, item.name);
   item.li = el("li", { class: "entry" }, cover(entry.app, "thumb"),
     el("div", { class: "entry-main" },
-      el("div", { class: "entry-title" }, item.name, item.app),
+      el("div", { class: "entry-title" }, item.open, item.app),
       el("div", { class: "entry-line" }, item.state, item.goal, item.idled, item.left),
       item.meter),
     item.actions);
+  opensGame(item.li, entry.app);
   return item;
 }
 
@@ -430,6 +454,7 @@ function fillEntry(item, entry, index, count) {
   const flags = entry.flags.split(" ").filter(Boolean);
   item.entry = entry;
   setText(item.name, entry.name);
+  item.open.setAttribute("aria-label", entry.name + ": details");
   setText(item.app, entry.app);
   setText(item.state, entry.state);
   item.state.className = "state " + tone(entry.state);
@@ -570,61 +595,146 @@ function markQueued(app, queued) {
   if (old) old.replaceWith(tile(game));
 }
 
+async function gameData(app) {
+  const [game, queue] = await Promise.all([call(["game", app]), call(["queue"])]);
+  return { game, queue: queue.rows };
+}
+
 async function selectGame(app) {
   selected = app;
   for (const node of $("lib-grid").querySelectorAll(".tile")) node.setAttribute("aria-pressed", String(node.dataset.app === app));
   const panel = $("detail");
   panel.classList.remove("closed");
   const number = ++detailNumber;
-  let result;
+  let data;
   try {
-    result = await call(["game", app]);
+    data = await gameData(app);
   } catch (error) {
     trouble(error);
     return;
   }
   if (number !== detailNumber) return;
-  if (!result.ok) {
-    panel.replaceChildren(el("p", { class: "quiet", text: result.text }));
+  if (!data.game.ok) {
+    panel.replaceChildren(el("p", { class: "quiet", text: data.game.text }));
     return;
   }
-  drawDetail(app, result.rows);
+  panel.replaceChildren(...gameView(app, data, () => panel.classList.add("closed"), () => selectGame(app)));
+  panel.firstChild.classList.add("detail-close");
 }
 
-function drawDetail(app, rows) {
-  const panel = $("detail");
-  const queued = find(rows, "queued") === "yes";
-  const facts = rows.filter((row) => row.label && row.key !== "name" && row.key !== "day");
-  const days = rows.filter((row) => row.key === "day");
+async function openGame(app) {
+  const panel = $("game-panel");
+  const first = panel.hidden;
+  const number = ++panelNumber;
+  if (first) {
+    panel.replaceChildren(closeButton(closeGame), el("p", { class: "quiet", text: "Loading." }));
+    panel.hidden = false;
+    $("scrim").hidden = false;
+  }
+  let data;
+  try {
+    data = await gameData(app);
+  } catch (error) {
+    trouble(error);
+    return;
+  }
+  if (number !== panelNumber || panel.hidden) return;
+  if (!data.game.ok) {
+    panel.replaceChildren(closeButton(closeGame), el("p", { class: "quiet", text: data.game.text }));
+    return;
+  }
+  panel.replaceChildren(...gameView(app, data, closeGame, () => openGame(app)));
+  if (first) panel.firstChild.focus({ preventScroll: true });
+}
+
+function closeGame() {
+  ++panelNumber;
+  $("game-panel").hidden = true;
+  $("scrim").hidden = true;
+}
+
+function closeButton(close) {
+  const button = iconButton("close", "Close", close);
+  button.classList.add("panel-close");
+  return button;
+}
+
+function addControls(app, again) {
   const picker = goalPicker("", "3", true);
-  const add = el("button", { type: "button", class: "primary", text: queued ? "In the queue" : "Add to the queue" });
-  add.disabled = queued;
+  const add = el("button", { type: "button", class: "primary", text: "Add to the queue" });
   add.addEventListener("click", async () => {
     add.disabled = true;
     const result = await act(["add", ...picker.words(), "--", app], false);
     if (result.ok) markQueued(app, true);
     refresh();
-    selectGame(app);
+    again();
   });
   const now = el("button", { type: "button", text: "Idle now", onclick: async () => {
     const result = await act(["now", app], false);
     if (result.ok) markQueued(app, true);
     refresh();
-    selectGame(app);
+    again();
   } });
-  const remove = queued ? confirmButton("Remove from the queue", ["remove", app], () => { markQueued(app, false); refresh(); selectGame(app); }, "wide") : null;
+  return el("div", { class: "detail-actions" }, el("div", { class: "goal-edit" }, picker.kind, picker.hours), add, now);
+}
+
+function queueControls(app, queue, again) {
+  const index = queue.findIndex((row) => row.app === app);
+  if (index < 0) return null;
+  const entry = queue[index];
+  const flags = entry.flags.split(" ").filter(Boolean);
+  const after = () => {
+    refresh();
+    again();
+  };
+  const run = async (words, quiet) => {
+    await act(words, quiet);
+    after();
+  };
+  const up = el("button", { type: "button", class: "small", onclick: () => run(["move", app, String(index)], true) }, icon("up"), "Up");
+  const down = el("button", { type: "button", class: "small", onclick: () => run(["move", app, String(index + 2)], true) }, icon("down"), "Down");
+  const top = el("button", { type: "button", class: "small", text: "To the top", onclick: () => run(["move", app, "1"], true) });
+  up.disabled = index === 0;
+  top.disabled = index === 0;
+  down.disabled = index === queue.length - 1;
+  const picker = goalPicker(entry.kind === "for" || entry.kind === "until" ? entry.kind : "none", entry.hours, false);
+  const goal = el("form", { class: "goal-edit" }, picker.kind, picker.hours, el("button", { type: "submit", class: "small", text: "Set goal" }));
+  goal.addEventListener("submit", (event) => {
+    event.preventDefault();
+    run(["goal", app, ...picker.words()], false);
+  });
+  const actions = [];
+  if (flags.includes("failed")) actions.push(el("button", { type: "button", text: "Try again", onclick: () => run(["retry", app], false) }));
+  if (flags.includes("held")) actions.push(confirmButton("Past refund", ["refund", app], after, "wide"));
+  if (!flags.includes("running") && !flags.includes("failed") && !flags.includes("held")) actions.push(el("button", { type: "button", class: "primary", text: "Idle now", onclick: () => run(["now", app], false) }));
+  actions.push(confirmButton("Remove from the queue", ["remove", app], () => { markQueued(app, false); after(); }, "wide"));
+  const where = "Place " + (index + 1) + " of " + queue.length + ", " + entry.state + (entry.left ? ", " + entry.left + " left" : "");
+  return el("section", { class: "detail-queue" + (flags.includes("running") ? " running" : "") },
+    el("h2", { text: "In the queue" }),
+    el("p", { class: "quiet", text: where }),
+    el("div", { class: "detail-buttons" }, up, down, top),
+    goal,
+    el("div", { class: "detail-actions" }, ...actions));
+}
+
+function gameView(app, data, close, again) {
+  const rows = data.game.rows;
+  const queued = find(rows, "queued") === "yes";
+  const facts = rows.filter((row) => row.label && row.key !== "name" && row.key !== "day");
+  const days = rows.filter((row) => row.key === "day");
   const values = days.map((row) => Number(row.value) || 0);
-  const chart = el("div", { id: "detail-chart" });
-  panel.replaceChildren(
-    iconButton("close", "Close", () => panel.classList.add("closed")),
+  const chart = el("div");
+  const holder = el("div", { class: "detail-chart" }, chart);
+  chartBlock(chart, values, days.map((row) => row.label), values.length - 1, days.length ? days[0].label.slice(5) : "", "Today", true);
+  return [
+    closeButton(close),
     cover(app, "detail-art"),
     el("h3", { text: find(rows, "name") }),
+    (queued ? queueControls(app, data.queue, again) : null) || addControls(app, again),
     el("dl", { class: "facts" }, ...facts.map((row) => fact(row.label, row.value))),
     el("h2", { text: "Idled, last 30 days" }),
-    chart,
-    el("div", { class: "detail-actions" }, queued ? null : el("div", { class: "goal-edit" }, picker.kind, picker.hours), add, now, remove));
-  panel.firstChild.classList.add("detail-close");
-  chartBlock(chart, values, days.map((row) => row.label), values.length - 1, days.length ? days[0].label.slice(5) : "", "Today", true);
+    holder
+  ];
 }
 
 function series(rows, name) {
@@ -636,6 +746,7 @@ function statTile(label, value, note) {
 }
 
 function drawOverview(rows, fresh) {
+  $("stats-overview").toggleAttribute("data-fresh", Boolean(fresh));
   const tiles = series(rows, "tile");
   const number = (key) => Number(find(tiles, key)) || 0;
   const extra = (list, key) => (list.find((row) => row.key === key) || {}).extra || "";
@@ -659,8 +770,9 @@ function drawOverview(rows, fresh) {
 
   const podium = series(rows, "top");
   $("podium").replaceChildren(...podium.map((row, index) => el("li", {},
-    el("span", { class: "rank", text: ranks[index] }),
-    el("span", {}, el("span", { class: "name", text: row.extra }), el("br"), el("span", { class: "meta", text: shortDuration(row.value) })))));
+    el("button", { type: "button", class: "podium-item", onclick: () => openGame(row.key) },
+      el("span", { class: "rank", text: ranks[index] }),
+      el("span", { class: "podium-text" }, el("span", { class: "name", text: row.extra }), el("span", { class: "meta", text: shortDuration(row.value) }))))));
   if (!podium.length) $("podium").append(el("li", {}, el("span", { class: "quiet", text: "Nothing idled yet." })));
 
   drawCalendar(days);
@@ -705,13 +817,13 @@ function drawCalendar(days) {
 }
 
 function drawGameFigures(rows) {
-  $("stats-table").replaceChildren(...rows.map((row) => el("tr", {},
-    el("td", {}, el("span", { class: "name", text: row.name }), el("br"), el("span", { class: "app", text: row.app })),
+  $("stats-table").replaceChildren(...rows.map((row) => opensGame(el("tr", {},
+    el("td", {}, gameLink(row.app, row.name), el("br"), el("span", { class: "app", text: row.app })),
     el("td", { class: "num", "data-label": "Idled", text: shortDuration(row.seconds) }),
     el("td", { class: "num", "data-label": "Sessions", text: row.sessions }),
     el("td", { class: "num", "data-label": "Longest", text: shortDuration(row.longest) }),
     el("td", { class: "num", "data-label": "Days", text: row.days }),
-    el("td", { "data-label": "Last", text: row.last }))));
+    el("td", { "data-label": "Last", text: row.last })), row.app)));
   $("stats-empty").hidden = rows.length !== 0;
 }
 
@@ -720,7 +832,7 @@ async function loadDay(day) {
   for (const button of $("history-days").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.day === day));
   const result = await call(["history", day]);
   $("history-title").textContent = day;
-  $("history-games").replaceChildren(...result.rows.map((row) => el("li", {}, el("span", { text: row.name }), el("span", { class: "meta", text: shortDuration(row.seconds) }))));
+  $("history-games").replaceChildren(...result.rows.map((row) => opensGame(el("li", {}, gameLink(row.app, row.name), el("span", { class: "meta", text: shortDuration(row.seconds) })), row.app)));
   if (!result.rows.length) $("history-games").append(el("li", {}, el("span", { class: "quiet", text: result.text })));
 }
 
@@ -991,6 +1103,7 @@ const pages = {
 };
 
 function route() {
+  closeGame();
   const wanted = location.hash.replace(/^#/, "");
   page = Object.prototype.hasOwnProperty.call(pages, wanted) ? wanted : "idling";
   for (const section of document.querySelectorAll(".page")) section.hidden = section.dataset.page !== page;
@@ -1142,9 +1255,12 @@ $("rescan").addEventListener("click", async () => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !$("ask").open) $("detail").classList.add("closed");
+  if (event.key !== "Escape" || $("ask").open) return;
+  $("detail").classList.add("closed");
+  closeGame();
 });
 window.addEventListener("hashchange", route);
+$("scrim").addEventListener("click", closeGame);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) clearTimeout(timer);
   else refresh();

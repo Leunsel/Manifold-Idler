@@ -187,7 +187,7 @@ namespace
         {
             const Theme& arcade = builtIn.Themes[0];
             CHECK(arcade.Name == "Arcade" && arcade.BuiltIn && !arcade.FromFolder && arcade.Variants.size() == 4 && arcade.Variants[0].Id == "synthwave");
-            CHECK(arcade.Options.size() == 2 && arcade.Options[0].Id == "scanlines" && arcade.Options[0].On && !arcade.Options[1].On);
+            CHECK(arcade.Options.empty() && builtIn.Themes[1].Options.empty());
             CHECK(arcade.Swatch.size() == 4 && !arcade.Variants.empty() && arcade.Swatch == arcade.Variants[0].Swatch);
             CHECK(builtIn.Themes[1].Name == "Manifold" && builtIn.Themes[1].Variants.empty() && builtIn.Themes[1].Swatch.size() == 4);
         }
