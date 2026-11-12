@@ -326,6 +326,7 @@ namespace
         CHECK(nonce.size() == 32);
         CHECK(policy && policy->find("style-src 'nonce-" + nonce + "'") != std::string::npos);
         CHECK(policy && policy->find("connect-src 'self'") != std::string::npos && policy->find("frame-ancestors 'none'") != std::string::npos);
+        CHECK(policy && policy->find("font-src data:;") != std::string::npos);
         CHECK(page.Body.find("<script nonce=\"" + nonce + "\">") != std::string::npos);
         CHECK(page.Body.find("<style nonce=\"" + nonce + "\">") != std::string::npos);
         CHECK(page.Body.find("{{nonce}}") == std::string::npos);
@@ -374,7 +375,17 @@ namespace
         const std::string html = WebPage("abc");
         CHECK(html.find("<script nonce=\"abc\">") != std::string::npos && html.find("<style nonce=\"abc\">") != std::string::npos);
         CHECK(html.find("src=\"http") == std::string::npos && html.find("href=\"http") == std::string::npos);
-        CHECK(html.find("url(") == std::string::npos && html.find("@import") == std::string::npos);
+        CHECK(html.find("@import") == std::string::npos);
+        int fonts = 0;
+        bool embedded = true;
+        for (std::size_t at = html.find("url("); at != std::string::npos; at = html.find("url(", at + 4))
+        {
+            embedded &= html.compare(at, 27, "url(data:font/woff2;base64,") == 0;
+            ++fonts;
+        }
+        CHECK(embedded && fonts == 2);
+        CHECK(html.find("font-family:\"Idler Pixel\"") != std::string::npos && html.find("font-family:\"Idler Text\"") != std::string::npos);
+        CHECK(html.find("<button id=\"screen\"") != std::string::npos);
         CHECK(html.find(" style=\"") == std::string::npos && html.find("innerHTML") == std::string::npos);
         CHECK(html.find("{{") == std::string::npos);
         CHECK(html.find("new Error(\"The idler does not answer. It may have ended; this page keeps trying. (MI-7015)\")") != std::string::npos);

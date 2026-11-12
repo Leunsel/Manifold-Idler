@@ -49,6 +49,7 @@ namespace Idler::Cli
     using CommandRunner = std::function<CommandResult(const std::vector<std::string>&)>;
 
     std::string WebPage(std::string_view nonce);
+    std::string_view WebFontFaces();
     std::string ResultJson(const CommandResult& result);
     HttpResponse PlainResponse(int status, std::string_view text);
     HttpResponse AnswerWeb(const HttpRequest& request, const WebConfig& config, const CommandRunner& run);

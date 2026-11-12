@@ -67,6 +67,7 @@ jobs:
           mkdir dist
           cp "${{ matrix.binary }}" LICENSE CLI/README.md dist/
           cp CLI/third_party/CLI11/LICENSE dist/CLI11-LICENSE
+          cp Licenses/Press-Start-2P.txt Licenses/VT323.txt dist/
 
       - uses: actions/upload-artifact@v7
         with:

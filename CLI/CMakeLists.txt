@@ -69,6 +69,7 @@ add_library(idler_cli_base STATIC
     src/Request.cpp
     src/Service.cpp
     src/Web.cpp
+    src/WebFonts.cpp
     src/WebPage.cpp
     src/WebServer.cpp)
 target_include_directories(idler_cli_base PUBLIC src)

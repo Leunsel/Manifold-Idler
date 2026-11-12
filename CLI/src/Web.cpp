@@ -472,7 +472,7 @@ namespace Idler::Cli
             response.Type = "text/html; charset=utf-8";
             response.Body = WebPage(nonce);
             AddSafetyHeaders(response, "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'nonce-" + nonce +
-                "'; connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+                "'; connect-src 'self'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
             return response;
         }
 
