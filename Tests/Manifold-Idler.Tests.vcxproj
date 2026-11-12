@@ -73,6 +73,7 @@
     <ClCompile Include="..\Source\Core\Cards.cpp" />
     <ClCompile Include="..\Source\Core\Library.cpp" />
     <ClCompile Include="..\Source\Core\Creatures.cpp" />
+    <ClCompile Include="..\Source\Core\Errors.cpp" />
     <ClCompile Include="..\Source\Core\MiniGames.cpp" />
     <ClCompile Include="..\Source\Core\Queue.cpp" />
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp" />

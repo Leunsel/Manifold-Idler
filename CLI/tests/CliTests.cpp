@@ -1,3 +1,4 @@
+#include "Core/Errors.h"
 #include "Http.h"
 #include "Paths.h"
 #include "Request.h"
@@ -165,6 +166,10 @@ namespace
         result.Columns = { "app", "name" };
         result.Rows = { { "620", "Portal 2" }, { "480", "Spacewar" } };
         CHECK(ResultJson(result) == "{\"ok\":false,\"text\":\"fine\\n\",\"columns\":[\"app\",\"name\"],\"rows\":[[\"620\",\"Portal 2\"],[\"480\",\"Spacewar\"]]}");
+        CommandResult failed;
+        failed.Ok = false;
+        failed.Text = ErrorMessage(ErrorCode::SteamNotRunning) + "\n";
+        CHECK(ResultJson(failed) == "{\"ok\":false,\"text\":\"Steam is not running. (MI-1001)\\n\",\"code\":\"MI-1001\"}");
     }
 
     void AddressChecks()
@@ -309,7 +314,8 @@ namespace
         const std::pair<std::string, std::string> json{ "content-type", "application/json" };
         const auto answer = [&](const HttpRequest& request) { return AnswerWeb(request, config, run); };
 
-        CHECK(answer(Asked("GET", "/", { host })).Status == 401);
+        const HttpResponse locked = answer(Asked("GET", "/", { host }));
+        CHECK(locked.Status == 401 && locked.Body == ErrorMessage(ErrorCode::WrongToken) + "\n");
         CHECK(answer(Asked("GET", "/?token=0123456789abcdef0123456789abcdee", { host })).Status == 401);
 
         const HttpResponse page = answer(Asked("GET", "/?token=" + config.Token, { host, { "sec-fetch-site", "none" } }));
@@ -353,7 +359,8 @@ namespace
         CHECK(answer(Asked("POST", "/api", { { "host", "evil.example:8090" }, key, json }, "[\"stop\"]")).Status == 403);
         CHECK(answer(Asked("POST", "/api", { host, key, { "content-type", "text/plain" } }, "[\"stop\"]")).Status == 415);
         CHECK(answer(Asked("POST", "/api", { host, key }, "[\"stop\"]")).Status == 415);
-        CHECK(answer(Asked("POST", "/api", { host, key, json }, "[\"quit\"]")).Status == 403);
+        const HttpResponse refused = answer(Asked("POST", "/api", { host, key, json }, "[\"quit\"]"));
+        CHECK(refused.Status == 403 && refused.Body == "{\"ok\":false,\"text\":\"Not from the web page: quit (MI-7014)\",\"code\":\"MI-7014\"}");
         CHECK(answer(Asked("POST", "/api", { host, key, json }, "stop")).Status == 400);
         CHECK(answer(Asked("POST", "/api", { host, key, json }, "[]")).Status == 400);
         CHECK(answer(Asked("GET", "/api", { host, key })).Status == 405);
@@ -369,6 +376,10 @@ namespace
         CHECK(html.find("src=\"http") == std::string::npos && html.find("href=\"http") == std::string::npos);
         CHECK(html.find("url(") == std::string::npos && html.find("@import") == std::string::npos);
         CHECK(html.find(" style=\"") == std::string::npos && html.find("innerHTML") == std::string::npos);
+        CHECK(html.find("{{") == std::string::npos);
+        CHECK(html.find("new Error(\"The idler does not answer. It may have ended; this page keeps trying. (MI-7015)\")") != std::string::npos);
+        CHECK(html.find("new Error(\"The idler gave an answer the page cannot read (HTTP {}). (MI-7016)\".replace(\"{}\", String(response.status)))") != std::string::npos);
+        CHECK(html.find("showBanner(\"" + ErrorMessage(ErrorCode::WrongToken) + "\")") != std::string::npos);
     }
 }
 

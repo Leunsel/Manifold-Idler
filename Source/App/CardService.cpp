@@ -1,6 +1,7 @@
 #include "App/CardService.h"
 
 #include "Core/Clock.h"
+#include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/WebPolicy.h"
 #include "Steam/SteamWeb.h"
@@ -398,22 +399,22 @@ namespace Idler
         if (!answered)
         {
             m_pageDone = request;
-            m_problem = "Steam's website did not answer.";
-            LOG_WARN("No answer in time for " + path);
+            m_problem = ErrorMessage(ErrorCode::WebsiteNoAnswer);
+            LOG_WARN(path + ": " + m_problem);
             return false;
         }
         WebPage page = std::move(m_page);
         if (!page.Ok)
         {
-            m_problem = "Steam's website could not be read.";
-            LOG_WARN("Could not read " + path);
+            m_problem = ErrorMessage(ErrorCode::WebsiteUnreadable);
+            LOG_WARN(path + ": " + m_problem);
             return false;
         }
         if (page.SteamId == 0)
         {
             LOG_INFO("Nobody signed in, says " + WithoutQuery(page.Address));
             if (m_state == LoginState::SignedIn)
-                m_problem = "Steam asks you to sign in again.";
+                m_problem = ErrorMessage(ErrorCode::SignInAgain);
             m_state = LoginState::SignedOut;
             m_steamId = 0;
             m_drops.clear();
@@ -441,7 +442,7 @@ namespace Idler
             const BadgePage parsed = ParseBadgePage(html);
             if (!parsed.LoggedIn)
             {
-                SetProblem("Steam's page does not show the drops. Sign out and in again.");
+                SetProblem(ErrorMessage(ErrorCode::DropsNotShown));
                 return;
             }
 

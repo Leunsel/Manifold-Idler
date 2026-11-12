@@ -1,6 +1,7 @@
 #include "App/IdlerModel.h"
 
 #include "App/Desktop.h"
+#include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
 #include "Core/WebPolicy.h"
@@ -44,6 +45,12 @@ namespace Idler
         constexpr double kBondCheckSeconds = 30.0;
         constexpr int kCreatureDaysLooked = 60;
         constexpr std::uint64_t kSteamIdBase = 76561197960265728ull;
+
+        std::string PathText(const std::filesystem::path& path)
+        {
+            const std::u8string text = path.u8string();
+            return std::string(text.begin(), text.end());
+        }
 
         std::string CleanListName(std::string_view name)
         {
@@ -141,7 +148,7 @@ namespace Idler
             {
                 char pace[32];
                 std::snprintf(pace, sizeof(pace), "%.2f", m_pace.Pace());
-                LOG_WARN(std::string("The program's own clock runs at ") + pace + " times real time, a speedhack perhaps; idle time, timers, creatures and mini-games keep to real time");
+                LOG_WARN(ErrorMessage(ErrorCode::ClockRunsOff, pace));
             }
         }
 
@@ -202,8 +209,14 @@ namespace Idler
     {
         StoreListsOfAccount();
         m_settings.WasActive = m_active;
-        m_settings.Save(m_settingsPath);
-        m_stats.Save(m_statsPath);
+        const bool settingsSaved = m_settings.Save(m_settingsPath);
+        if (!settingsSaved && !m_settingsUnsaved)
+            LOG_ERROR(ErrorMessage(ErrorCode::SettingsNotSaved, PathText(m_settingsPath)));
+        m_settingsUnsaved = !settingsSaved;
+        const bool statsSaved = m_stats.Save(m_statsPath);
+        if (!statsSaved && !m_statsUnsaved)
+            LOG_ERROR(ErrorMessage(ErrorCode::StatsNotSaved, PathText(m_statsPath)));
+        m_statsUnsaved = !statsSaved;
         m_dirty = false;
         m_nextSave = Now() + kSaveSeconds;
     }
@@ -224,9 +237,9 @@ namespace Idler
             else if (status.MayConnect())
                 LOG_INFO("Steam is running; asking it which account is logged on");
             else if (status.Running())
-                LOG_WARN("Steam is running, nobody is logged on");
+                LOG_WARN(ErrorMessage(ErrorCode::NobodyLoggedOn));
             else
-                LOG_WARN("Steam is not running");
+                LOG_WARN(ErrorMessage(ErrorCode::SteamNotRunning));
         }
 
         if (changed)
@@ -1449,7 +1462,7 @@ namespace Idler
         if (line == "gone")
         {
             session.ReportedError = true;
-            LOG_WARN("Steam went away: " + GameText(session.AppId));
+            LOG_WARN(GameText(session.AppId) + ": " + ErrorMessage(ErrorCode::SteamWentAway));
             return;
         }
         if (line.starts_with("error steam"))
@@ -1506,7 +1519,7 @@ namespace Idler
             {
                 if (session.StopRequested && now - session.StopRequestedAt > kStopGraceSeconds)
                 {
-                    LOG_WARN("Did not end in time and was ended: " + GameText(session.AppId));
+                    LOG_WARN(GameText(session.AppId) + ": " + ErrorMessage(ErrorCode::DidNotEndInTime));
                     session.Worker.Terminate();
                 }
                 ++it;
@@ -1518,12 +1531,12 @@ namespace Idler
             if (!session.StopRequested && !session.ReportedError)
             {
                 m_steamRetryAt = now + kSteamRetrySeconds;
-                LOG_WARN("Stopped by itself: " + GameText(session.AppId));
+                LOG_WARN(GameText(session.AppId) + ": " + ErrorMessage(ErrorCode::StoppedByItself));
                 if (QueueEntry* entry = Idler::FindEntry(CurrentQueue(), session.AppId); entry && ++entry->Crashes >= kMaxCrashes)
                 {
                     entry->Failed = true;
-                    entry->Error = "It stopped by itself several times.";
-                    LOG_ERROR("Given up, it stopped by itself several times: " + GameText(session.AppId));
+                    entry->Error = ErrorMessage(ErrorCode::KeptStopping);
+                    LOG_ERROR(GameText(session.AppId) + ": " + entry->Error);
                 }
             }
             else if (session.StopRequested)
@@ -1644,7 +1657,7 @@ namespace Idler
                 }
                 else
                 {
-                    LOG_ERROR("Helper process did not start: " + GameText(appId));
+                    LOG_ERROR(GameText(appId) + ": " + ErrorMessage(ErrorCode::HelperNotStarted));
                     m_steamRetryAt = now + kSteamRetrySeconds;
                 }
                 m_nextStart = now + kSecondsBetweenStarts;
@@ -1745,7 +1758,7 @@ namespace Idler
         LOG_WARN("Shutting down now");
         m_shutdownFailed = !Desktop::ShutDown();
         if (m_shutdownFailed)
-            LOG_ERROR("The computer could not be shut down");
+            LOG_ERROR(ErrorMessage(ErrorCode::ShutdownFailed));
     }
 
     void IdlerModel::LoadAchievements(std::uint32_t appId)
@@ -1786,8 +1799,8 @@ namespace Idler
         {
             m_achievementWorker.reset();
             m_achievementPhase = AchievementPhase::Failed;
-            m_achievementProblem = "The list could not be read.";
-            LOG_ERROR("Helper process did not start: " + GameText(appId));
+            m_achievementProblem = ErrorMessage(ErrorCode::ListHelperNotStarted);
+            LOG_ERROR(GameText(appId) + ": " + m_achievementProblem);
             return;
         }
         m_achievementWorker->CloseInput();
@@ -1870,7 +1883,7 @@ namespace Idler
             if (failures >= kFailuresToGiveUp)
             {
                 m_iconsWanted.clear();
-                LOG_WARN("Achievement pictures could not be fetched");
+                LOG_WARN(ErrorMessage(ErrorCode::PicturesNotFetched));
             }
         }
     }
@@ -1957,9 +1970,9 @@ namespace Idler
         {
             m_achievementWorker.reset();
             m_statSetting.clear();
-            m_achievementNotice = "The change could not be sent to Steam.";
+            m_achievementNotice = ErrorMessage(ErrorCode::ChangeNotSent);
             m_achievementNoticeProblem = true;
-            LOG_ERROR("Helper process did not start: " + GameText(m_achievementApp));
+            LOG_ERROR(GameText(m_achievementApp) + ": " + m_achievementNotice);
             return;
         }
         m_achievementWorker->CloseInput();
@@ -2029,9 +2042,9 @@ namespace Idler
         if (!m_achievementWorker->Start(L"--change-achievements=" + std::to_wstring(m_achievementApp)) || !m_achievementWorker->Write(WriteAchievementChanges(changes)))
         {
             m_achievementWorker.reset();
-            m_achievementNotice = "The change could not be sent to Steam.";
+            m_achievementNotice = ErrorMessage(ErrorCode::ChangeNotSent);
             m_achievementNoticeProblem = true;
-            LOG_ERROR("Helper process did not start: " + GameText(m_achievementApp));
+            LOG_ERROR(GameText(m_achievementApp) + ": " + m_achievementNotice);
             return;
         }
         m_achievementWorker->CloseInput();
@@ -2085,9 +2098,9 @@ namespace Idler
             }
             else
             {
-                m_achievementNotice = "Steam did not take the new value of " + label + ".";
+                m_achievementNotice = ErrorMessage(ErrorCode::StatNotTaken, label);
                 m_achievementNoticeProblem = true;
-                LOG_WARN("Stat not set, " + GameText(m_achievementApp) + ": " + m_statSetting);
+                LOG_WARN(GameText(m_achievementApp) + ": " + ErrorMessage(ErrorCode::StatNotTaken, m_statSetting));
             }
             m_statSetting.clear();
             ReadAchievementSchema();
@@ -2108,7 +2121,9 @@ namespace Idler
         }
         const auto locked = static_cast<std::size_t>(std::count_if(m_achievementsLocking.begin(), m_achievementsLocking.end(), [&](const std::string& id) { return stands(id, false); }));
         const std::size_t refused = m_achievementsUnlocking.size() + m_achievementsLocking.size() - unlocked.size() - locked;
-        m_achievementNotice = AchievementChangeText(unlocked.size(), locked, refused);
+        m_achievementNotice = AchievementChangeText(unlocked.size(), locked, 0);
+        if (refused > 0)
+            m_achievementNotice += (m_achievementNotice.empty() ? "" : " ") + ErrorMessage(ErrorCode::ChangesRefused, std::to_string(refused));
         m_achievementNoticeProblem = refused > 0;
         if (refused > 0)
             LOG_WARN("Achievements changed, " + GameText(m_achievementApp) + ": " + m_achievementNotice);
@@ -2160,12 +2175,12 @@ namespace Idler
         }
         if (line.starts_with("refused "))
         {
-            LOG_WARN("Steam did not take " + line.substr(8) + ", " + GameText(m_achievementApp));
+            LOG_WARN("Steam did not take " + line.substr(8) + ", " + GameText(m_achievementApp) + " (" + ErrorName(ErrorCode::ChangesRefused) + ")");
             return;
         }
         if (line.starts_with("stored ") && line != "stored 1")
         {
-            LOG_WARN("Steam stored the change with result " + line.substr(7) + ", " + GameText(m_achievementApp));
+            LOG_WARN(GameText(m_achievementApp) + ": " + ErrorMessage(ErrorCode::StoredWithResult, line.substr(7)));
             return;
         }
         if (line.starts_with("stat "))
@@ -2301,19 +2316,19 @@ namespace Idler
             {
                 m_achievementWorker->Terminate();
                 m_achievementPhase = AchievementPhase::Ready;
-                m_achievementNotice = "Steam did not answer. Open the list again to see what it took.";
+                m_achievementNotice = ErrorMessage(ErrorCode::ChangeNoAnswer);
                 m_achievementNoticeProblem = true;
                 m_achievementsIncoming.clear();
                 m_gameStatsIncoming.clear();
                 m_statSetting.clear();
-                LOG_WARN("Achievements not changed, " + GameText(m_achievementApp) + ": Steam did not answer");
+                LOG_WARN("Achievements not changed, " + GameText(m_achievementApp) + ": " + m_achievementNotice);
             }
             else if (m_achievementPhase == AchievementPhase::Busy)
             {
                 m_achievementWorker->Terminate();
                 m_achievementPhase = AchievementPhase::Failed;
-                m_achievementProblem = "Steam did not answer.";
-                LOG_WARN("Achievements not read, " + GameText(m_achievementApp) + ": Steam did not answer");
+                m_achievementProblem = ErrorMessage(ErrorCode::ListNoAnswer);
+                LOG_WARN("Achievements not read, " + GameText(m_achievementApp) + ": " + m_achievementProblem);
             }
         }
         if (m_achievementWorkerChanges)

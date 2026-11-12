@@ -130,4 +130,5 @@ namespace Idler::UI
 
     void ShowTooltip(const std::function<void()>& content);
     void ItemTooltip(const char* text);
+    bool ErrorTooltip(std::string_view message);
 }

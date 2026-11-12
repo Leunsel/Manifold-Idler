@@ -1,5 +1,6 @@
 #include "WebServer.h"
 
+#include "Core/Errors.h"
 #include "Sockets.h"
 
 #include <algorithm>
@@ -42,7 +43,7 @@ namespace Idler::Cli
         const std::string where = AddressText(address);
         if (!Net::StartSockets())
         {
-            error = "This system has no network sockets.";
+            error = ErrorMessage(ErrorCode::NoNetworkSockets);
             return false;
         }
 
@@ -69,14 +70,14 @@ namespace Idler::Cli
         }
         if (!read)
         {
-            error = "Not an address: " + where;
+            error = ErrorMessage(ErrorCode::NotAnAddress, where);
             return false;
         }
 
         const Socket socket = ::socket(family, SOCK_STREAM, 0);
         if (socket == kNoSocket)
         {
-            error = "No network socket could be made for " + where;
+            error = ErrorMessage(ErrorCode::NoNetworkSocket, where);
             return false;
         }
         Net::KeepFromChildren(socket);
@@ -90,7 +91,7 @@ namespace Idler::Cli
         if (!Net::FitsSelect(socket) || ::bind(socket, reinterpret_cast<const sockaddr*>(&storage), length) != 0 || ::listen(socket, 16) != 0)
         {
             Net::CloseSocket(socket);
-            error = "The web page could not be opened at " + where + ": the port is taken, or the address is not one of this computer's.";
+            error = ErrorMessage(ErrorCode::PortTaken, where);
             return false;
         }
         Net::SetBlocking(socket, false);

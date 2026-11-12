@@ -1,5 +1,6 @@
 #include "UI/MenuWidgets.h"
 
+#include "Core/Errors.h"
 #include "Generated/IconsFontAwesome5.h"
 #include "UI/Covers.h"
 #include "UI/UiScale.h"
@@ -1055,5 +1056,44 @@ namespace Idler::UI
                 ImGui::TextUnformatted(text);
                 ImGui::PopTextWrapPos();
             });
+    }
+
+    bool ErrorTooltip(std::string_view message)
+    {
+        const ErrorInfo* info = ErrorOf(message);
+        if (!info || !ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            return false;
+
+        static ErrorCode copiedCode{};
+        static double copiedAt = -10.0;
+        const std::string name = ErrorName(info->Code);
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        const bool clicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        if (clicked)
+        {
+            ImGui::SetClipboardText(name.c_str());
+            copiedCode = info->Code;
+            copiedAt = ImGui::GetTime();
+        }
+        const bool copied = copiedCode == info->Code && ImGui::GetTime() - copiedAt < 2.0;
+        if (!copied && !ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_AllowWhenDisabled))
+            return clicked;
+
+        const std::string heading = name + "  " + std::string(ErrorArea(info->Code));
+        const std::string footer = copied ? "Copied " + name + "." : "Click to copy " + name + ".";
+        ShowTooltip([&]()
+            {
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 26.0f);
+                ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Accent);
+                ImGui::TextUnformatted(heading.c_str());
+                ImGui::PopStyleColor();
+                ImGui::TextUnformatted(info->Cause.data(), info->Cause.data() + info->Cause.size());
+                ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Label);
+                ImGui::TextUnformatted(info->Help.data(), info->Help.data() + info->Help.size());
+                ImGui::PopStyleColor();
+                ImGui::TextDisabled("%s", footer.c_str());
+                ImGui::PopTextWrapPos();
+            });
+        return clicked;
     }
 }

@@ -2,6 +2,7 @@
 #include "Core/Cards.h"
 #include "Core/Clock.h"
 #include "Core/Creatures.h"
+#include "Core/Errors.h"
 #include "Core/Library.h"
 #include "Core/Queue.h"
 #include "Core/RuntimeLog.h"
@@ -3153,6 +3154,93 @@ namespace
         CHECK(!missing.Placed && missing.Queue.empty());
     }
 
+    std::filesystem::path FindErrorReference()
+    {
+        std::error_code ignored;
+        for (std::filesystem::path folder = std::filesystem::current_path(ignored); !folder.empty(); folder = folder.parent_path())
+        {
+            if (std::filesystem::exists(folder / "Source" / "Core" / "Errors.h", ignored))
+                return folder / "docs" / "ERRORS.md";
+            if (folder == folder.parent_path())
+                break;
+        }
+        return {};
+    }
+
+    void TestErrors()
+    {
+        const auto table = ErrorTable();
+        CHECK(table.size() == std::size(kErrorCodes));
+        for (const ErrorCode code : kErrorCodes)
+            CHECK(FindError(code) && FindError(code)->Code == code);
+
+        bool ordered = true;
+        bool described = true;
+        bool plain = true;
+        bool areas = true;
+        bool linked = true;
+        for (std::size_t index = 0; index < table.size(); ++index)
+        {
+            const ErrorInfo& info = table[index];
+            const int number = static_cast<int>(info.Code);
+            ordered &= index == 0 || static_cast<int>(table[index - 1].Code) < number;
+            areas &= number >= 1001 && number <= 8999 && number % 1000 != 0 && !ErrorArea(info.Code).empty();
+            described &= !info.Message.empty() && !info.Cause.empty() && !info.Help.empty() && info.Cause.back() == '.' && info.Help.back() == '.';
+            const std::size_t place = info.Message.find("{}");
+            plain &= (place == std::string_view::npos || info.Message.find("{}", place + 2) == std::string_view::npos) &&
+                info.Message.find_first_of("\"\\<>\n") == std::string_view::npos && info.Cause.find('\n') == std::string_view::npos;
+            for (const std::string_view text : { info.Cause, info.Help })
+            {
+                for (std::size_t at = text.find("MI-"); at != std::string_view::npos; at = text.find("MI-", at + 3))
+                    linked &= FindError(text.substr(at, 7)) != nullptr;
+            }
+        }
+        CHECK(ordered);
+        CHECK(described);
+        CHECK(plain);
+        CHECK(areas);
+        CHECK(linked);
+
+        CHECK(ErrorName(ErrorCode::SteamNotRunning) == "MI-1001");
+        CHECK(ErrorArea(ErrorCode::SteamNotRunning) == "Steam");
+        CHECK(ErrorArea(ErrorCode::OtherAccount) == "Card farm");
+        CHECK(ErrorMessage(ErrorCode::SteamNotRunning) == "Steam is not running. (MI-1001)");
+        CHECK(ErrorMessage(ErrorCode::AppInfoNewerFormat, "0756442A") == "Steam uses a newer format for its list of apps (0756442A). (MI-3002)");
+        CHECK(ErrorMessage(ErrorCode::PageBadAnswer, "{}") == "The idler gave an answer the page cannot read (HTTP {}). (MI-7016)");
+
+        CHECK(FindError("MI-1001") == FindError(ErrorCode::SteamNotRunning));
+        CHECK(FindError(" mi-1001\n") == FindError(ErrorCode::SteamNotRunning));
+        CHECK(FindError("1001") == FindError(ErrorCode::SteamNotRunning));
+        CHECK(!FindError("MI-9999") && !FindError("MI-100") && !FindError("MI-10011") && !FindError("") && !FindError("XY-1001") && !FindError("MI-1a01"));
+
+        CHECK(ErrorOf(ErrorMessage(ErrorCode::GameNotOwned)) == FindError(ErrorCode::GameNotOwned));
+        CHECK(ErrorOf("Portal 2 (620): " + ErrorMessage(ErrorCode::SteamWentAway) + "\n") == FindError(ErrorCode::SteamWentAway));
+        CHECK(ErrorOf("Steam did not take ACH_WIN, Portal 2 (620) (MI-4010)") == FindError(ErrorCode::ChangesRefused));
+        CHECK(!ErrorOf("Steam is not running.") && !ErrorOf("(MI-9999)") && !ErrorOf("MI-1001") && !ErrorOf("") && !ErrorOf("Portal 2 (620)"));
+
+        const std::string reference = ErrorReference(*FindError(ErrorCode::NoServer));
+        CHECK(reference.rfind("MI-6001 (Command line and server)\n", 0) == 0);
+        CHECK(reference.find("What happened: ") != std::string::npos && reference.find("What to do: ") != std::string::npos);
+        CHECK(reference.find("ERRORS.md#mi-6001") != std::string::npos);
+        const std::string list = ErrorList();
+        CHECK(list.rfind("Steam\n  MI-1001  Steam is not running.\n", 0) == 0);
+        CHECK(list.find("  MI-6005  No socket can be made at ....\n") != std::string::npos);
+
+        const std::string markdown = ErrorsMarkdown();
+        for (const ErrorInfo& info : table)
+            CHECK(markdown.find("\n### " + ErrorName(info.Code) + "\n") != std::string::npos);
+        CHECK(markdown.find("| [Card farm](#card-farm) | MI-8001 to MI-8009 |") != std::string::npos);
+
+        const std::filesystem::path file = FindErrorReference();
+        std::ifstream in(file, std::ios::binary);
+        std::string written((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        written.erase(std::remove(written.begin(), written.end(), '\r'), written.end());
+        const bool current = !file.empty() && written == markdown;
+        if (!current)
+            std::printf("  docs/ERRORS.md is not the table's: write it again with idler explain --markdown\n");
+        CHECK(current);
+    }
+
     void TestText()
     {
         const std::string_view jsonPlain = R"("plain")";
@@ -3970,6 +4058,7 @@ int main()
         { "Stats", TestStats },
         { "Settings", TestSettings },
         { "Text", TestText },
+        { "Errors", TestErrors },
     };
     for (const auto& test : tests)
     {

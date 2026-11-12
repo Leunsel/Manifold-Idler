@@ -1,5 +1,6 @@
 #include "Steam/Worker.h"
 
+#include "Core/Errors.h"
 #include "Core/Library.h"
 #include "Core/Text.h"
 #include "Steam/SteamClient.h"
@@ -90,7 +91,7 @@ namespace Idler::Worker
             const Steam::Status status = Steam::ReadStatus();
             if (!status.MayConnect())
             {
-                Say("error steam Steam is not running.");
+                Say("error steam " + ErrorMessage(ErrorCode::SteamNotRunning));
                 return 3;
             }
 
@@ -105,17 +106,17 @@ namespace Idler::Worker
             }
             if (!steam.User()->BLoggedOn())
             {
-                Say("error steam Steam is offline.");
+                Say("error steam " + ErrorMessage(ErrorCode::SteamOffline));
                 return 3;
             }
             if (!steam.Apps()->BIsSubscribedApp(appId))
             {
-                Say("error app This account does not own the game.");
+                Say("error app " + ErrorMessage(ErrorCode::GameNotOwned));
                 return 4;
             }
             if (steam.Utils()->GetAppID() != appId)
             {
-                Say("error app Steam did not accept the game.");
+                Say("error app " + ErrorMessage(ErrorCode::GameNotAccepted));
                 return 4;
             }
 
@@ -194,7 +195,7 @@ namespace Idler::Worker
         {
             if (!status.MayConnect())
             {
-                Say("error steam Steam is not running.");
+                Say("error steam " + ErrorMessage(ErrorCode::SteamNotRunning));
                 return 3;
             }
 
@@ -208,19 +209,19 @@ namespace Idler::Worker
             }
             if (!steam.User()->BLoggedOn())
             {
-                Say("error steam Steam is offline.");
+                Say("error steam " + ErrorMessage(ErrorCode::SteamOffline));
                 return 3;
             }
             if (!steam.Apps()->BIsSubscribedApp(appId))
             {
-                Say("error app This account does not own the game.");
+                Say("error app " + ErrorMessage(ErrorCode::GameNotOwned));
                 return 4;
             }
 
             steam.UserStats()->RequestCurrentStats();
             if (const int result = WaitForStats(steam, appId, Steam::kCallbackStatsReceived); result != 1)
             {
-                Say(result < 0 ? "error steam Steam did not send the achievements." : "error app Steam has no achievements for this game.");
+                Say(result < 0 ? "error steam " + ErrorMessage(ErrorCode::StatsNotSent) : "error app " + ErrorMessage(ErrorCode::NoAchievements));
                 return result < 0 ? 3 : 4;
             }
             return 0;
@@ -318,13 +319,13 @@ namespace Idler::Worker
             {
                 if (!stats->StoreStats())
                 {
-                    Say("error steam Steam did not take the change.");
+                    Say("error steam " + ErrorMessage(ErrorCode::StoreRefused));
                     return 3;
                 }
                 const int stored = WaitForStats(steam, appId, Steam::kCallbackStatsStored);
                 if (stored < 0)
                 {
-                    Say("error steam Steam did not confirm the change.");
+                    Say("error steam " + ErrorMessage(ErrorCode::StoreNotConfirmed));
                     return 3;
                 }
                 Say("stored " + std::to_string(stored));
@@ -340,7 +341,7 @@ namespace Idler::Worker
             const Steam::Status status = Steam::ReadStatus();
             if (!status.MayConnect())
             {
-                Say("error steam Steam is not running.");
+                Say("error steam " + ErrorMessage(ErrorCode::SteamNotRunning));
                 return 3;
             }
 
@@ -362,7 +363,7 @@ namespace Idler::Worker
 #endif
             if (static_cast<std::uint32_t>(steamId) == 0)
             {
-                Say("error steam Nobody is logged on to Steam.");
+                Say("error steam " + ErrorMessage(ErrorCode::NobodyLoggedOn));
                 return 3;
             }
             Say("client " + std::to_string(static_cast<std::uint32_t>(steamId)) + " " + std::to_string(steam.Apps()->GetEarliestPurchaseUnixTime(kFreePackageApp)));

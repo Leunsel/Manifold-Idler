@@ -1,5 +1,6 @@
 #include "Web.h"
 
+#include "Core/Errors.h"
 #include "Core/Text.h"
 #include "Paths.h"
 #include "Sockets.h"
@@ -84,9 +85,15 @@ namespace Idler::Cli
             return response;
         }
 
+        std::string CodeField(std::string_view text)
+        {
+            const ErrorInfo* info = ErrorOf(text);
+            return info ? ",\"code\":" + JsonString(ErrorName(info->Code)) : std::string();
+        }
+
         HttpResponse JsonProblem(int status, std::string_view text)
         {
-            return JsonResponse(status, "{\"ok\":false,\"text\":" + JsonString(text) + "}");
+            return JsonResponse(status, "{\"ok\":false,\"text\":" + JsonString(text) + CodeField(text) + "}");
         }
 
         HttpResponse WrongMethod(std::string_view allowed)
@@ -387,7 +394,7 @@ namespace Idler::Cli
             {
                 if (!IsUsableToken(kept))
                 {
-                    error = PathToUtf8(file) + " holds no usable token: it takes 16 to 256 letters, digits, - or _. Without the file a new one is made.";
+                    error = ErrorMessage(ErrorCode::TokenUnusable, PathToUtf8(file));
                     return false;
                 }
                 token = std::string(kept);
@@ -396,12 +403,12 @@ namespace Idler::Cli
         }
         if (!RandomHex(16, token))
         {
-            error = "No random token could be made for the web page.";
+            error = ErrorMessage(ErrorCode::NoRandomToken);
             return false;
         }
         if (!WriteToken(file, token))
         {
-            error = "The web page's token could not be saved in " + PathToUtf8(file);
+            error = ErrorMessage(ErrorCode::TokenNotSaved, PathToUtf8(file));
             return false;
         }
         return true;
@@ -409,7 +416,7 @@ namespace Idler::Cli
 
     std::string ResultJson(const CommandResult& result)
     {
-        std::string json = std::string("{\"ok\":") + (result.Ok ? "true" : "false") + ",\"text\":" + JsonString(result.Text);
+        std::string json = std::string("{\"ok\":") + (result.Ok ? "true" : "false") + ",\"text\":" + JsonString(result.Text) + CodeField(result.Text);
         if (!result.Columns.empty())
         {
             json += ",\"columns\":[";
@@ -443,16 +450,16 @@ namespace Idler::Cli
     {
         const std::string* host = request.Header("host");
         if (!host || !HostAllowed(*host, config.Names))
-            return PlainResponse(403, "This name is not one of the idler's addresses. Use its IP address or localhost.");
+            return PlainResponse(403, ErrorMessage(ErrorCode::WrongHost));
         if (!OriginAllowed(request))
-            return PlainResponse(403, "The idler answers its own page only.");
+            return PlainResponse(403, ErrorMessage(ErrorCode::WrongOrigin));
         if (request.Method != "GET" && request.Method != "POST")
             return WrongMethod("GET, POST");
 
         const std::string* header = request.Header("x-idler-token");
         const std::string given = header ? *header : QueryValue(request.Query, "token");
         if (!TokenMatches(config.Token, given))
-            return PlainResponse(401, "The token is missing or wrong. The whole address, with the token, comes from: idler web");
+            return PlainResponse(401, ErrorMessage(ErrorCode::WrongToken));
 
         if (request.Path == "/")
         {
@@ -460,7 +467,7 @@ namespace Idler::Cli
                 return WrongMethod("GET");
             std::string nonce;
             if (!RandomHex(16, nonce))
-                return PlainResponse(500, "No random number for the page.");
+                return PlainResponse(500, ErrorMessage(ErrorCode::NoRandomNonce));
             HttpResponse response;
             response.Type = "text/html; charset=utf-8";
             response.Body = WebPage(nonce);
@@ -475,12 +482,12 @@ namespace Idler::Cli
                 return WrongMethod("POST");
             const std::string* type = request.Header("content-type");
             if (!type || !StartsWithIgnoreCase(*type, "application/json"))
-                return JsonProblem(415, "The request has to be JSON.");
+                return JsonProblem(415, ErrorMessage(ErrorCode::NotJson));
             std::vector<std::string> words;
             if (!ParseJsonWords(request.Body, words) || words.empty())
-                return JsonProblem(400, "The request has to be a list of words, the first is the command.");
+                return JsonProblem(400, ErrorMessage(ErrorCode::NotWords));
             if (!WebAllows(words[0]))
-                return JsonProblem(403, "Not from the web page: " + words[0]);
+                return JsonProblem(403, ErrorMessage(ErrorCode::NotFromPage, words[0]));
             return JsonResponse(200, ResultJson(run(words)));
         }
 

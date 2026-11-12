@@ -378,6 +378,8 @@ namespace Idler
         bool m_pretendMessages = false;
         double m_sessionSeconds = 0.0;
         bool m_steamLogged = false;
+        bool m_settingsUnsaved = false;
+        bool m_statsUnsaved = false;
         Hold m_loggedHold = Hold::None;
 
         CreatureSet m_creatures;

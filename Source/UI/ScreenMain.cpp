@@ -4,6 +4,7 @@
 #include "App/Shell.h"
 #include "App/Desktop.h"
 #include "App/WebPanel.h"
+#include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
 #include "Core/WebPolicy.h"
@@ -230,6 +231,7 @@ namespace Idler::UI
         {
             BeginRow(id);
             const float wrap = ImGui::GetCursorPosX() + RowWidth();
+            ImGui::BeginGroup();
             ImGui::PushStyleColor(ImGuiCol_Text, color);
             if (icon)
             {
@@ -240,6 +242,8 @@ namespace Idler::UI
             ImGui::TextUnformatted(text.data(), text.data() + text.size());
             ImGui::PopTextWrapPos();
             ImGui::PopStyleColor();
+            ImGui::EndGroup();
+            ErrorTooltip(text);
             ImGui::PopID();
         }
 
@@ -1490,7 +1494,7 @@ namespace Idler::UI
             if (active && hold != Hold::None)
                 Notice("##hold", hold == Hold::Steam ? ICON_FA_HOURGLASS_HALF : ICON_FA_PAUSE, ManifoldTheme::Warning, HoldText(model));
             if (model.ShutdownFailed())
-                Notice("##shutdown_failed", ICON_FA_TIMES_CIRCLE, ManifoldTheme::Error, "The computer could not be shut down.");
+                Notice("##shutdown_failed", ICON_FA_TIMES_CIRCLE, ManifoldTheme::Error, ErrorMessage(ErrorCode::ShutdownFailed));
 
             ControlRow("Games at once", "How many games of the queue idle at the same time. Steam counts up to 32.", Px(110.0f), [&]()
                 {
@@ -2346,6 +2350,7 @@ namespace Idler::UI
             drawList->AddText(ImVec2(pos.x, std::round(pos.y + (height - ImGui::GetTextLineHeight()) * 0.5f)), ImGui::GetColorU32(color), text.c_str());
             drawList->PopClipRect();
             ImGui::Dummy(ImVec2(std::max(0.0f, width - buttons), height));
+            ErrorTooltip(text);
 
             ImGui::BeginDisabled(writing);
             if (undo)
@@ -2413,6 +2418,7 @@ namespace Idler::UI
             if (phase == AchievementPhase::Failed)
             {
                 ImGui::TextColored(ManifoldTheme::Error, "%s", model.AchievementsProblem().c_str());
+                ErrorTooltip(model.AchievementsProblem());
                 if (ImGui::Button(ICON_FA_SYNC " Try again"))
                     model.LoadAchievements(appId);
                 return false;
@@ -2626,6 +2632,7 @@ namespace Idler::UI
                 const ImVec2 pos = ImGui::GetCursorScreenPos();
                 ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, std::round(pos.y + (height - ImGui::GetTextLineHeight()) * 0.5f)), ImGui::GetColorU32(color), text.c_str());
                 ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, height));
+                ErrorTooltip(text);
                 ImGui::Dummy(ImVec2(0.0f, Px(2.0f)));
             }
 
@@ -3147,7 +3154,7 @@ namespace Idler::UI
                 const std::uint32_t read = cards.LastFullRead();
                 InfoRow("Last read", cards.Reading() ? std::string("Reading now ...") : read != 0 ? DateText(read) + ", " + ClockText(static_cast<double>(read) - static_cast<double>(std::time(nullptr))) : std::string("Not yet"), ManifoldTheme::Muted);
                 if (model.CardLoginIsOtherAccount())
-                    Notice("##other", ICON_FA_EXCLAMATION_TRIANGLE, ManifoldTheme::Warning, "This login is for another account than the one logged on to Steam.");
+                    Notice("##other", ICON_FA_EXCLAMATION_TRIANGLE, ManifoldTheme::Warning, ErrorMessage(ErrorCode::OtherAccount));
                 if (const std::string problem = cards.Problem(); !problem.empty())
                     Notice("##problem", ICON_FA_EXCLAMATION_TRIANGLE, ManifoldTheme::Warning, problem);
                 BeginRow("##actions");
@@ -5400,6 +5407,7 @@ namespace Idler::UI
                     ImGui::TextColored(ImVec4(1.0f, 0.58f, 0.58f, 1.0f), "[%s]", entry.Trace.c_str());
                     ImGui::SameLine();
                     ImGui::TextUnformatted(entry.Message.c_str());
+                    ErrorTooltip(entry.Message);
                 }
             }
             clipper.End();

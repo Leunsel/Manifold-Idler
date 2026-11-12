@@ -50,7 +50,7 @@ if(NOT WIN32)
     target_link_libraries(idler_imgui PUBLIC ${CMAKE_DL_LIBS})
 endif()
 
-set(CORE AppInfo Cards Creatures Library MiniGames Queue RuntimeLog Settings Stats Terrarium Text Vdf WebPolicy)
+set(CORE AppInfo Cards Creatures Errors Library MiniGames Queue RuntimeLog Settings Stats Terrarium Text Vdf WebPolicy)
 set(STEAM LibraryScan SteamClient SteamLocal Worker)
 set(UI Covers CoversSdl Fonts IdleAnimation MenuWidgets MiniGameView ScreenMain TerrariumView
     Scenes/HomeAutumn Scenes/HomeSpring Scenes/HomeSummer Scenes/HomeWinter Scenes/StageClouds Scenes/StageMeadow Scenes/StageUnderwater)

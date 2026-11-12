@@ -1,5 +1,7 @@
 #include "Steam/SteamClient.h"
 
+#include "Core/Errors.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -67,7 +69,7 @@ namespace Idler::Steam
         void* module = OpenLibrary(library);
         if (!module)
         {
-            error = "Steam's client library could not be loaded.";
+            error = ErrorMessage(ErrorCode::ClientLibraryNotLoaded);
             return false;
         }
 
@@ -76,27 +78,27 @@ namespace Idler::Steam
         m_freeCallback = FindSymbol(module, "Steam_FreeLastCallback");
         if (!create)
         {
-            error = "This Steam version is not supported.";
+            error = ErrorMessage(ErrorCode::NoCreateInterface);
             return false;
         }
 
         m_client = static_cast<IClient*>(create(kClientVersion, nullptr));
         if (!m_client)
         {
-            error = "This Steam version is not supported.";
+            error = ErrorMessage(ErrorCode::ClientInterfaceRefused);
             return false;
         }
 
         m_pipe = m_client->CreateSteamPipe();
         if (!m_pipe)
         {
-            error = "Steam is not running.";
+            error = ErrorMessage(ErrorCode::NoSteamPipe);
             return false;
         }
         m_globalUser = m_client->ConnectToGlobalUser(m_pipe);
         if (!m_globalUser)
         {
-            error = "Nobody is logged on to Steam.";
+            error = ErrorMessage(ErrorCode::NoGlobalUser);
             return false;
         }
 
@@ -107,7 +109,7 @@ namespace Idler::Steam
         m_userStats = static_cast<IUserStats*>(m_client->GetISteamUserStats(m_globalUser, m_pipe, kUserStatsVersion));
         if (!m_user || !m_utils || !m_apps || !m_friends || !m_userStats)
         {
-            error = "This Steam version is not supported.";
+            error = ErrorMessage(ErrorCode::InterfaceMissing);
             return false;
         }
         return true;

@@ -1,6 +1,7 @@
 #include "Commands.h"
 
 #include "App/IdlerModel.h"
+#include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
 #include "Request.h"
@@ -189,7 +190,7 @@ namespace Idler::Cli
         {
             if (!model.SteamStatus().LoggedOn())
             {
-                problem = "Steam is not running, or nobody is logged on.";
+                problem = ErrorMessage(model.SteamStatus().Running() ? ErrorCode::NobodyLoggedOn : ErrorCode::SteamNotRunning);
                 return false;
             }
             if (!model.ScannedOnce())

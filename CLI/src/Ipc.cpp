@@ -1,5 +1,6 @@
 #include "Ipc.h"
 
+#include "Core/Errors.h"
 #include "Paths.h"
 #include "Sockets.h"
 
@@ -66,13 +67,13 @@ namespace Idler::Cli
         sockaddr_un address{};
         if (!StartSockets() || !MakeAddress(file, address))
         {
-            error = "No socket can be made at " + PathToUtf8(file);
+            error = ErrorMessage(ErrorCode::NoSocketPath, PathToUtf8(file));
             return false;
         }
         const Socket socket = ::socket(AF_UNIX, SOCK_STREAM, 0);
         if (socket == kNoSocket)
         {
-            error = "This system has no local sockets. Windows needs to be version 10 1803 or newer.";
+            error = ErrorMessage(ErrorCode::NoLocalSockets);
             return false;
         }
 
@@ -88,7 +89,7 @@ namespace Idler::Cli
         if (!bound || ::listen(socket, 8) != 0)
         {
             CloseSocket(socket);
-            error = "The socket could not be opened at " + PathToUtf8(file);
+            error = ErrorMessage(ErrorCode::SocketNotOpened, PathToUtf8(file));
             return false;
         }
         m_socket = static_cast<std::uintptr_t>(socket);

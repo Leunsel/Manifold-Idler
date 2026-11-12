@@ -1,3 +1,4 @@
+#include "Core/Errors.h"
 #include "Core/Text.h"
 #include "Ipc.h"
 #include "Paths.h"
@@ -33,20 +34,42 @@ namespace
         std::string reply;
         if (!Idler::Cli::Ask(Idler::Cli::SocketFile(settings), Idler::Cli::JoinRequest(words), reply))
         {
-            std::fprintf(stderr, "No idler runs with these settings. Start one with: idler serve\n");
+            std::fprintf(stderr, "%s\n", Idler::ErrorMessage(Idler::ErrorCode::NoServer).c_str());
             return kNoServer;
         }
         bool ok = false;
         std::string text;
         if (!Idler::Cli::ReadReply(reply, ok, text))
         {
-            std::fprintf(stderr, "The idler gave an answer that makes no sense.\n");
+            std::fprintf(stderr, "%s\n", Idler::ErrorMessage(Idler::ErrorCode::BadReply).c_str());
             return 1;
         }
         if (!text.empty() && text.back() != '\n')
             text.push_back('\n');
         std::fputs(text.c_str(), ok ? stdout : stderr);
         return ok ? 0 : 1;
+    }
+
+    int Explain(const std::string& code, bool markdown)
+    {
+        if (markdown)
+        {
+            std::fputs(Idler::ErrorsMarkdown().c_str(), stdout);
+            return 0;
+        }
+        if (code.empty())
+        {
+            std::fputs(Idler::ErrorList().c_str(), stdout);
+            return 0;
+        }
+        const Idler::ErrorInfo* info = Idler::FindError(code);
+        if (!info)
+        {
+            std::fprintf(stderr, "No error has the code %s. All codes: idler explain\n", code.c_str());
+            return 1;
+        }
+        std::fputs(Idler::ErrorReference(*info).c_str(), stdout);
+        return 0;
     }
 }
 
@@ -167,7 +190,16 @@ int main(int argc, char** argv)
     CLI::Option* serviceWeb = serviceInstall->add_option("--web", serviceWebAddress, "Also serve the web page, at 127.0.0.1:8090 or the address:port given")->expected(0, 1);
     CLI::App* serviceRemove = service->add_subcommand("remove", "Stop and remove it");
 
+    std::string explainCode;
+    bool explainMarkdown = false;
+    CLI::App* explain = app.add_subcommand("explain", "What an error code means, MI-1001 for example; without one, all codes");
+    explain->add_option("code", explainCode, "The code, as MI-1001 or 1001");
+    explain->add_flag("--markdown", explainMarkdown, "All codes as Markdown, as in docs/ERRORS.md");
+
     CLI11_PARSE(app, argc, argv);
+
+    if (explain->parsed())
+        return Explain(explainCode, explainMarkdown);
 
     const std::filesystem::path settings = settingsText.empty() ? Idler::Cli::DefaultSettingsFile() : Idler::Cli::PathFromUtf8(settingsText);
 

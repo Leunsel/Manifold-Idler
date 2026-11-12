@@ -1,5 +1,6 @@
 #include "Steam/LibraryScan.h"
 
+#include "Core/Errors.h"
 #include "Core/Text.h"
 #include "Steam/WorkerProcess.h"
 
@@ -27,7 +28,7 @@ namespace Idler::Steam
             WorkerProcess worker;
             if (!worker.Start(L"--scan"))
             {
-                output.Problem = "The library could not be read.";
+                output.Problem = ErrorMessage(ErrorCode::ScanHelperNotStarted);
                 return output;
             }
 
@@ -92,13 +93,13 @@ namespace Idler::Steam
                 if (std::chrono::steady_clock::now() > deadline)
                 {
                     worker.Terminate();
-                    output.Problem = "Steam did not answer.";
+                    output.Problem = ErrorMessage(ErrorCode::ScanNoAnswer);
                     return output;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
             }
             if (!done && output.Problem.empty())
-                output.Problem = "The library could not be read.";
+                output.Problem = ErrorMessage(ErrorCode::ScanHelperEnded);
             return output;
         }
     }
@@ -109,7 +110,7 @@ namespace Idler::Steam
         result.Account = status.Account;
 
         const std::vector<std::uint8_t> file = ReadAppInfoFile(status);
-        const AppInfoResult apps = file.empty() ? AppInfoResult{ {}, 0, "Steam's list of apps could not be read." } : ParseAppInfo(file);
+        const AppInfoResult apps = file.empty() ? AppInfoResult{ {}, 0, ErrorMessage(ErrorCode::AppInfoUnreadable) } : ParseAppInfo(file);
         result.Problem = apps.Error;
         if (!result.Problem.empty())
             return result;

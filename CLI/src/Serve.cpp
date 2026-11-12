@@ -2,6 +2,7 @@
 
 #include "App/IdlerModel.h"
 #include "Commands.h"
+#include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Settings.h"
 #include "Core/Text.h"
@@ -115,13 +116,13 @@ namespace Idler::Cli
 
         if (!options.Pretend && WindowProgramRuns())
         {
-            std::fprintf(stderr, "The window program runs: two idlers would idle the same queue twice. Close it first.\n");
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::WindowProgramRuns).c_str());
             return 1;
         }
         std::string reply;
         if (Ask(socketFile, "ping", reply))
         {
-            std::fprintf(stderr, "An idler already runs with these settings.\n");
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::ServerRuns).c_str());
             return 1;
         }
 

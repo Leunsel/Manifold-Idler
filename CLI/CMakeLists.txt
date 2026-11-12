@@ -28,6 +28,7 @@ add_library(idler_core STATIC
     ${IDLER_SOURCE}/Core/AppInfo.cpp
     ${IDLER_SOURCE}/Core/Cards.cpp
     ${IDLER_SOURCE}/Core/Creatures.cpp
+    ${IDLER_SOURCE}/Core/Errors.cpp
     ${IDLER_SOURCE}/Core/Library.cpp
     ${IDLER_SOURCE}/Core/MiniGames.cpp
     ${IDLER_SOURCE}/Core/Queue.cpp

@@ -3,6 +3,7 @@
 #include "App/Desktop.h"
 #include "App/Splash.h"
 #include "App/WindowCommon.h"
+#include "Core/Errors.h"
 #include "Core/Text.h"
 #include "Resource.h"
 #include "UI/Covers.h"
@@ -18,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include <dwmapi.h>
 #include <dxgi1_3.h>
@@ -37,6 +39,18 @@ namespace Idler
         constexpr const wchar_t* kWindowTitle = kCardFarmEnabled ? L"Manifold Idler (test)" : L"Manifold Idler";
 
         using namespace WindowCommon;
+
+        void PutError(wchar_t* target, std::size_t size, ErrorCode code, std::string_view detail = {})
+        {
+            ::wcsncpy_s(target, size, Utf8ToWide(ErrorMessage(code, detail)).c_str(), _TRUNCATE);
+        }
+
+        std::string HexText(HRESULT result)
+        {
+            char text[16];
+            std::snprintf(text, sizeof(text), "0x%08X", static_cast<unsigned>(result));
+            return text;
+        }
 
         constexpr DWORD kWindowStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME | WS_CLIPCHILDREN;
 
@@ -125,7 +139,7 @@ namespace Idler
         wc.lpszClassName = kWindowClass;
         if (!::RegisterClassExW(&wc))
         {
-            ::wcscpy_s(m_error, L"Could not register the window class.");
+            PutError(m_error, ARRAYSIZE(m_error), ErrorCode::WindowClassFailed);
             return false;
         }
 
@@ -133,7 +147,7 @@ namespace Idler
             kClientWidth, kClientHeight, nullptr, nullptr, instance, this);
         if (!m_hwnd)
         {
-            ::wcscpy_s(m_error, L"Could not create the window.");
+            PutError(m_error, ARRAYSIZE(m_error), ErrorCode::WindowFailed);
             return false;
         }
 
@@ -331,7 +345,7 @@ namespace Idler
         }
         if (FAILED(hr))
         {
-            ::swprintf_s(m_error, L"Could not create the Direct3D 11 device (0x%08X).", static_cast<unsigned>(hr));
+            PutError(m_error, ARRAYSIZE(m_error), ErrorCode::DeviceFailed, HexText(hr));
             return false;
         }
 
@@ -351,7 +365,7 @@ namespace Idler
         if (FAILED(hr))
         {
             release();
-            ::swprintf_s(m_error, L"DXGI factory not available (0x%08X).", static_cast<unsigned>(hr));
+            PutError(m_error, ARRAYSIZE(m_error), ErrorCode::FactoryFailed, HexText(hr));
             return false;
         }
 
@@ -368,7 +382,7 @@ namespace Idler
         if (FAILED(hr))
         {
             release();
-            ::swprintf_s(m_error, L"Could not create the swap chain (0x%08X).", static_cast<unsigned>(hr));
+            PutError(m_error, ARRAYSIZE(m_error), ErrorCode::SwapChainFailed, HexText(hr));
             return false;
         }
 
@@ -532,13 +546,13 @@ namespace Idler
         const char* fontError = nullptr;
         if (!Fonts::Build(&fontError))
         {
-            ::MultiByteToWideChar(CP_UTF8, 0, fontError ? fontError : "font error", -1, m_error, ARRAYSIZE(m_error));
+            ::wcsncpy_s(m_error, Utf8ToWide(fontError ? fontError : ErrorMessage(ErrorCode::FontAtlasFailed)).c_str(), _TRUNCATE);
             return false;
         }
 
         if (!ImGui_ImplWin32_Init(m_hwnd) || !ImGui_ImplDX11_Init(m_device, m_context))
         {
-            ::wcscpy_s(m_error, L"Could not initialise Dear ImGui.");
+            PutError(m_error, ARRAYSIZE(m_error), ErrorCode::ImGuiFailed);
             return false;
         }
         UI::Covers::Initialise(m_device);

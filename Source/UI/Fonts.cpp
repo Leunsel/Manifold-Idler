@@ -1,5 +1,6 @@
 #include "UI/Fonts.h"
 
+#include "Core/Errors.h"
 #include "Core/Text.h"
 #include "Generated/IconsFontAwesome5.h"
 
@@ -196,11 +197,13 @@ namespace Idler::Fonts
         if (!error)
             error = &dummy;
         *error = nullptr;
+        static std::string message;
 
         const Source icons = IconFont();
         if (!icons.Found())
         {
-            *error = "The embedded icon font is missing. Was App.rc compiled in?";
+            message = ErrorMessage(ErrorCode::IconFontMissing);
+            *error = message.c_str();
             return false;
         }
 
@@ -217,7 +220,8 @@ namespace Idler::Fonts
         static const ImWchar iconRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
         if (!font || !Add(atlas, icons, iconConfig, iconRanges))
         {
-            *error = "Could not build the font atlas.";
+            message = ErrorMessage(ErrorCode::FontAtlasFailed);
+            *error = message.c_str();
             return false;
         }
 

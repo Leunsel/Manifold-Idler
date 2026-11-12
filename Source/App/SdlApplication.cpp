@@ -3,6 +3,7 @@
 #include "App/Gl.h"
 #include "App/WindowCommon.h"
 #include "Core/Clock.h"
+#include "Core/Errors.h"
 #include "UI/Covers.h"
 #include "UI/Fonts.h"
 #include "UI/IdleAnimation.h"
@@ -290,7 +291,7 @@ namespace Idler
             SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
         if (!SDL_Init(SDL_INIT_VIDEO))
         {
-            m_error = std::string("Could not start SDL: ") + SDL_GetError();
+            m_error = ErrorMessage(ErrorCode::SdlFailed, SDL_GetError());
             return false;
         }
         m_sdlStarted = true;
@@ -309,20 +310,20 @@ namespace Idler
         m_window = SDL_CreateWindow(kWindowTitle, kClientWidth, kClientHeight, flags);
         if (!m_window)
         {
-            m_error = std::string("Could not create the window: ") + SDL_GetError();
+            m_error = ErrorMessage(ErrorCode::SdlWindowFailed, SDL_GetError());
             return false;
         }
         m_context = SDL_GL_CreateContext(m_window);
         if (!m_context)
         {
-            m_error = std::string("Could not create the OpenGL context: ") + SDL_GetError();
+            m_error = ErrorMessage(ErrorCode::GlContextFailed, SDL_GetError());
             return false;
         }
         SDL_GL_MakeCurrent(m_window, m_context);
         SDL_GL_SetSwapInterval(1);
         if (!Gl::Load())
         {
-            m_error = "OpenGL 3 is not available.";
+            m_error = ErrorMessage(ErrorCode::GlTooOld);
             return false;
         }
 
@@ -340,12 +341,12 @@ namespace Idler
         const char* fontError = nullptr;
         if (!Fonts::Build(&fontError))
         {
-            m_error = fontError ? fontError : "font error";
+            m_error = fontError ? fontError : ErrorMessage(ErrorCode::FontAtlasFailed);
             return false;
         }
         if (!ImGui_ImplSDL3_InitForOpenGL(m_window, m_context) || !ImGui_ImplOpenGL3_Init(kGlslVersion))
         {
-            m_error = "Could not initialise Dear ImGui.";
+            m_error = ErrorMessage(ErrorCode::ImGuiFailed);
             return false;
         }
         m_imguiStarted = true;

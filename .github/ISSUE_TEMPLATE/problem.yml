@@ -1,0 +1,40 @@
+name: Problem
+description: Something does not work as it should
+body:
+  - type: input
+    id: code
+    attributes:
+      label: Error code
+      description: The code at the end of the message, such as MI-1001. docs/ERRORS.md explains each one. Leave it empty if there was none.
+      placeholder: MI-1001
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: program
+    attributes:
+      label: Program
+      options:
+        - Window program on Windows
+        - Window program on Linux
+        - CLI on Windows
+        - CLI on Linux
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release, or the commit if you built it yourself.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: The log lines around the problem, from the Log page in the window or from idler log 50. Check that they hold nothing you want to keep to yourself.
+      render: text

@@ -1,5 +1,8 @@
 #include "Web.h"
 
+#include "Core/Errors.h"
+#include "Http.h"
+
 #include <array>
 #include <string_view>
 
@@ -209,14 +212,14 @@ async function call(words) {
       redirect: "error"
     });
   } catch (error) {
-    throw new Error("The idler does not answer. It may have ended; this page keeps trying.");
+    throw new Error({{MI-7015}});
   }
   if (response.status === 401) throw new TokenError();
   let data;
   try {
     data = await response.json();
   } catch (error) {
-    throw new Error("The idler gave an answer that makes no sense (" + response.status + ").");
+    throw new Error({{MI-7016}}.replace("{}", String(response.status)));
   }
   const columns = Array.isArray(data.columns) ? data.columns : [];
   const rows = Array.isArray(data.rows) ? data.rows.map((row) => Object.fromEntries(columns.map((name, index) => [name, row[index] ?? ""]))) : [];
@@ -247,7 +250,7 @@ function lockPage() {
   clearTimeout(timer);
   for (const control of document.querySelectorAll("button, input, select")) control.disabled = true;
   setPill("No token", "bad");
-  showBanner("The token is missing or wrong. The whole address, with its token, comes from: idler web");
+  showBanner({{MI-7010}});
 }
 
 function trouble(error) {
@@ -584,6 +587,24 @@ if (!token) {
 
         constexpr std::array<std::string_view, 5> kParts{ kHead, kBody, kScriptStart, kScriptViews, kScriptEnd };
         constexpr std::string_view kNoncePlace = "{{nonce}}";
+        constexpr std::string_view kErrorPlace = "{{MI-";
+
+        void PutErrors(std::string& page)
+        {
+            for (std::size_t at = page.find(kErrorPlace); at != std::string::npos; at = page.find(kErrorPlace, at))
+            {
+                const std::size_t end = page.find("}}", at);
+                const ErrorInfo* info = end == std::string::npos ? nullptr : FindError(std::string_view(page).substr(at + 2, end - at - 2));
+                if (!info)
+                {
+                    at += kErrorPlace.size();
+                    continue;
+                }
+                const std::string text = JsonString(ErrorMessage(info->Code, "{}"));
+                page.replace(at, end + 2 - at, text);
+                at += text.size();
+            }
+        }
     }
 
     std::string WebPage(std::string_view nonce)
@@ -593,6 +614,7 @@ if (!token) {
             page += part;
         for (std::size_t at = page.find(kNoncePlace); at != std::string::npos; at = page.find(kNoncePlace, at + nonce.size()))
             page.replace(at, kNoncePlace.size(), nonce);
+        PutErrors(page);
         return page;
     }
 }

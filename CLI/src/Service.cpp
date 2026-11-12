@@ -1,5 +1,6 @@
 #include "Service.h"
 
+#include "Core/Errors.h"
 #include "Ipc.h"
 #include "Paths.h"
 #include "Request.h"
@@ -87,13 +88,13 @@ namespace Idler::Cli
 #ifdef _WIN32
     int InstallService(const std::filesystem::path&, bool, bool, const std::string&)
     {
-        std::fprintf(stderr, "A service is for Linux. On Windows a task at logon can run: idler serve\n");
+        std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::ServiceIsForLinux).c_str());
         return 1;
     }
 
     int RemoveService(const std::filesystem::path&)
     {
-        std::fprintf(stderr, "A service is for Linux. On Windows a task at logon can run: idler serve\n");
+        std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::ServiceIsForLinux).c_str());
         return 1;
     }
 #else
@@ -171,7 +172,7 @@ namespace Idler::Cli
         const std::filesystem::path program = ThisProgram();
         if (program.empty())
         {
-            std::fprintf(stderr, "Where this program lies could not be found.\n");
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::NoProgramPath).c_str());
             return 1;
         }
 
@@ -180,7 +181,7 @@ namespace Idler::Cli
         const bool active = Systemctl({ "is-active", "--quiet", unitName }) == 0;
         if (!active && ServerAnswers(settings))
         {
-            std::fprintf(stderr, "An idler already runs with these settings, in a terminal perhaps. End it with: idler quit\nThen run this again.\n");
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::ServerRunsElsewhere).c_str());
             return 1;
         }
 
@@ -193,19 +194,19 @@ namespace Idler::Cli
             out << ServiceUnit(program, settings, start, webText);
             if (!out)
             {
-                std::fprintf(stderr, "%s could not be written.\n", PathToUtf8(file).c_str());
+                std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::UnitNotWritten, PathToUtf8(file)).c_str());
                 return 1;
             }
         }
 
         if (Systemctl({ "daemon-reload" }) != 0)
         {
-            std::fprintf(stderr, "systemctl --user did not work. A user service needs systemd and a login session of this user.\n");
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::SystemctlFailed).c_str());
             return 1;
         }
         if (Systemctl({ "enable", unitName }) != 0 || Systemctl({ active ? "restart" : "start", unitName }) != 0)
         {
-            std::fprintf(stderr, "The service did not start. What systemd says: systemctl --user status %s\n", unitName.c_str());
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::ServiceNotStarted, unitName).c_str());
             return 1;
         }
 
@@ -229,7 +230,7 @@ namespace Idler::Cli
         std::error_code error;
         if (!std::filesystem::exists(file, error))
         {
-            std::fprintf(stderr, "No service is installed for these settings.\n");
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::NoService).c_str());
             return 1;
         }
 
@@ -238,7 +239,7 @@ namespace Idler::Cli
         Systemctl({ "daemon-reload" });
         if (error)
         {
-            std::fprintf(stderr, "%s could not be removed.\n", PathToUtf8(file).c_str());
+            std::fprintf(stderr, "%s\n", ErrorMessage(ErrorCode::UnitNotRemoved, PathToUtf8(file)).c_str());
             return 1;
         }
         std::printf("%s is removed and stopped. In a terminal the idler still runs with: idler serve\n", unitName.c_str());

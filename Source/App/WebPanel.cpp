@@ -1,5 +1,6 @@
 #include "App/WebPanel.h"
 
+#include "Core/Errors.h"
 #include "Core/Text.h"
 #include "Core/WebPolicy.h"
 
@@ -81,11 +82,11 @@ namespace Idler
         std::shared_ptr<WebPage> Held;
         ULONGLONG HeldAt = 0;
 
-        void Fail(const char* what, HRESULT result)
+        void Fail(ErrorCode what, HRESULT result)
         {
-            char text[160];
-            std::snprintf(text, sizeof(text), "%s (0x%08X)", what, static_cast<unsigned>(result));
-            Problem = text;
+            char text[16];
+            std::snprintf(text, sizeof(text), "0x%08X", static_cast<unsigned>(result));
+            Problem = ErrorMessage(what, text);
             Now = WebPanel::State::Failed;
             if (OnLoad)
                 std::exchange(OnLoad, nullptr)(WebPage{});
@@ -283,7 +284,7 @@ namespace Idler
                         return S_OK;
                     if (FAILED(result) || !environment)
                     {
-                        impl->Fail("WebView2 did not start.", result);
+                        impl->Fail(ErrorCode::WebViewNotStarted, result);
                         return S_OK;
                     }
                     const HRESULT created = environment->CreateCoreWebView2Controller(impl->Parent, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
@@ -297,26 +298,26 @@ namespace Idler
                             }
                             if (FAILED(controllerResult) || !controller)
                             {
-                                impl->Fail("WebView2 did not open.", controllerResult);
+                                impl->Fail(ErrorCode::WebViewNotOpened, controllerResult);
                                 return S_OK;
                             }
                             impl->Controller = controller;
                             if (FAILED(controller->get_CoreWebView2(&impl->View)))
                             {
-                                impl->Fail("WebView2 has no page.", E_FAIL);
+                                impl->Fail(ErrorCode::WebViewNoPage, E_FAIL);
                                 return S_OK;
                             }
                             impl->Setup(url, visible);
                             return S_OK;
                         }).Get());
                     if (FAILED(created))
-                        impl->Fail("WebView2 did not open.", created);
+                        impl->Fail(ErrorCode::WebViewNotOpened, created);
                     return S_OK;
                 }).Get());
         if (started == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-            impl->Fail("Microsoft's WebView2 Runtime is not installed.", started);
+            impl->Fail(ErrorCode::WebViewMissing, started);
         else if (FAILED(started))
-            impl->Fail("WebView2 did not start.", started);
+            impl->Fail(ErrorCode::WebViewNotStarted, started);
     }
 
     void WebPanel::Close()

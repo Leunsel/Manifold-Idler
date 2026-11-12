@@ -96,6 +96,7 @@
     <ClCompile Include="Source\Core\Cards.cpp" />
     <ClCompile Include="Source\Core\Library.cpp" />
     <ClCompile Include="Source\Core\Creatures.cpp" />
+    <ClCompile Include="Source\Core\Errors.cpp" />
     <ClCompile Include="Source\Core\MiniGames.cpp" />
     <ClCompile Include="Source\Core\Queue.cpp" />
     <ClCompile Include="Source\Core\RuntimeLog.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="Source\Core\Cards.h" />
     <ClInclude Include="Source\Core\Library.h" />
     <ClInclude Include="Source\Core\Creatures.h" />
+    <ClInclude Include="Source\Core\Errors.h" />
     <ClInclude Include="Source\Core\MiniGames.h" />
     <ClInclude Include="Source\Core\Queue.h" />
     <ClInclude Include="Source\UI\CreatureSprites.h" />

@@ -1,5 +1,6 @@
 #include "Core/AppInfo.h"
 
+#include "Core/Errors.h"
 #include "Core/Text.h"
 
 #include <cstdio>
@@ -288,14 +289,14 @@ namespace Idler
         reader.Skip(4);
         if (!reader.Ok())
         {
-            result.Error = "The file is too short.";
+            result.Error = ErrorMessage(ErrorCode::AppInfoTooShort);
             return result;
         }
         if (magic != kMagic27 && magic != kMagic28 && magic != kMagic29)
         {
-            char text[96];
-            std::snprintf(text, sizeof(text), "Steam uses a newer format of this file (%08X).", magic);
-            result.Error = text;
+            char text[16];
+            std::snprintf(text, sizeof(text), "%08X", magic);
+            result.Error = ErrorMessage(ErrorCode::AppInfoNewerFormat, text);
             return result;
         }
 
@@ -306,7 +307,7 @@ namespace Idler
             const std::int64_t offset = reader.Read<std::int64_t>();
             if (!reader.Ok() || !ReadStringTable(file, offset, strings))
             {
-                result.Error = "The string table of the file is damaged.";
+                result.Error = ErrorMessage(ErrorCode::AppInfoStringsDamaged);
                 return result;
             }
             tableStart = static_cast<std::size_t>(offset);
@@ -319,7 +320,7 @@ namespace Idler
             const std::uint32_t appId = reader.Read<std::uint32_t>();
             if (!reader.Ok())
             {
-                result.Error = "The file ends too early.";
+                result.Error = ErrorMessage(ErrorCode::AppInfoEndsEarly);
                 return result;
             }
             if (appId == 0)
@@ -328,7 +329,7 @@ namespace Idler
             const std::uint32_t size = reader.Read<std::uint32_t>();
             if (!reader.Ok() || size > tableStart || reader.At() > tableStart - size)
             {
-                result.Error = "An entry of the file is damaged.";
+                result.Error = ErrorMessage(ErrorCode::AppInfoEntryDamaged);
                 return result;
             }
             const std::size_t end = reader.At() + size;
