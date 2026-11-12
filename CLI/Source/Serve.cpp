@@ -136,6 +136,7 @@ namespace Idler::Cli
                 return 1;
             }
             webConfig.Names = ComputerNames();
+            webConfig.Themes = options.Themes;
             const std::string computer = webConfig.Names.empty() ? std::string("<this computer>") : webConfig.Names.front();
             pageAddress = PageAddress(IsWildcard(webAddress) ? computer + ":" + std::to_string(webAddress.Port) : AddressText(webAddress), webConfig.Token);
         }
@@ -156,6 +157,7 @@ namespace Idler::Cli
         if (options.Web)
         {
             std::printf("Web page: %s\n", pageAddress.c_str());
+            std::printf("Themes of your own: %s\n", PathToUtf8(options.Themes).c_str());
             if (!IsLoopback(webAddress))
                 std::fprintf(stderr, "The web page answers other computers too, over plain HTTP: whoever sees the traffic sees the token. An SSH tunnel is safer.\n");
         }

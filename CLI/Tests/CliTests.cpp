@@ -3,6 +3,7 @@
 #include "Paths.h"
 #include "Request.h"
 #include "Service.h"
+#include "Themes.h"
 #include "Web.h"
 
 #include <algorithm>
@@ -84,27 +85,195 @@ namespace
         return text;
     }
 
+    std::string ReadBytes(const std::filesystem::path& file)
+    {
+        std::ifstream in(file, std::ios::binary);
+        return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    }
+
+    const EmbeddedFile* Embedded(std::string_view path)
+    {
+        for (const EmbeddedFile& file : BuiltInThemeFiles())
+        {
+            if (file.Path == path)
+                return &file;
+        }
+        return nullptr;
+    }
+
     void PageSourceChecks()
     {
         std::error_code ignored;
-        std::filesystem::path web;
+        std::filesystem::path root;
         for (std::filesystem::path folder = std::filesystem::current_path(ignored); !folder.empty(); folder = folder.parent_path())
         {
             if (std::filesystem::exists(folder / "CLI" / "Web" / "page.js", ignored))
             {
-                web = folder / "CLI" / "Web";
+                root = folder;
                 break;
             }
             if (folder == folder.parent_path())
                 break;
         }
-        const bool current = !web.empty() && ReadSource(web / "page.html") == WebPageHtml() && ReadSource(web / "page.css") == WebPageStyle() &&
+        const std::filesystem::path web = root / "CLI" / "Web";
+        bool current = !root.empty() && ReadSource(web / "page.html") == WebPageHtml() && ReadSource(web / "base.css") == WebPageStyle() &&
             ReadSource(web / "page.js") == WebPageScript();
+        std::size_t sourceFiles = 0;
+        for (std::filesystem::recursive_directory_iterator entry(web / "Themes", ignored), end; current && !ignored && entry != end; entry.increment(ignored))
+        {
+            if (!entry->is_regular_file(ignored))
+                continue;
+            ++sourceFiles;
+            std::string relative = PathToUtf8(entry->path().lexically_relative(web / "Themes"));
+            std::replace(relative.begin(), relative.end(), '\\', '/');
+            const EmbeddedFile* embedded = Embedded(relative);
+            current = embedded && embedded->Bytes == ReadSource(entry->path());
+        }
+        for (const char* font : { "PressStart2P.woff2", "VT323.woff2" })
+        {
+            const EmbeddedFile* embedded = Embedded(std::string("arcade/") + font);
+            current = current && embedded && embedded->Bytes == ReadBytes(root / "Dependencies" / "Fonts" / font);
+        }
+        current = current && sourceFiles > 0 && BuiltInThemeFiles().size() == sourceFiles + 2;
         if (!current)
             std::printf("  CLI/Source/WebAssets.cpp is not the one of CLI/Web: run CLI/Tools/web-assets.py\n");
         CHECK(current);
         CHECK(WebLogo().rfind("data:image/png;base64,iVBORw0KGgo", 0) == 0);
-        CHECK(WebFontFaces().find("font-family:\"Idler Pixel\"") != std::string::npos);
+        const EmbeddedFile* arcade = Embedded("arcade/theme.css");
+        CHECK(arcade && arcade->Bytes.find("font-family:\"Idler Pixel\"") != std::string::npos && arcade->Bytes.find("url(PressStart2P.woff2)") != std::string::npos);
+    }
+
+    void WriteFile(const std::filesystem::path& file, std::string_view text)
+    {
+        std::error_code ignored;
+        std::filesystem::create_directories(file.parent_path(), ignored);
+        std::ofstream out(file, std::ios::binary | std::ios::trunc);
+        out << text;
+    }
+
+    void ThemeChecks()
+    {
+        CHECK(IsThemeId("arcade") && IsThemeId("my-theme-2") && IsThemeId("9"));
+        CHECK(!IsThemeId("") && !IsThemeId("-x") && !IsThemeId("My") && !IsThemeId("a b") && !IsThemeId("a_b") && !IsThemeId(std::string(33, 'a')));
+        CHECK(IsThemeFilePath("theme.css") && IsThemeFilePath("fonts/Pixel-1.woff2") && IsThemeFilePath("a/b/c/d.png"));
+        CHECK(!IsThemeFilePath("") && !IsThemeFilePath("../x.css") && !IsThemeFilePath("a/../x.css") && !IsThemeFilePath(".hidden.css") && !IsThemeFilePath("a//b.css"));
+        CHECK(!IsThemeFilePath("a\\b.css") && !IsThemeFilePath("a/b/c/d/e.css") && !IsThemeFilePath("x%2e.css") && !IsThemeFilePath("/x.css") && !IsThemeFilePath("x.css/"));
+        CHECK(ThemeFileType("theme.css") == "text/css; charset=utf-8" && ThemeFileType("a/B.WOFF2") == "font/woff2" && ThemeFileType("x.svg") == "image/svg+xml");
+        CHECK(ThemeFileType("theme.ini").empty() && ThemeFileType("x.js").empty() && ThemeFileType("x.html").empty() && ThemeFileType("x").empty() && ThemeFileType("a.b/c").empty());
+
+        Theme theme;
+        theme.Id = "mine";
+        std::vector<std::string> problems;
+        ReadThemeInfo("\xEF\xBB\xBF; a comment\r\nname = Mine\r\nnote=Calm.\r\n\r\n[variant night]\r\nname=Night\r\nswatch=#112233, #ABC #11223344\r\n"
+            "[variant day]\r\n[option glow]\r\nname=Glow\r\nnote=It glows.\r\ndefault=on\r\n[option quiet]\r\n", theme, problems);
+        CHECK(problems.empty());
+        CHECK(theme.Name == "Mine" && theme.Note == "Calm.");
+        CHECK(theme.Variants.size() == 2 && theme.Variants[0].Id == "night" && theme.Variants[0].Name == "Night" && theme.Variants[1].Id == "day");
+        CHECK(!theme.Variants.empty() && (theme.Variants[0].Swatch == std::vector<std::string>{ "#112233", "#abc", "#11223344" }));
+        CHECK(theme.Options.size() == 2 && theme.Options[0].Id == "glow" && theme.Options[0].On && theme.Options[0].Note == "It glows." && !theme.Options[1].On);
+
+        Theme bad;
+        bad.Id = "bad";
+        problems.clear();
+        ReadThemeInfo("name=Bad\nswatch=#12345 red\n[variant Night]\nname=x\n[variant ok]\nnote=no notes here\n[option ok]\ndefault=maybe\n[look]\nsize=3\nwhat\n[variant ok]\n[option ok]\n", bad, problems);
+        CHECK(problems.size() == 8);
+        CHECK(!problems.empty() && problems[0] == "Theme problem: bad, theme.ini line 2: \"#12345\" is not a colour such as #22e6ff (MI-7020)");
+        CHECK(bad.Name == "Bad" && bad.Swatch.empty() && bad.Variants.size() == 1 && bad.Options.size() == 1);
+
+        const ThemeSet builtIn = LoadThemes({});
+        CHECK(builtIn.Problems.empty());
+        CHECK(builtIn.Themes.size() == 2 && builtIn.Themes[0].Id == "arcade" && builtIn.Themes[1].Id == "manifold");
+        if (builtIn.Themes.size() == 2)
+        {
+            const Theme& arcade = builtIn.Themes[0];
+            CHECK(arcade.Name == "Arcade" && arcade.BuiltIn && !arcade.FromFolder && arcade.Variants.size() == 4 && arcade.Variants[0].Id == "synthwave");
+            CHECK(arcade.Options.size() == 2 && arcade.Options[0].Id == "scanlines" && arcade.Options[0].On && !arcade.Options[1].On);
+            CHECK(arcade.Swatch.size() == 4 && !arcade.Variants.empty() && arcade.Swatch == arcade.Variants[0].Swatch);
+            CHECK(builtIn.Themes[1].Name == "Manifold" && builtIn.Themes[1].Variants.empty() && builtIn.Themes[1].Swatch.size() == 4);
+        }
+
+        std::error_code ignored;
+        const std::filesystem::path folder = std::filesystem::temp_directory_path(ignored) / "manifold-idler-theme-test";
+        std::filesystem::remove_all(folder, ignored);
+        WriteFile(folder / "mine" / "theme.css", ":root{--accent:#f0f}");
+        WriteFile(folder / "mine" / "theme.ini", "name=</script><b>&\n[variant one]\nswatch=#fff\n");
+        WriteFile(folder / "mine" / "art" / "dot.png", "\x89PNG dot");
+        WriteFile(folder / "mine" / "notes.txt", "not served");
+        WriteFile(folder / "arcade" / "theme.css", "/* mine */");
+        WriteFile(folder / "Bad Name" / "theme.css", "x");
+        WriteFile(folder / "empty" / "readme.png", "x");
+        WriteFile(folder / ".git" / "theme.css", "x");
+        WriteFile(folder / "outside.css", "secret");
+
+        const ThemeSet own = LoadThemes(folder);
+        CHECK(own.Themes.size() == 3 && own.Themes[0].Id == "arcade" && own.Themes[0].FromFolder && own.Themes[0].BuiltIn && own.Themes[0].Name == "arcade" && own.Themes[0].Variants.empty());
+        CHECK(own.Themes.size() == 3 && own.Themes[2].Id == "mine" && own.Themes[2].FromFolder && !own.Themes[2].BuiltIn && (own.Themes[2].Swatch == std::vector<std::string>{ "#fff" }));
+        CHECK(own.Problems.size() == 2);
+        const std::string json = ThemesJson(own);
+        CHECK(json.find('<') == std::string::npos && json.find('&') == std::string::npos && json.find("\\u003c/script\\u003e\\u003cb\\u003e\\u0026") != std::string::npos);
+        CHECK(json.find("\"from\":\"replaced\"") != std::string::npos && json.find("\"from\":\"built-in\"") != std::string::npos && json.find("\"from\":\"folder\"") != std::string::npos);
+        CHECK(json.find("{\"default\":\"arcade\"") == 0 && json.find("\"docs\":\"" + std::string(kThemesReference) + "\"") != std::string::npos);
+        CHECK(ThemesText(own).find("arcade") != std::string::npos && ThemesText(own).find("MI-7020") != std::string::npos);
+
+        std::string bytes;
+        std::string type;
+        CHECK(FindThemeFile(folder, "arcade", "theme.css", bytes, type) && bytes == "/* mine */" && type.rfind("text/css", 0) == 0);
+        CHECK(FindThemeFile(folder, "arcade", "VT323.woff2", bytes, type) && type == "font/woff2" && bytes.compare(0, 4, "wOF2") == 0);
+        CHECK(FindThemeFile({}, "arcade", "theme.css", bytes, type) && bytes.find("Idler Pixel") != std::string::npos);
+        CHECK(FindThemeFile(folder, "mine", "art/dot.png", bytes, type) && type == "image/png" && bytes == "\x89PNG dot");
+        CHECK(!FindThemeFile(folder, "mine", "notes.txt", bytes, type));
+        CHECK(!FindThemeFile(folder, "mine", "theme.ini", bytes, type));
+        CHECK(!FindThemeFile(folder, "mine", "../outside.css", bytes, type));
+        CHECK(!FindThemeFile(folder, "empty", "readme.png", bytes, type));
+        CHECK(!FindThemeFile(folder, "nothing", "theme.css", bytes, type));
+        CHECK(!FindThemeFile(folder, "..", "outside.css", bytes, type));
+
+        WebConfig config;
+        config.Token = "0123456789abcdef0123456789abcdef";
+        config.Themes = folder;
+        const CommandRunner run = [](const std::vector<std::string>&) { return CommandResult{}; };
+        const std::pair<std::string, std::string> host{ "host", "127.0.0.1:8090" };
+        const auto answer = [&](const HttpRequest& request) { return AnswerWeb(request, config, run); };
+        const std::string themes = "/themes/" + config.Token + "/";
+        const HttpResponse sheet = answer(Asked("GET", themes + "arcade/theme.css", { host, { "sec-fetch-site", "same-origin" } }));
+        CHECK(sheet.Status == 200 && sheet.Body == "/* mine */" && sheet.Type.rfind("text/css", 0) == 0);
+        CHECK(sheet.Header("Cache-Control") && *sheet.Header("Cache-Control") == "no-cache" && sheet.Header("X-Content-Type-Options"));
+        const HttpResponse font = answer(Asked("GET", themes + "arcade/PressStart2P.woff2", { host }));
+        CHECK(font.Status == 200 && font.Type == "font/woff2" && font.Header("Cross-Origin-Resource-Policy"));
+        CHECK(answer(Asked("GET", themes + "manifold/theme.css", { host })).Status == 200);
+        CHECK(answer(Asked("GET", "/themes/0123456789abcdef0123456789abcdee/arcade/theme.css", { host })).Status == 401);
+        CHECK(answer(Asked("GET", "/themes/arcade/theme.css", { host })).Status == 401);
+        CHECK(answer(Asked("GET", "/themes/arcade/theme.css?token=" + config.Token, { host })).Status == 401);
+        CHECK(answer(Asked("GET", themes + "mine/../outside.css", { host })).Status == 404);
+        CHECK(answer(Asked("GET", themes + "mine/%2e%2e/outside.css", { host })).Status == 404);
+        CHECK(answer(Asked("GET", themes + "mine/theme.ini", { host })).Status == 404);
+        CHECK(answer(Asked("GET", themes + "arcade", { host })).Status == 404);
+        CHECK(answer(Asked("GET", "/themes/" + config.Token, { host })).Status == 404);
+        CHECK(answer(Asked("POST", themes + "arcade/theme.css", { host })).Status == 405);
+        CHECK(answer(Asked("GET", themes + "arcade/theme.css", { host, { "sec-fetch-site", "cross-site" } })).Status == 403);
+        const HttpResponse page = answer(Asked("GET", "/?token=" + config.Token, { host }));
+        CHECK(page.Status == 200 && page.Body.find("<script type=\"application/json\" id=\"themes\">{\"default\":\"arcade\"") != std::string::npos);
+        CHECK(page.Body.find("</script><b>") == std::string::npos && page.Body.find("\"id\":\"mine\"") != std::string::npos);
+
+        std::string text;
+        CHECK(CopyTheme(folder, "arcade", "my-arcade", text) && text.find("my-arcade") != std::string::npos);
+        CHECK(ReadBytes(folder / "my-arcade" / "theme.css") == "/* mine */" && ReadBytes(folder / "my-arcade" / "VT323.woff2").compare(0, 4, "wOF2") == 0);
+        CHECK(ReadSource(folder / "my-arcade" / "theme.ini").find("[theme]\nname=my-arcade\nnote=") == 0);
+        CHECK(CopyTheme(folder, "manifold", "calm", text));
+        const EmbeddedFile* manifold = Embedded("manifold/theme.css");
+        CHECK(manifold && ReadBytes(folder / "calm" / "theme.css") == manifold->Bytes);
+        CHECK(CopyTheme(folder, "mine", "mine-2", text) && std::filesystem::exists(folder / "mine-2" / "art" / "dot.png", ignored) && !std::filesystem::exists(folder / "mine-2" / "notes.txt", ignored));
+        CHECK(ReadSource(folder / "mine-2" / "theme.ini") == "name=mine-2\n[variant one]\nswatch=#fff\n");
+        const ThemeSet copied = LoadThemes(folder);
+        CHECK(copied.Themes.size() == 6);
+        const auto named = std::find_if(copied.Themes.begin(), copied.Themes.end(), [](const Theme& one) { return one.Id == "my-arcade"; });
+        CHECK(named != copied.Themes.end() && named->Name == "my-arcade" && named->Variants.size() == 4 && !named->BuiltIn);
+        CHECK(!CopyTheme(folder, "manifold", "calm", text) && text.find("(MI-7018)") != std::string::npos);
+        CHECK(!CopyTheme(folder, "nothing", "x", text) && text.find("(MI-7017)") != std::string::npos);
+        CHECK(!CopyTheme(folder, "empty", "y", text) && text.find("(MI-7017)") != std::string::npos);
+        CHECK(!CopyTheme(folder, "manifold", "Not Fine", text) && text.find("(MI-7021)") != std::string::npos);
+        CHECK(!std::filesystem::exists(folder / "x", ignored) && !std::filesystem::exists(folder / "y", ignored));
+        std::filesystem::remove_all(folder, ignored);
     }
 
     void HttpChecks()
@@ -363,7 +532,8 @@ namespace
         CHECK(nonce.size() == 32);
         CHECK(policy && policy->find("style-src 'nonce-" + nonce + "'") != std::string::npos);
         CHECK(policy && policy->find("connect-src 'self'") != std::string::npos && policy->find("frame-ancestors 'none'") != std::string::npos);
-        CHECK(policy && policy->find("font-src data:;") != std::string::npos);
+        CHECK(policy && policy->find("style-src 'nonce-" + nonce + "' 'self';") != std::string::npos);
+        CHECK(policy && policy->find("font-src data: 'self';") != std::string::npos);
         CHECK(page.Body.find("<script nonce=\"" + nonce + "\">") != std::string::npos);
         CHECK(page.Body.find("<style nonce=\"" + nonce + "\">") != std::string::npos);
         CHECK(page.Body.find("{{nonce}}") == std::string::npos);
@@ -409,20 +579,14 @@ namespace
         CHECK(answer(Asked("GET", "/nothing", { host })).Status == 401);
         CHECK(PlainResponse(400, "x").Header("X-Content-Type-Options") != nullptr);
 
-        const std::string html = WebPage("abc");
+        const std::string html = WebPage("abc", LoadThemes({}));
         CHECK(html.find("<script nonce=\"abc\">") != std::string::npos && html.find("<style nonce=\"abc\">") != std::string::npos);
         CHECK(html.find("src=\"http") == std::string::npos && html.find("href=\"http") == std::string::npos);
         CHECK(html.find("@import") == std::string::npos);
-        int fonts = 0;
-        bool embedded = true;
-        for (std::size_t at = html.find("url("); at != std::string::npos; at = html.find("url(", at + 4))
-        {
-            embedded &= html.compare(at, 27, "url(data:font/woff2;base64,") == 0;
-            ++fonts;
-        }
-        CHECK(embedded && fonts == 2);
-        CHECK(html.find("font-family:\"Idler Pixel\"") != std::string::npos && html.find("font-family:\"Idler Text\"") != std::string::npos);
-        CHECK(html.find("<button id=\"screen\"") != std::string::npos);
+        CHECK(html.find("url(") == std::string::npos && html.find("font-family:\"Idler") == std::string::npos);
+        CHECK(html.find("document.write('<link id=\"theme-sheet\" rel=\"stylesheet\" href=\"/themes/' + token + \"/\" + theme.id + '/theme.css\">')") != std::string::npos);
+        CHECK(html.find("<script type=\"application/json\" id=\"themes\">{\"default\":\"arcade\",") != std::string::npos);
+        CHECK(html.find("<button id=\"look\"") != std::string::npos);
         CHECK(html.find("<img class=\"logo\" src=\"data:image/png;base64,") != std::string::npos && html.find("<link rel=\"icon\" href=\"data:image/png;base64,") != std::string::npos);
         for (const char* view : { "idling", "library", "statistics", "log", "settings" })
             CHECK(html.find(std::string("<a href=\"#") + view + "\" data-page=\"" + view + "\"") != std::string::npos);
@@ -525,6 +689,7 @@ int main()
     GuardChecks();
     TokenChecks();
     AnswerChecks();
+    ThemeChecks();
 
     std::printf("%d checks, %d failed\n", g_checks, g_failed);
     return g_failed == 0 ? 0 : 1;

@@ -31,6 +31,7 @@ namespace Idler::Cli
         constexpr std::string_view kWebCommands[] = { "ping", "status", "queue", "add", "remove", "goal", "games", "lists", "use", "log", "start", "stop", "slots",
             "move", "sort", "retry", "now", "refund", "clear", "undo", "list", "rescan", "library", "game", "stats", "history", "settings", "set" };
         constexpr std::string_view kCoverPath = "/cover/";
+        constexpr std::string_view kThemesPath = "/themes/";
         constexpr std::uintmax_t kLargestPicture = 8u * 1024u * 1024u;
 
         std::string LowerAscii(std::string_view text)
@@ -472,6 +473,19 @@ namespace Idler::Cli
         return response;
     }
 
+    HttpResponse ThemeResponse(const std::filesystem::path& folder, std::string_view id, std::string_view file)
+    {
+        HttpResponse response;
+        if (!FindThemeFile(folder, id, file, response.Body, response.Type))
+            return PlainResponse(404, "No such theme file.");
+        response.Headers.emplace_back("Content-Security-Policy", std::string(kLockedPolicy));
+        response.Headers.emplace_back("Cache-Control", "no-cache");
+        response.Headers.emplace_back("X-Content-Type-Options", "nosniff");
+        response.Headers.emplace_back("Referrer-Policy", "no-referrer");
+        response.Headers.emplace_back("Cross-Origin-Resource-Policy", "same-origin");
+        return response;
+    }
+
     HttpResponse AnswerWeb(const HttpRequest& request, const WebConfig& config, const CommandRunner& run)
     {
         const std::string* host = request.Header("host");
@@ -482,10 +496,34 @@ namespace Idler::Cli
         if (request.Method != "GET" && request.Method != "POST")
             return WrongMethod("GET, POST");
 
-        const std::string* header = request.Header("x-idler-token");
-        const std::string given = header ? *header : QueryValue(request.Query, "token");
+        const std::string_view path = request.Path;
+        const bool themeFile = path.starts_with(kThemesPath);
+        std::string_view themePart;
+        std::string given;
+        if (themeFile)
+        {
+            const std::string_view rest = path.substr(kThemesPath.size());
+            const std::size_t slash = rest.find('/');
+            given = std::string(rest.substr(0, slash));
+            themePart = slash == std::string_view::npos ? std::string_view() : rest.substr(slash + 1);
+        }
+        else
+        {
+            const std::string* header = request.Header("x-idler-token");
+            given = header ? *header : QueryValue(request.Query, "token");
+        }
         if (!TokenMatches(config.Token, given))
             return PlainResponse(401, ErrorMessage(ErrorCode::WrongToken));
+
+        if (themeFile)
+        {
+            if (request.Method != "GET")
+                return WrongMethod("GET");
+            const std::size_t slash = themePart.find('/');
+            if (slash == std::string_view::npos)
+                return PlainResponse(404, "No such theme file.");
+            return ThemeResponse(config.Themes, themePart.substr(0, slash), themePart.substr(slash + 1));
+        }
 
         if (request.Path == "/")
         {
@@ -496,9 +534,9 @@ namespace Idler::Cli
                 return PlainResponse(500, ErrorMessage(ErrorCode::NoRandomNonce));
             HttpResponse response;
             response.Type = "text/html; charset=utf-8";
-            response.Body = WebPage(nonce);
+            response.Body = WebPage(nonce, LoadThemes(config.Themes));
             AddSafetyHeaders(response, "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'nonce-" + nonce +
-                "'; connect-src 'self'; img-src data: 'self'; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+                "' 'self'; connect-src 'self'; img-src data: 'self'; font-src data: 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
             return response;
         }
 

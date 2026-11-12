@@ -1,0 +1,47 @@
+:root{--bg:#0f1012;--side:#0b0c0e;--panel:#15161a;--sunken:#1b1d22;--raised:#26292e;--raised-hover:#33373f;--fg:#e6e8ed;--soft:#c7c9d1;--dim:#80858f;--line:rgba(255,255,255,.07);--line-strong:rgba(255,255,255,.14);--accent:#2edb9e;--accent-hover:#42f0b3;--on-accent:#0b0c0e;--good:#2edb9e;--warn:#f2b352;--bad:#f26b5c;--font-text:Tahoma,"Segoe UI",system-ui,"Noto Sans",sans-serif;--font-mono:Consolas,"Cascadia Mono","DejaVu Sans Mono",ui-monospace,monospace;--shadow:inset 0 1px 0 rgba(255,255,255,.035),0 14px 30px -22px rgba(0,0,0,.95);--shadow-small:var(--shadow);--shadow-pop:0 18px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04);--fast:.14s;--slow:.3s;--ease:cubic-bezier(.2,.7,.2,1)}
+
+.side{background:linear-gradient(180deg,#0d0e11,#0a0b0d 70%)}
+.top{background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 140px),var(--panel)}
+.tile-stat{background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%),var(--panel)}
+.nav a{position:relative}
+.nav a[aria-current=page]{box-shadow:inset 3px 0 0 var(--tone),0 0 0 1px color-mix(in srgb,var(--tone) 16%,transparent)}
+button.primary:hover:not(:disabled),button.primary:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent),0 8px 18px -10px color-mix(in srgb,var(--accent) 70%,transparent)}
+button:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 24%,transparent)}
+.tile{transition:transform var(--fast) var(--ease),box-shadow var(--fast) var(--ease),border-color var(--fast) var(--ease),background var(--fast) var(--ease)}
+.tile:hover:not(:disabled),.tile:focus-visible{transform:translateY(-2px);border-color:var(--line-strong);background:#1f2126;box-shadow:0 12px 24px -14px rgba(0,0,0,.9)}
+.tile[aria-pressed=true],.tile[aria-pressed=true]:hover:not(:disabled){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 10px 26px -14px color-mix(in srgb,var(--accent) 60%,transparent)}
+.tile .tile-art{transition:transform var(--slow) var(--ease),filter var(--slow) var(--ease)}
+.tile:hover .tile-art{transform:scale(1.04);filter:brightness(1.08)}
+.entry{transition:border-color var(--slow) var(--ease),opacity var(--slow) var(--ease)}
+.entry.running .meter span{background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent) no-repeat,var(--good);background-size:40% 100%,100% 100%;animation:manifold-shimmer 2.4s var(--ease) infinite}
+.toast{transform:translate(-50%,12px);transition:opacity var(--slow) var(--ease),transform var(--slow) var(--ease)}
+.toast.show{transform:translate(-50%,0)}
+.ask[open]{animation:manifold-dialog .22s var(--ease)}
+.ask::backdrop{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+
+@keyframes manifold-rise{from{opacity:0;transform:translateY(8px)}}
+@keyframes manifold-pop{from{opacity:0;transform:translateY(5px)}}
+@keyframes manifold-breathe{50%{box-shadow:inset 3px 0 0 var(--good),0 0 22px -8px color-mix(in srgb,var(--good) 60%,transparent)}}
+@keyframes manifold-shimmer{from{background-position:-67% 0,0 0}to{background-position:167% 0,0 0}}
+@keyframes manifold-ping{from{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 60%,transparent)}to{box-shadow:0 0 0 7px transparent}}
+@keyframes manifold-grow{from{transform:scaleY(0)}}
+@keyframes manifold-turn{0%,42%{transform:rotate(0)}50%,92%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+@keyframes manifold-dialog{from{opacity:0;transform:translateY(6px) scale(.98)}}
+@keyframes manifold-slide{from{opacity:0;transform:translateX(28px)}}
+.page>:not(.detail){animation:manifold-rise var(--slow) var(--ease) backwards}
+.page>:nth-child(2):not(.detail){animation-delay:40ms}
+.page>:nth-child(3):not(.detail){animation-delay:80ms}
+.entry,.tile{animation:manifold-pop .32s var(--ease) backwards;animation-delay:calc(min(var(--i,0),24) * 16ms)}
+.entry.running{animation:manifold-pop .32s var(--ease) backwards,manifold-breathe 3.2s ease-in-out .32s infinite}
+.pill.good::before{animation:manifold-ping 1.8s ease-out infinite}
+.chart[data-fresh] .bar-col span{transform-origin:bottom;animation:manifold-grow .55s var(--ease) backwards;animation-delay:calc(var(--i,0) * 14ms)}
+:root[data-active=yes] .logo{animation:manifold-turn 8s cubic-bezier(.65,0,.35,1) infinite}
+
+@media (max-width:1100px){
+.detail{animation:manifold-slide .28s var(--ease) backwards}
+}
+@media (max-width:760px){
+.nav a[aria-current=page]{box-shadow:inset 0 3px 0 var(--tone)}
+.top{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg)}
+}

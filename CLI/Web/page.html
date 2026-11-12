@@ -7,12 +7,36 @@
 <meta name="referrer" content="no-referrer">
 <title>Manifold Idler</title>
 <link rel="icon" href="{{logo}}">
-<script nonce="{{nonce}}">
-try { const screen = localStorage.getItem("manifold-idler.screen"); if (["classic", "phosphor", "amber", "idler"].includes(screen)) document.documentElement.dataset.screen = screen; } catch (error) {}
-</script>
+<script type="application/json" id="themes">{{themes}}</script>
 <style nonce="{{nonce}}">
 {{style}}
 </style>
+<script nonce="{{nonce}}">
+(() => {
+  const root = document.documentElement;
+  const read = (key) => { try { return localStorage.getItem(key) || ""; } catch (error) { return ""; } };
+  const write = (key, value) => { try { localStorage.setItem(key, value); } catch (error) {} };
+  const old = read("manifold-idler.screen");
+  if (old) {
+    if (!read("manifold-idler.theme")) write("manifold-idler.theme", old === "idler" ? "manifold" : "arcade");
+    if (old !== "idler" && !read("manifold-idler.variant.arcade")) write("manifold-idler.variant.arcade", old);
+    try { localStorage.removeItem("manifold-idler.screen"); } catch (error) {}
+  }
+  let data = {};
+  try { data = JSON.parse(document.getElementById("themes").textContent); } catch (error) {}
+  const themes = Array.isArray(data.themes) ? data.themes : [];
+  const theme = themes.find((one) => one.id === read("manifold-idler.theme")) || themes.find((one) => one.id === data.default) || themes[0];
+  if (!theme) return;
+  const variant = theme.variants.find((one) => one.id === read("manifold-idler.variant." + theme.id)) || theme.variants[0];
+  const saved = read("manifold-idler.options." + theme.id);
+  const on = saved.startsWith("on:") ? saved.slice(3).split(" ") : null;
+  root.dataset.theme = theme.id;
+  if (variant) root.dataset.variant = variant.id;
+  root.dataset.options = theme.options.filter((one) => on ? on.includes(one.id) : one.on).map((one) => one.id).join(" ");
+  const token = new URLSearchParams(location.search).get("token") || "";
+  if (/^[A-Za-z0-9_-]+$/.test(token) && /^[a-z0-9-]+$/.test(theme.id)) document.write('<link id="theme-sheet" rel="stylesheet" href="/themes/' + token + "/" + theme.id + '/theme.css">');
+})();
+</script>
 </head>
 <body>
 <div class="shell">
@@ -31,7 +55,7 @@ try { const screen = localStorage.getItem("manifold-idler.screen"); if (["classi
 <header class="top">
 <a class="top-brand" href="#idling" aria-label="Manifold Idler"><img class="logo" src="{{logo}}" alt="" width="32" height="32"></a>
 <h1 id="page-title">Idling</h1>
-<div class="run"><span id="state" class="pill muted">Connecting</span><button id="screen" class="screen" type="button" title="Screen" aria-label="Screen"><span></span><span></span><span></span><span></span></button><button id="toggle" class="primary" type="button" disabled>Start</button></div>
+<div class="run"><span id="state" class="pill muted">Connecting</span><button id="look" class="look-button" type="button" title="Look" aria-label="Look"><span></span><span></span><span></span><span></span></button><button id="toggle" class="primary" type="button" disabled>Start</button></div>
 </header>
 <div class="banner-wrap"><div id="banner" class="banner" role="alert" hidden></div></div>
 <noscript><div class="banner-wrap"><div class="banner">This page needs JavaScript.</div></div></noscript>
@@ -180,7 +204,7 @@ try { const screen = localStorage.getItem("manifold-idler.screen"); if (["classi
 <div class="stack">
 <div class="card"><h2>New games in the queue</h2><div id="set-goal" class="settings"></div></div>
 <div class="card"><h2>Steam</h2><dl id="steam-facts" class="facts"></dl><button id="rescan" type="button">Read library again</button></div>
-<div class="card"><h2>Look</h2><div id="screens" class="screens"></div></div>
+<div class="card"><h2>Look</h2><div id="looks" class="looks"></div></div>
 </div>
 </div>
 </section>

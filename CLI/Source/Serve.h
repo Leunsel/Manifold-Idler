@@ -12,6 +12,7 @@ namespace Idler::Cli
         bool Pretend = false;
         bool Web = false;
         std::string WebAddress;
+        std::filesystem::path Themes;
     };
 
     int Serve(const ServeOptions& options);

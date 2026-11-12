@@ -48,14 +48,8 @@ const icons = {
   close: ["X.....X", ".X...X.", "..X.X..", "...X...", "..X.X..", ".X...X.", "X.....X"]
 };
 
-const screens = {
-  synthwave: { name: "Synthwave", colors: ["#22e6ff", "#ff3fd2", "#ffe95c", "#62ffb0"] },
-  classic: { name: "Classic", colors: ["#f2f2f2", "#ffd84d", "#6fd6ff", "#ff7aa8"] },
-  phosphor: { name: "Phosphor", colors: ["#4dff88", "#d4ff5c", "#2fe0c4", "#b6ffd0"] },
-  amber: { name: "Amber", colors: ["#ffb31a", "#fff0c2", "#ff6a3d", "#ffd36b"] },
-  idler: { name: "Idler", colors: ["#2edb9e", "#e6e8ed", "#80858f", "#f2b352"] }
-};
-const screenOrder = Object.keys(screens);
+const themeData = readThemes();
+let lookChange = Promise.resolve();
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const ranks = ["1ST", "2ND", "3RD"];
@@ -175,7 +169,7 @@ function toast(text, ok) {
 function lockPage() {
   locked = true;
   clearTimeout(timer);
-  for (const control of document.querySelectorAll("button:not(#screen), input, select")) control.disabled = true;
+  for (const control of document.querySelectorAll("button:not(#look), input, select")) control.disabled = true;
   setPill("No token", "bad");
   showBanner({{MI-7010}});
 }
@@ -325,18 +319,19 @@ function goalPicker(kindValue, hoursValue, withUsual) {
   return { kind, hours, words };
 }
 
-function barChart(values, labels, highlight) {
+function barChart(values, labels, highlight, fresh) {
   const top = Math.max(0, ...values);
-  const chart = el("div", { class: "chart" });
+  const chart = el("div", { class: "chart", "data-fresh": fresh });
   values.forEach((value, index) => {
     const fill = el("span");
     fill.style.setProperty("--v", top > 0 ? String(value / top) : "0");
+    fill.style.setProperty("--i", String(index));
     chart.append(el("div", { class: "bar-col" + (value > 0 ? "" : " empty") + (index === highlight ? " today" : ""), title: labels[index] + ": " + duration(value) }, fill));
   });
   return chart;
 }
 
-function chartBlock(target, values, labels, highlight, first, last) {
+function chartBlock(target, values, labels, highlight, first, last, fresh) {
   const top = Math.max(0, ...values);
   if (top <= 0) {
     target.replaceWith(el("div", { id: target.id }, el("p", { class: "quiet", text: "Nothing idled yet." })));
@@ -344,7 +339,7 @@ function chartBlock(target, values, labels, highlight, first, last) {
   }
   target.replaceWith(el("div", { id: target.id },
     el("span", { class: "chart-top", text: top > 0 ? "Top " + shortDuration(top) : "" }),
-    barChart(values, labels, highlight),
+    barChart(values, labels, highlight, fresh),
     el("div", { class: "axis" }, el("span", { text: first }), el("span", { text: last }))));
 }
 
@@ -355,6 +350,7 @@ function drawStatus(rows) {
   const state = find(rows, "state");
   setPill(state || "Unknown", tone(state));
   active = find(rows, "active") === "yes";
+  document.documentElement.dataset.active = active ? "yes" : "no";
   const toggle = $("toggle");
   toggle.textContent = active ? "Stop" : "Start";
   toggle.classList.toggle("primary", !active);
@@ -461,23 +457,23 @@ function fillEntry(item, entry, index, count) {
 
 function drawQueue() {
   const list = $("queue");
-  const seen = new Set();
+  const wanted = new Set(queueEntries.map((entry) => entry.app));
+  for (const [app, item] of queueItems) {
+    if (wanted.has(app)) continue;
+    item.li.remove();
+    queueItems.delete(app);
+    if (editing === app) editing = null;
+  }
   queueEntries.forEach((entry, index) => {
-    seen.add(entry.app);
     let item = queueItems.get(entry.app);
     if (!item) {
       item = makeEntry(entry);
+      item.li.style.setProperty("--i", String(index));
       queueItems.set(entry.app, item);
     }
     fillEntry(item, entry, index, queueEntries.length);
     if (list.children[index] !== item.li) list.insertBefore(item.li, list.children[index] || null);
   });
-  for (const [app, item] of queueItems) {
-    if (seen.has(app)) continue;
-    item.li.remove();
-    queueItems.delete(app);
-    if (editing === app) editing = null;
-  }
   list.hidden = queueEntries.length === 0;
   $("queue-empty").hidden = queueEntries.length !== 0;
 }
@@ -528,7 +524,11 @@ function watchMore() {
 
 function showMoreGames() {
   const next = library.slice(libraryShown, libraryShown + libraryStep);
-  $("lib-grid").append(...next.map(tile));
+  $("lib-grid").append(...next.map((game, index) => {
+    const node = tile(game);
+    node.style.setProperty("--i", String(index));
+    return node;
+  }));
   libraryShown += next.length;
   if (libraryShown < library.length) watchMore();
 }
@@ -624,7 +624,7 @@ function drawDetail(app, rows) {
     chart,
     el("div", { class: "detail-actions" }, queued ? null : el("div", { class: "goal-edit" }, picker.kind, picker.hours), add, now, remove));
   panel.firstChild.classList.add("detail-close");
-  chartBlock(chart, values, days.map((row) => row.label), values.length - 1, days.length ? days[0].label.slice(5) : "", "Today");
+  chartBlock(chart, values, days.map((row) => row.label), values.length - 1, days.length ? days[0].label.slice(5) : "", "Today", true);
 }
 
 function series(rows, name) {
@@ -635,7 +635,7 @@ function statTile(label, value, note) {
   return el("div", { class: "tile-stat" }, el("small", { text: label }), el("strong", { text: value, title: value }), el("span", { text: note }));
 }
 
-function drawOverview(rows) {
+function drawOverview(rows, fresh) {
   const tiles = series(rows, "tile");
   const number = (key) => Number(find(tiles, key)) || 0;
   const extra = (list, key) => (list.find((row) => row.key === key) || {}).extra || "";
@@ -655,7 +655,7 @@ function drawOverview(rows) {
 
   const days = series(rows, "day");
   const month = days.slice(-30);
-  chartBlock($("chart-days"), month.map((row) => Number(row.value) || 0), month.map((row) => row.key), month.length - 1, month.length ? month[0].key.slice(5) : "", "Today");
+  chartBlock($("chart-days"), month.map((row) => Number(row.value) || 0), month.map((row) => row.key), month.length - 1, month.length ? month[0].key.slice(5) : "", "Today", fresh);
 
   const podium = series(rows, "top");
   $("podium").replaceChildren(...podium.map((row, index) => el("li", {},
@@ -679,9 +679,9 @@ function drawOverview(rows) {
   }
 
   const weekdayRows = series(rows, "weekday");
-  chartBlock($("chart-weekdays"), weekdayRows.map((row) => Number(row.value) || 0), weekdays, -1, "Monday", "Sunday");
+  chartBlock($("chart-weekdays"), weekdayRows.map((row) => Number(row.value) || 0), weekdays, -1, "Monday", "Sunday", fresh);
   const hourRows = series(rows, "hour");
-  chartBlock($("chart-hours"), hourRows.map((row) => Number(row.value) || 0), hourRows.map((row) => row.key + ":00"), new Date().getHours(), "0:00", "23:00");
+  chartBlock($("chart-hours"), hourRows.map((row) => Number(row.value) || 0), hourRows.map((row) => row.key + ":00"), new Date().getHours(), "0:00", "23:00", fresh);
 }
 
 function drawCalendar(days) {
@@ -724,14 +724,14 @@ async function loadDay(day) {
   if (!result.rows.length) $("history-games").append(el("li", {}, el("span", { class: "quiet", text: result.text })));
 }
 
-async function loadStats() {
+async function loadStats(fresh) {
   statsAt = Date.now();
   for (const tab of document.querySelectorAll(".tabs [data-tab]")) tab.setAttribute("aria-selected", String(tab.dataset.tab === statsTab));
   $("stats-overview").hidden = statsTab !== "overview";
   $("stats-games").hidden = statsTab !== "games";
   $("stats-history").hidden = statsTab !== "history";
   if (statsTab === "overview") {
-    drawOverview((await call(["stats"])).rows);
+    drawOverview((await call(["stats"])).rows, fresh);
   } else if (statsTab === "games") {
     drawGameFigures((await call(["stats", "games", $("stats-order").value])).rows);
   } else {
@@ -823,49 +823,169 @@ function drawSteamFacts() {
   $("steam-facts").replaceChildren(...statusRows.filter((row) => row.key === "steam" || row.key === "library").map((row) => fact(row.label, row.value)));
 }
 
-function currentScreen() {
-  const screen = document.documentElement.dataset.screen;
-  return screen in screens ? screen : "synthwave";
+function readThemes() {
+  let data = {};
+  try { data = JSON.parse($("themes").textContent); } catch (error) {}
+  return {
+    fallback: typeof data.default === "string" ? data.default : "",
+    folder: typeof data.folder === "string" ? data.folder : "",
+    docs: typeof data.docs === "string" && data.docs.startsWith("https://") ? data.docs : "",
+    themes: Array.isArray(data.themes) ? data.themes : [],
+    problems: Array.isArray(data.problems) ? data.problems : []
+  };
 }
 
-function setScreen(next) {
-  if (next === "synthwave") delete document.documentElement.dataset.screen;
-  else document.documentElement.dataset.screen = next;
-  try { localStorage.setItem("manifold-idler.screen", next); } catch (error) {}
-  nameScreen();
-  drawScreens();
+function stored(key) {
+  try { return localStorage.getItem(key) || ""; } catch (error) { return ""; }
 }
 
-function nameScreen() {
-  const name = screens[currentScreen()].name;
-  $("screen").title = "Look: " + name;
-  $("screen").setAttribute("aria-label", "Look: " + name + ". Switch to the next one");
+function store(key, value) {
+  try { localStorage.setItem(key, value); } catch (error) {}
 }
 
-function drawScreens() {
-  const current = currentScreen();
-  $("screens").replaceChildren(...screenOrder.map((key) => {
-    const swatch = el("span", { class: "swatch", "aria-hidden": "true" });
-    for (const color of screens[key].colors) {
-      const square = el("i");
-      square.style.setProperty("background", color);
-      swatch.append(square);
+function themeOf(id) {
+  return themeData.themes.find((theme) => theme.id === id);
+}
+
+function currentLook() {
+  const root = document.documentElement;
+  return { theme: root.dataset.theme || "", variant: root.dataset.variant || "", options: (root.dataset.options || "").split(" ").filter(Boolean) };
+}
+
+function optionsOf(theme) {
+  const saved = stored("manifold-idler.options." + theme.id);
+  const on = saved.startsWith("on:") ? saved.slice(3).split(" ") : null;
+  return theme.options.filter((option) => on ? on.includes(option.id) : option.on).map((option) => option.id);
+}
+
+function lookName(theme, variant) {
+  return variant && theme.variants.length > 1 ? theme.name + " · " + variant.name : theme.name;
+}
+
+function lookStops() {
+  return themeData.themes.flatMap((theme) => theme.variants.length ? theme.variants.map((variant) => ({ theme, variant })) : [{ theme, variant: null }]);
+}
+
+function themeSheet(id) {
+  return new Promise((resolve) => {
+    const link = el("link", { rel: "stylesheet", href: "/themes/" + encodeURIComponent(token) + "/" + encodeURIComponent(id) + "/theme.css" });
+    link.addEventListener("load", () => resolve(link), { once: true });
+    link.addEventListener("error", () => resolve(link), { once: true });
+    document.head.append(link);
+  });
+}
+
+function withTransition(change) {
+  if (!document.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return change();
+  return document.startViewTransition(change).updateCallbackDone.catch(() => {});
+}
+
+function setLook(themeId, variantId) {
+  const theme = themeOf(themeId);
+  if (!theme) return;
+  const variant = theme.variants.find((one) => one.id === variantId) || theme.variants.find((one) => one.id === stored("manifold-idler.variant." + theme.id)) || theme.variants[0];
+  store("manifold-idler.theme", theme.id);
+  if (variant) store("manifold-idler.variant." + theme.id, variant.id);
+  const apply = async () => {
+    const root = document.documentElement;
+    if (root.dataset.theme !== theme.id || !$("theme-sheet")) {
+      const link = await themeSheet(theme.id);
+      const old = $("theme-sheet");
+      if (old) old.remove();
+      link.id = "theme-sheet";
     }
-    return el("button", { type: "button", "aria-pressed": String(key === current), onclick: () => setScreen(key) }, swatch, el("span", { text: screens[key].name }));
-  }));
+    root.dataset.theme = theme.id;
+    if (variant) root.dataset.variant = variant.id;
+    else delete root.dataset.variant;
+    root.dataset.options = optionsOf(theme).join(" ");
+    nameLook();
+    drawLooks();
+  };
+  lookChange = lookChange.then(() => withTransition(apply)).catch(() => {});
+}
+
+function nextLook() {
+  const stops = lookStops();
+  if (!stops.length) return;
+  const now = currentLook();
+  const at = stops.findIndex((stop) => stop.theme.id === now.theme && (!stop.variant || stop.variant.id === now.variant));
+  const next = stops[(at + 1) % stops.length];
+  setLook(next.theme.id, next.variant ? next.variant.id : "");
+}
+
+function setOption(theme, id, on) {
+  const chosen = new Set(optionsOf(theme));
+  if (on) chosen.add(id);
+  else chosen.delete(id);
+  const list = theme.options.map((option) => option.id).filter((option) => chosen.has(option));
+  store("manifold-idler.options." + theme.id, "on:" + list.join(" "));
+  if (document.documentElement.dataset.theme === theme.id) document.documentElement.dataset.options = list.join(" ");
+  drawLooks();
+}
+
+function nameLook() {
+  const now = currentLook();
+  const theme = themeOf(now.theme);
+  const variant = theme ? theme.variants.find((one) => one.id === now.variant) : null;
+  const name = theme ? lookName(theme, variant) : "Plain";
+  const button = $("look");
+  button.title = "Look: " + name;
+  button.setAttribute("aria-label", "Look: " + name + ". Switch to the next one");
+  const colors = variant && variant.swatch.length ? variant.swatch : theme ? theme.swatch : [];
+  [...button.children].forEach((square, index) => {
+    if (colors.length) square.style.setProperty("background", colors[index % colors.length]);
+    else square.style.removeProperty("background");
+  });
+}
+
+function swatchOf(colors) {
+  const swatch = el("span", { class: "swatch", "aria-hidden": "true" });
+  for (const color of colors || []) {
+    const square = el("i");
+    square.style.setProperty("background", color);
+    swatch.append(square);
+  }
+  return swatch;
+}
+
+function optionRow(theme, option, on) {
+  return el("div", { class: "setting" },
+    el("strong", { text: option.name }),
+    option.note ? el("p", { text: option.note }) : null,
+    el("div", { class: "control" }, el("button", { type: "button", class: "switch", role: "switch", "aria-checked": String(on), "aria-label": option.name, onclick: () => setOption(theme, option.id, !on) })));
+}
+
+function drawLooks() {
+  const now = currentLook();
+  const groups = themeData.themes.map((theme) => {
+    const current = theme.id === now.theme;
+    const stops = theme.variants.length ? theme.variants : [null];
+    return el("div", { class: "look-group", "data-theme": theme.id },
+      el("div", { class: "look-head" }, el("strong", { text: theme.name }), theme.from !== "built-in" ? el("span", { class: "tag", text: "Own" }) : null),
+      theme.note ? el("p", { class: "look-note", text: theme.note }) : null,
+      el("div", { class: "look-grid" }, ...stops.map((variant) => el("button", {
+        type: "button",
+        "aria-pressed": String(current && (!variant || variant.id === now.variant)),
+        onclick: () => setLook(theme.id, variant ? variant.id : "")
+      }, swatchOf(variant ? variant.swatch : theme.swatch), el("span", { text: variant ? variant.name : theme.name })))),
+      current && theme.options.length ? el("div", { class: "settings" }, ...theme.options.map((option) => optionRow(theme, option, now.options.includes(option.id)))) : null);
+  });
+  const folder = themeData.folder ? el("p", { class: "quiet look-folder" }, "Themes of your own go into a folder each in ", el("code", { text: themeData.folder }), ".",
+    themeData.docs ? " " : null, themeData.docs ? el("a", { href: themeData.docs, target: "_blank", rel: "noopener noreferrer", text: "How to make one" }) : null) : null;
+  $("looks").replaceChildren(...groups, folder, ...themeData.problems.map((text) => el("p", { class: "warn look-problem", text: String(text) })));
 }
 
 async function loadSettings() {
   settingsRows = (await call(["settings"])).rows;
   drawSettings();
   drawSteamFacts();
-  drawScreens();
+  drawLooks();
 }
 
 const pages = {
   idling: { title: "Idling", load: loadQueue },
   library: { title: "Library", load: () => loadLibrary(false) },
-  statistics: { title: "Statistics", load: loadStats },
+  statistics: { title: "Statistics", load: () => loadStats(true) },
   log: { title: "Log", load: loadLog },
   settings: { title: "Settings", load: loadSettings }
 };
@@ -903,7 +1023,7 @@ async function refresh() {
     drawStatus(status.rows);
     if (page === "idling") await loadQueue();
     else if (page === "log") await loadLog();
-    else if (page === "statistics" && statsTab === "overview" && Date.now() - statsAt > statsMilliseconds) await loadStats();
+    else if (page === "statistics" && statsTab === "overview" && Date.now() - statsAt > statsMilliseconds) await loadStats(false);
     if (wasFailing && page !== "idling" && page !== "log") pages[page].load().catch(trouble);
   } catch (error) {
     trouble(error);
@@ -929,7 +1049,7 @@ $("toggle").addEventListener("click", async () => {
   refresh();
 });
 
-$("screen").addEventListener("click", () => setScreen(screenOrder[(screenOrder.indexOf(currentScreen()) + 1) % screenOrder.length]));
+$("look").addEventListener("click", nextLook);
 
 $("slots-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1006,10 +1126,10 @@ moreWatcher.observe($("lib-more"));
 for (const tab of document.querySelectorAll(".tabs [data-tab]")) {
   tab.addEventListener("click", () => {
     statsTab = tab.dataset.tab;
-    loadStats().catch(trouble);
+    loadStats(true).catch(trouble);
   });
 }
-$("stats-order").addEventListener("change", () => loadStats().catch(trouble));
+$("stats-order").addEventListener("change", () => loadStats(false).catch(trouble));
 
 $("log-level").addEventListener("change", () => drawLog(true));
 $("log-search").addEventListener("input", () => drawLog(true));
@@ -1030,7 +1150,8 @@ document.addEventListener("visibilitychange", () => {
   else refresh();
 });
 
-nameScreen();
+nameLook();
+drawLooks();
 if (!token) {
   lockPage();
   route();

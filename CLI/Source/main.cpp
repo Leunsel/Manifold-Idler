@@ -6,6 +6,7 @@
 #include "Serve.h"
 #include "Service.h"
 #include "Steam/Worker.h"
+#include "Themes.h"
 
 #include "CLI11.hpp"
 
@@ -104,6 +105,8 @@ int main(int argc, char** argv)
     serve->add_flag("--start", serveOptions.Start, "Start the queue as soon as the library is read");
     serve->add_flag("--pretend", serveOptions.Pretend, "")->group("");
     CLI::Option* serveWeb = serve->add_option("--web", serveOptions.WebAddress, "Also serve a web page, at 127.0.0.1:8090 or the address:port given")->expected(0, 1);
+    std::string themesText;
+    serve->add_option("--themes", themesText, "The folder with themes of your own for the web page; Manifold-Idler.themes beside the settings without it");
 
     std::vector<std::string> request;
     const auto simple = [&](const char* name, const char* help)
@@ -232,6 +235,16 @@ int main(int argc, char** argv)
     CLI::Option* serviceWeb = serviceInstall->add_option("--web", serviceWebAddress, "Also serve the web page, at 127.0.0.1:8090 or the address:port given")->expected(0, 1);
     CLI::App* serviceRemove = service->add_subcommand("remove", "Stop and remove it");
 
+    std::string themeFrom;
+    std::string themeName;
+    CLI::App* themes = app.add_subcommand("themes", "The web page's themes: the built-in ones and those of your own");
+    themes->add_option("--themes", themesText, "The folder with themes of your own; Manifold-Idler.themes beside the settings without it");
+    themes->require_subcommand(0, 1);
+    CLI::App* themesCopy = themes->add_subcommand("copy", "Copy a theme into the themes folder, to change it there");
+    themesCopy->add_option("theme", themeFrom, "The theme to copy, arcade for example")->required();
+    themesCopy->add_option("name", themeName, "The new theme's name, also its folder's: a to z, 0 to 9 and -")->required();
+    themesCopy->add_option("--themes", themesText, "The folder with themes of your own; Manifold-Idler.themes beside the settings without it");
+
     std::string explainCode;
     bool explainMarkdown = false;
     CLI::App* explain = app.add_subcommand("explain", "What an error code means, MI-1001 for example; without one, all codes");
@@ -258,10 +271,25 @@ int main(int argc, char** argv)
     if (serviceRemove->parsed())
         return Idler::Cli::RemoveService(settings);
 
+    const std::filesystem::path themesFolder = themesText.empty() ? Idler::Cli::DefaultThemesFolder(settings) : Idler::Cli::PathFromUtf8(themesText);
+    if (themesCopy->parsed())
+    {
+        std::string text;
+        const bool copied = Idler::Cli::CopyTheme(themesFolder, themeFrom, themeName, text);
+        std::fprintf(copied ? stdout : stderr, "%s\n", text.c_str());
+        return copied ? 0 : 1;
+    }
+    if (themes->parsed())
+    {
+        std::fputs(Idler::Cli::ThemesText(Idler::Cli::LoadThemes(themesFolder)).c_str(), stdout);
+        return 0;
+    }
+
     if (serve->parsed())
     {
         serveOptions.Settings = settings;
         serveOptions.Web = serveWeb->count() > 0;
+        serveOptions.Themes = themesFolder;
         return Idler::Cli::Serve(serveOptions);
     }
     return Ask(settings, request);

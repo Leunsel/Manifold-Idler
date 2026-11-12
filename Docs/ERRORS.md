@@ -16,7 +16,7 @@ This file is made from `Source/Core/Errors.cpp` with `idler explain --markdown`.
 | [Achievements and stats](#achievements-and-stats) | MI-4001 to MI-4012 |
 | [The program](#the-program) | MI-5001 to MI-5016 |
 | [Command line and server](#command-line-and-server) | MI-6001 to MI-6015 |
-| [Web page](#web-page) | MI-7001 to MI-7016 |
+| [Web page](#web-page) | MI-7001 to MI-7021 |
 | [Card farm](#card-farm) | MI-8001 to MI-8009 |
 
 ## Steam
@@ -712,6 +712,46 @@ What to do: Start the server again with idler serve. The page goes on by itself 
 What happened: The server answered with something that is not the page's JSON. Another program may listen on the port.
 
 What to do: Check that the address is the one idler web gives.
+
+### MI-7017
+
+**No theme is called ....**
+
+What happened: The name is none of the built-in themes and no folder in the themes folder.
+
+What to do: idler themes lists the themes there are.
+
+### MI-7018
+
+**There is a folder of that name already: ...**
+
+What happened: A copy of a theme goes into a folder of its own, and one of that name is there already.
+
+What to do: Pick another name, or move the folder out of the way.
+
+### MI-7019
+
+**The theme could not be written: ...**
+
+What happened: Copying a theme into the themes folder failed part of the way.
+
+What to do: Check that the folder can be written to and the disk is not full.
+
+### MI-7020
+
+**Theme problem: ...**
+
+What happened: A theme folder was left out or only partly read: a file it needs is missing, or theme.ini holds a line the idler cannot use.
+
+What to do: Docs/WEB-THEMES.md lists what a theme holds. The page uses the rest of the theme as it is.
+
+### MI-7021
+
+**Not a name for a theme: ...**
+
+What happened: A theme's name is its folder's name, and that may hold only a to z, 0 to 9 and -, up to 32 characters, starting with a letter or digit.
+
+What to do: Pick a name such as my-arcade.
 
 ## Card farm
 

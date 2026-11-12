@@ -42,16 +42,16 @@ namespace Idler::Cli
         }
     }
 
-    std::string WebPage(std::string_view nonce)
+    std::string WebPage(std::string_view nonce, const ThemeSet& themes)
     {
         std::string page = WebPageHtml();
         ReplaceOnce(page, "{{style}}", WebPageStyle());
-        ReplaceOnce(page, "{{fonts}}", WebFontFaces());
         std::string script = WebPageScript();
         PutErrors(script);
         ReplaceOnce(page, "{{script}}", script);
         ReplaceAll(page, "{{logo}}", WebLogo());
         ReplaceAll(page, "{{nonce}}", nonce);
+        ReplaceOnce(page, "{{themes}}", ThemesJson(themes));
         return page;
     }
 }

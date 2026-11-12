@@ -91,6 +91,11 @@
     X(NotFromPage, 7014) \
     X(PageNoAnswer, 7015) \
     X(PageBadAnswer, 7016) \
+    X(ThemeUnknown, 7017) \
+    X(ThemeFolderTaken, 7018) \
+    X(ThemeNotWritten, 7019) \
+    X(ThemeNotRight, 7020) \
+    X(ThemeNameUnusable, 7021) \
     X(WebsiteNoAnswer, 8001) \
     X(WebsiteUnreadable, 8002) \
     X(SignInAgain, 8003) \

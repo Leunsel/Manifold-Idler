@@ -139,4 +139,9 @@ namespace Idler::Cli
     {
         return std::filesystem::path(settings).replace_extension(".web-token");
     }
+
+    std::filesystem::path DefaultThemesFolder(const std::filesystem::path& settings)
+    {
+        return std::filesystem::path(settings).replace_extension(".themes");
+    }
 }

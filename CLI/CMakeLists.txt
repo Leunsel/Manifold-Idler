@@ -70,6 +70,7 @@ add_library(idler_cli_base STATIC
     Source/Paths.cpp
     Source/Request.cpp
     Source/Service.cpp
+    Source/Themes.cpp
     Source/Web.cpp
     Source/WebAssets.cpp
     Source/WebPage.cpp

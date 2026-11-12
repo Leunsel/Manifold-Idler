@@ -2,6 +2,7 @@
 
 #include "Commands.h"
 #include "Http.h"
+#include "Themes.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -45,12 +46,12 @@ namespace Idler::Cli
         std::string Token;
         std::vector<std::string> Names;
         std::function<std::filesystem::path(std::uint32_t)> Cover;
+        std::filesystem::path Themes;
     };
 
     using CommandRunner = std::function<CommandResult(const std::vector<std::string>&)>;
 
-    std::string WebPage(std::string_view nonce);
-    std::string WebFontFaces();
+    std::string WebPage(std::string_view nonce, const ThemeSet& themes);
     std::string WebLogo();
     std::string WebPageHtml();
     std::string WebPageStyle();
@@ -58,5 +59,6 @@ namespace Idler::Cli
     std::string ResultJson(const CommandResult& result);
     HttpResponse PlainResponse(int status, std::string_view text);
     HttpResponse PictureResponse(const std::filesystem::path& file);
+    HttpResponse ThemeResponse(const std::filesystem::path& folder, std::string_view id, std::string_view file);
     HttpResponse AnswerWeb(const HttpRequest& request, const WebConfig& config, const CommandRunner& run);
 }
