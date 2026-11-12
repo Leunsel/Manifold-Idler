@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = "x86_64-linux-gnu.2.31"
-CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
+CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "Worker", "WorkerProcessPosix"]
 BASE = ["Http", "Ipc", "Paths", "Request", "Service", "Themes", "Web", "WebAssets", "WebPage", "WebServer"]
 PROGRAM = ["main", "Commands", "PageCommands", "Serve", "Desktop"]
@@ -40,8 +40,9 @@ def main():
     program = [os.path.join(src, name + ".cpp") for name in PROGRAM]
     cli_tests = os.path.join(HERE, "Tests", "CliTests.cpp")
     core_tests = os.path.join(root, "Tests", "Tests.cpp")
+    sprite_view = os.path.join(source, "UI", "SpriteView.cpp")
 
-    includes = ["-I", os.path.join(HERE, "Shim"), "-I", source, "-I", src, "-isystem", os.path.join(root, "Dependencies", "CLI11")]
+    includes = ["-I", os.path.join(HERE, "Shim"), "-I", source, "-I", src, "-isystem", os.path.join(root, "Dependencies", "CLI11"), "-isystem", os.path.join(root, "Dependencies", "ImGui")]
     flags = ["-target", TARGET, "-std=c++20", "-O2", "-Wall", "-Wextra", "-DIDLER_CLI"]
 
     def compile_one(path):
@@ -53,7 +54,7 @@ def main():
     built = {}
     failed = False
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
-        for path, target, code, messages in pool.map(compile_one, core + engine + base + program + [cli_tests, core_tests]):
+        for path, target, code, messages in pool.map(compile_one, core + engine + base + program + [cli_tests, core_tests, sprite_view]):
             built[path] = target
             if messages.strip():
                 print(os.path.basename(path) + ":\n" + messages)
@@ -69,7 +70,7 @@ def main():
 
     link("idler", core + engine + base + program)
     link("idler_tests", [cli_tests] + base + core)
-    link("idler_core_tests", [core_tests] + core)
+    link("idler_core_tests", [core_tests, sprite_view] + core)
 
 
 if __name__ == "__main__":

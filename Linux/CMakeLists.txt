@@ -52,9 +52,9 @@ if(NOT WIN32)
     target_link_libraries(idler_imgui PUBLIC ${CMAKE_DL_LIBS})
 endif()
 
-set(CORE AppInfo Cards Creatures Errors FileLock Library MiniGames Queue RuntimeLog Settings Stats Terrarium Text Vdf WebPolicy)
+set(CORE AppInfo Cards Creatures Errors FileLock Json Library MiniGames Queue RuntimeLog Settings SpriteFile Stats Terrarium Text Vdf WebPolicy)
 set(STEAM LibraryScan SteamClient SteamLocal Worker)
-set(UI Covers Fonts IdleAnimation MenuWidgets MiniGameView ScreenMain TerrariumView
+set(UI Covers Fonts IdleAnimation MenuWidgets MiniGameView ScreenMain SpriteView TerrariumView
     Scenes/HomeAutumn Scenes/HomeSpring Scenes/HomeSummer Scenes/HomeWinter Scenes/StageClouds Scenes/StageMeadow Scenes/StageUnderwater)
 set(APP IdlerModel CardService)
 set(OWN MainSdl App/SdlApplication App/Gl App/WebPanelNone UI/CoversSdl)

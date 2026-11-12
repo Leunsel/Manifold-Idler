@@ -117,7 +117,8 @@ next to `Manifold-Idler.exe`. Only one of them runs on a settings file at a time
 GitHub Actions builds the window program for Windows and Linux and the CLI for both on every push, and runs the tests. A tag
 `v*` puts the programs on a release.
 
-Creature pictures are JSON files in `Tools/CreatureForge/creatures`; `Source/UI/CreatureSprites.h` is generated from them:
+Creature pictures are JSON files in `Tools/CreatureForge/creatures`; `Source/UI/CreatureSprites.h` is generated from them, and the
+core tests fail while it is behind them:
 
 ```text
 py Tools/CreatureForge/forge.py sheet <key>                          renders out/<key>.png and checks the creature

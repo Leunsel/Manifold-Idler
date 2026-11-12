@@ -32,10 +32,12 @@ add_library(idler_core STATIC
     ${IDLER_SOURCE}/Core/Errors.cpp
     ${IDLER_SOURCE}/Core/FileLock.cpp
     ${IDLER_SOURCE}/Core/Library.cpp
+    ${IDLER_SOURCE}/Core/Json.cpp
     ${IDLER_SOURCE}/Core/MiniGames.cpp
     ${IDLER_SOURCE}/Core/Queue.cpp
     ${IDLER_SOURCE}/Core/RuntimeLog.cpp
     ${IDLER_SOURCE}/Core/Settings.cpp
+    ${IDLER_SOURCE}/Core/SpriteFile.cpp
     ${IDLER_SOURCE}/Core/Stats.cpp
     ${IDLER_SOURCE}/Core/Terrarium.cpp
     ${IDLER_SOURCE}/Core/Text.cpp
@@ -98,7 +100,8 @@ target_link_libraries(idler_tests PRIVATE idler_cli_base)
 idler_flags(idler_tests)
 add_test(NAME idler_tests COMMAND idler_tests)
 
-add_executable(idler_core_tests ${IDLER_ROOT}/Tests/Tests.cpp)
+add_executable(idler_core_tests ${IDLER_ROOT}/Tests/Tests.cpp ${IDLER_SOURCE}/UI/SpriteView.cpp)
+target_include_directories(idler_core_tests SYSTEM PRIVATE ${IDLER_ROOT}/Dependencies/ImGui)
 target_link_libraries(idler_core_tests PRIVATE idler_core)
 idler_flags(idler_core_tests)
 add_test(NAME idler_core_tests COMMAND idler_core_tests)

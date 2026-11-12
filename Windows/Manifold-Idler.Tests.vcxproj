@@ -47,7 +47,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Source;$(ProjectDir)..\Dependencies\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CONSOLE;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -72,6 +72,8 @@
     <ClCompile Include="..\Source\Core\AppInfo.cpp" />
     <ClCompile Include="..\Source\Core\Cards.cpp" />
     <ClCompile Include="..\Source\Core\Library.cpp" />
+    <ClCompile Include="..\Source\Core\Json.cpp" />
+    <ClCompile Include="..\Source\Core\SpriteFile.cpp" />
     <ClCompile Include="..\Source\Core\Creatures.cpp" />
     <ClCompile Include="..\Source\Core\Errors.cpp" />
     <ClCompile Include="..\Source\Core\FileLock.cpp" />
@@ -84,6 +86,7 @@
     <ClCompile Include="..\Source\Core\WebPolicy.cpp" />
     <ClCompile Include="..\Source\Core\Text.cpp" />
     <ClCompile Include="..\Source\Core\Vdf.cpp" />
+    <ClCompile Include="..\Source\UI\SpriteView.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

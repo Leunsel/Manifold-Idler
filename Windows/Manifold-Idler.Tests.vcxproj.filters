@@ -7,6 +7,9 @@
     <Filter Include="Source\Core">
       <UniqueIdentifier>{b12d670b-b6fe-5017-9906-1b1413ec25c9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\UI">
+      <UniqueIdentifier>{b8271103-7aa4-5dbb-b5a8-06507a054a4d}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Tests">
       <UniqueIdentifier>{f59d26c4-8053-5672-a3a7-16d513befb40}</UniqueIdentifier>
     </Filter>
@@ -28,6 +31,12 @@
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Core\Library.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Json.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\SpriteFile.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Core\MiniGames.cpp">
@@ -53,6 +62,9 @@
     </ClCompile>
     <ClCompile Include="..\Source\Core\Vdf.cpp">
       <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\SpriteView.cpp">
+      <Filter>Source\UI</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Core\WebPolicy.cpp">
       <Filter>Source\Core</Filter>

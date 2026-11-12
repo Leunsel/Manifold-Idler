@@ -95,6 +95,8 @@
     <ClCompile Include="..\Source\Core\AppInfo.cpp" />
     <ClCompile Include="..\Source\Core\Cards.cpp" />
     <ClCompile Include="..\Source\Core\Library.cpp" />
+    <ClCompile Include="..\Source\Core\Json.cpp" />
+    <ClCompile Include="..\Source\Core\SpriteFile.cpp" />
     <ClCompile Include="..\Source\Core\Creatures.cpp" />
     <ClCompile Include="..\Source\Core\Errors.cpp" />
     <ClCompile Include="..\Source\Core\FileLock.cpp" />
@@ -117,6 +119,7 @@
     <ClCompile Include="Source\UI\CoversWin32.cpp" />
     <ClCompile Include="..\Source\UI\Fonts.cpp" />
     <ClCompile Include="..\Source\UI\IdleAnimation.cpp" />
+    <ClCompile Include="..\Source\UI\SpriteView.cpp" />
     <ClCompile Include="..\Source\UI\MenuWidgets.cpp" />
     <ClCompile Include="..\Source\UI\MiniGameView.cpp" />
     <ClCompile Include="..\Source\UI\Scenes\HomeAutumn.cpp" />
@@ -140,12 +143,15 @@
     <ClInclude Include="..\Source\Core\AppInfo.h" />
     <ClInclude Include="..\Source\Core\Cards.h" />
     <ClInclude Include="..\Source\Core\Library.h" />
+    <ClInclude Include="..\Source\Core\Json.h" />
+    <ClInclude Include="..\Source\Core\SpriteFile.h" />
     <ClInclude Include="..\Source\Core\Creatures.h" />
     <ClInclude Include="..\Source\Core\Errors.h" />
     <ClInclude Include="..\Source\Core\FileLock.h" />
     <ClInclude Include="..\Source\Core\MiniGames.h" />
     <ClInclude Include="..\Source\Core\Queue.h" />
     <ClInclude Include="..\Source\UI\CreatureSprites.h" />
+    <ClInclude Include="..\Source\UI\SpriteView.h" />
     <ClInclude Include="..\Source\Core\RuntimeLog.h" />
     <ClInclude Include="..\Source\Core\Settings.h" />
     <ClInclude Include="..\Source\Core\SmoothWheel.h" />

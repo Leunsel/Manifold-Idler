@@ -328,6 +328,11 @@ namespace Idler::UI::IdleAnimation
 
     void DrawCreature(ImDrawList* drawList, ImVec2 at, CreatureId id, Mood mood, std::uint32_t seed, float pixel, Look look, bool mirrored, float squash, Form form, Part part)
     {
+        DrawSprite(drawList, at, SpriteOf(id, look == Look::Unknown ? Form::First : form), mood, seed, pixel, look, mirrored, squash, part);
+    }
+
+    void DrawSprite(ImDrawList* drawList, ImVec2 at, const Sprite& sprite, Mood mood, std::uint32_t seed, float pixel, Look look, bool mirrored, float squash, Part part)
+    {
         g_part = part;
         struct Unpart
         {
@@ -339,7 +344,6 @@ namespace Idler::UI::IdleAnimation
         {
             ~Unsquash() { g_squash = 0.0f; }
         } unsquash;
-        const Sprite& sprite = SpriteOf(id, look == Look::Unknown ? Form::First : form);
         if (look == Look::Unknown)
         {
             DrawFrame(drawList, origin, sprite.Frames[0], pixel, false, ShadowPalette());
@@ -371,6 +375,29 @@ namespace Idler::UI::IdleAnimation
                 DrawSparkle(drawList, where, pixel, time, seed);
             break;
         }
+        }
+    }
+
+    void DrawSpriteFrame(ImDrawList* drawList, ImVec2 at, const Sprite& sprite, int frame, float pixel, bool blink, Tint tint, bool mirrored)
+    {
+        if (sprite.FrameCount <= 0)
+            return;
+        const Frame& shown = sprite.Frames[std::clamp(frame, 0, sprite.FrameCount - 1)];
+        const ImVec2 origin(std::round(at.x), std::round(at.y));
+        switch (tint)
+        {
+        case Tint::Colors:
+            DrawFrame(drawList, origin, shown, pixel, blink, ColoredPalette(sprite.Body, sprite.Second, sprite.Third), mirrored);
+            break;
+        case Tint::Gold:
+            DrawFrame(drawList, origin, shown, pixel, blink, ColoredPalette(kGold, kGoldLight, kGold), mirrored);
+            break;
+        case Tint::Shadow:
+            DrawFrame(drawList, origin, shown, pixel, false, ShadowPalette(), mirrored);
+            break;
+        case Tint::Grey:
+            DrawFrame(drawList, origin, shown, pixel, blink, GreyPalette(), mirrored);
+            break;
         }
     }
 

@@ -96,6 +96,12 @@
     <ClCompile Include="..\Source\Core\Library.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Core\Json.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\SpriteFile.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\Core\MiniGames.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
@@ -148,6 +154,9 @@
       <Filter>Source\UI</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\UI\IdleAnimation.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\SpriteView.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\UI\MenuWidgets.cpp">
@@ -257,6 +266,12 @@
     <ClInclude Include="..\Source\Core\Library.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\Core\Json.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\SpriteFile.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\Core\MiniGames.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
@@ -318,6 +333,9 @@
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\CreatureSprites.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\SpriteView.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\Fonts.h">

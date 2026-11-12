@@ -8,6 +8,11 @@
 #include <cstdint>
 #include <string>
 
+namespace Idler::UI::CreatureSprites
+{
+    struct Sprite;
+}
+
 namespace Idler::UI::IdleAnimation
 {
     enum class Mood
@@ -49,6 +54,17 @@ namespace Idler::UI::IdleAnimation
 
     void DrawCreature(ImDrawList* drawList, ImVec2 at, CreatureId id, Mood mood, std::uint32_t seed, float pixel, Look look = Look::Normal, bool mirrored = false, float squash = 0.0f,
         Form form = Form::Shown, Part part = Part::Whole);
+    void DrawSprite(ImDrawList* drawList, ImVec2 at, const CreatureSprites::Sprite& sprite, Mood mood, std::uint32_t seed, float pixel, Look look = Look::Normal,
+        bool mirrored = false, float squash = 0.0f, Part part = Part::Whole);
+
+    enum class Tint
+    {
+        Colors,
+        Gold,
+        Shadow,
+        Grey
+    };
+    void DrawSpriteFrame(ImDrawList* drawList, ImVec2 at, const CreatureSprites::Sprite& sprite, int frame, float pixel, bool blink, Tint tint, bool mirrored = false);
     void SetHaze(float amount, ImVec4 color);
     ImVec2 MotionOf(CreatureId id, std::uint32_t seed);
 
