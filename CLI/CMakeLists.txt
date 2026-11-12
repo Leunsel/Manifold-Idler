@@ -37,6 +37,7 @@ add_library(idler_core STATIC
     ${IDLER_SOURCE}/Core/Queue.cpp
     ${IDLER_SOURCE}/Core/RuntimeLog.cpp
     ${IDLER_SOURCE}/Core/Settings.cpp
+    ${IDLER_SOURCE}/Core/SpriteEdit.cpp
     ${IDLER_SOURCE}/Core/SpriteFile.cpp
     ${IDLER_SOURCE}/Core/Stats.cpp
     ${IDLER_SOURCE}/Core/Terrarium.cpp

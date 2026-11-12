@@ -104,7 +104,11 @@
     X(WebViewNotStarted, 8006) \
     X(WebViewNotOpened, 8007) \
     X(WebViewNoPage, 8008) \
-    X(OtherAccount, 8009)
+    X(OtherAccount, 8009) \
+    X(SpriteNotRead, 9001) \
+    X(SpriteNotSaved, 9002) \
+    X(NoCreatureFolder, 9003) \
+    X(CreatureFolderMissing, 9004)
 
 namespace Idler
 {

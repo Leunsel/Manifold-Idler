@@ -45,13 +45,96 @@ namespace Idler::SpriteCreator
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             text.erase(std::remove(text.begin(), text.end(), '\r'), text.end());
             file.Sprite = SpriteFile::Read(text, file.Problem);
-            if (file.Sprite)
-            {
-                file.Findings = SpriteFile::Lint(*file.Sprite);
-                file.View = std::make_unique<UI::SpriteView>(*file.Sprite);
-            }
+            file.Saved = file.Sprite;
+            Refresh(file);
             return file;
         }
+    }
+
+    void Refresh(CreatureFile& file)
+    {
+        if (!file.Sprite)
+        {
+            file.View.reset();
+            file.Findings = {};
+            return;
+        }
+        file.Findings = SpriteFile::Lint(*file.Sprite);
+        file.View = std::make_unique<UI::SpriteView>(*file.Sprite);
+    }
+
+    void Remember(CreatureFile& file)
+    {
+        if (!file.Sprite)
+            return;
+        file.Undo.push_back(*file.Sprite);
+        if (file.Undo.size() > kUndoDepth)
+            file.Undo.erase(file.Undo.begin());
+        file.Redo.clear();
+    }
+
+    void Forget(CreatureFile& file)
+    {
+        if (file.Sprite && !file.Undo.empty() && file.Undo.back() == *file.Sprite)
+            file.Undo.pop_back();
+    }
+
+    bool StepBack(CreatureFile& file)
+    {
+        if (!file.Sprite || file.Undo.empty())
+            return false;
+        file.Redo.push_back(*file.Sprite);
+        file.Sprite = std::move(file.Undo.back());
+        file.Undo.pop_back();
+        Refresh(file);
+        return true;
+    }
+
+    bool StepForward(CreatureFile& file)
+    {
+        if (!file.Sprite || file.Redo.empty())
+            return false;
+        file.Undo.push_back(*file.Sprite);
+        file.Sprite = std::move(file.Redo.back());
+        file.Redo.pop_back();
+        Refresh(file);
+        return true;
+    }
+
+    bool SaveCreature(CreatureFile& file, std::string& problem)
+    {
+        if (!file.Sprite)
+        {
+            problem = "the file was never read";
+            return false;
+        }
+        const std::string text = SpriteFile::Write(*file.Sprite);
+        std::filesystem::path temporary = file.Path;
+        temporary += L".saving";
+        {
+            std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
+            if (out)
+                out.write(text.data(), static_cast<std::streamsize>(text.size()));
+            if (!out)
+            {
+                std::error_code ignored;
+                std::filesystem::remove(temporary, ignored);
+                problem = "the file cannot be written";
+                return false;
+            }
+        }
+        std::error_code error;
+        std::filesystem::rename(temporary, file.Path, error);
+        if (error)
+        {
+            std::error_code ignored;
+            std::filesystem::remove(temporary, ignored);
+            problem = error.message();
+            return false;
+        }
+        file.Saved = file.Sprite;
+        problem.clear();
+        return true;
     }
 
     std::vector<CreatureFile> LoadCreatures(const std::filesystem::path& folder)

@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = "x86_64-linux-gnu.2.31"
-CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
+CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteEdit", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "Worker", "WorkerProcessPosix"]
 BASE = ["Http", "Ipc", "Paths", "Request", "Service", "Themes", "Web", "WebAssets", "WebPage", "WebServer"]
 PROGRAM = ["main", "Commands", "PageCommands", "Serve", "Desktop"]

@@ -1,9 +1,10 @@
 #include "SpriteCreator/CreatorScreen.h"
 
+#include "Core/Errors.h"
 #include "Core/SpriteFile.h"
 #include "Core/Text.h"
 #include "Generated/IconsFontAwesome5.h"
-#include "UI/Fonts.h"
+#include "SpriteCreator/Widgets.h"
 #include "UI/IdleAnimation.h"
 #include "UI/Theme.h"
 #include "UI/UiScale.h"
@@ -27,6 +28,7 @@ namespace Idler::SpriteCreator
         namespace Animation = UI::IdleAnimation;
 
         constexpr ImVec4 kRunningRow = ImVec4(0.100f, 0.205f, 0.176f, 1.0f);
+        constexpr double kMessageSeconds = 6.0;
 
         struct Light
         {
@@ -35,46 +37,18 @@ namespace Idler::SpriteCreator
         };
         constexpr Light kLights[] = { { "Day", 1.0f }, { "Dawn", 0.55f }, { "Dusk", 0.45f }, { "Night", 0.0f } };
 
-        ImU32 Color(ImVec4 color)
-        {
-            return ImGui::GetColorU32(color);
-        }
-
         std::uint32_t SeedOf(int index)
         {
             return static_cast<std::uint32_t>(index) * 7919u + 13u;
         }
 
-        bool WindowButton(const char* id, const char* icon, float side, ImVec4 hoverColor)
+        struct TitleStatus
         {
-            const ImVec2 pos = ImGui::GetCursorScreenPos();
-            const bool clicked = ImGui::InvisibleButton(id, ImVec2(side, side));
-            const bool hovered = ImGui::IsItemHovered();
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            if (hovered)
-                drawList->AddRectFilled(pos, ImVec2(pos.x + side, pos.y + side), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, 0.07f)), Px(4.0f));
-            const ImVec2 size = ImGui::CalcTextSize(icon);
-            drawList->AddText(ImVec2(std::round(pos.x + (side - size.x) * 0.5f), std::round(pos.y + (side - size.y) * 0.5f)),
-                Color(hovered ? hoverColor : ManifoldTheme::Label), icon);
-            return clicked;
-        }
+            std::string Text;
+            ImVec4 Color;
+        };
 
-        void BoldText(ImDrawList* drawList, ImVec2 at, ImVec4 color, const char* text)
-        {
-            ImFont* bold = Fonts::Bold();
-            if (bold)
-                drawList->AddText(bold, ImGui::GetFontSize(), at, Color(color), text);
-            else
-                drawList->AddText(at, Color(color), text);
-        }
-
-        float BoldWidth(const char* text)
-        {
-            ImFont* bold = Fonts::Bold();
-            return bold ? bold->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0.0f, text).x : ImGui::CalcTextSize(text).x;
-        }
-
-        void TitleBar(WindowControls& window, const std::filesystem::path& folder, bool found, std::size_t count)
+        void TitleBar(WindowControls& window, const TitleStatus& status)
         {
             const ImVec2 origin = ImGui::GetWindowPos();
             const float width = ImGui::GetWindowWidth();
@@ -95,71 +69,29 @@ namespace Idler::SpriteCreator
             BoldText(drawList, ImVec2(x, textY), ManifoldTheme::Text, kTitle);
             x += BoldWidth(kTitle);
 
-            std::string status;
-            if (found)
-                status = WideToUtf8(folder.wstring()) + "  \xC2\xB7  " + std::to_string(count) + (count == 1 ? " file" : " files");
-            else if (folder.empty())
-                status = "No creature folder found. Start it with --creatures=<folder>.";
-            else
-                status = "The creature folder " + WideToUtf8(folder.wstring()) + " does not exist.";
             const float statusLeft = x + Px(18.0f);
             const float statusRight = buttonsX - Px(16.0f);
             if (statusRight > statusLeft)
             {
                 drawList->PushClipRect(ImVec2(statusLeft, origin.y), ImVec2(statusRight, origin.y + height), true);
-                drawList->AddText(ImVec2(statusLeft, textY), Color(found ? ManifoldTheme::Muted : ManifoldTheme::Warning), status.c_str());
+                drawList->AddText(ImVec2(statusLeft, textY), Color(status.Color), status.Text.c_str());
                 drawList->PopClipRect();
             }
 
             const float buttonsY = std::round(origin.y + (height - side) * 0.5f);
             ImGui::SetCursorScreenPos(ImVec2(buttonsX, buttonsY));
-            if (WindowButton("##minimise", ICON_FA_MINUS, side, ManifoldTheme::Text))
+            if (IconButton("##minimise", ICON_FA_MINUS, side, ManifoldTheme::Text))
                 window.Minimise();
             ImGui::SameLine(0.0f, gap);
-            if (WindowButton("##maximise", window.Maximised() ? ICON_FA_WINDOW_RESTORE : ICON_FA_WINDOW_MAXIMIZE, side, ManifoldTheme::Text))
+            if (IconButton("##maximise", window.Maximised() ? ICON_FA_WINDOW_RESTORE : ICON_FA_WINDOW_MAXIMIZE, side, ManifoldTheme::Text))
                 window.ToggleMaximised();
             ImGui::SameLine(0.0f, gap);
-            if (WindowButton("##close", ICON_FA_TIMES, side, ManifoldTheme::Error))
+            if (IconButton("##close", ICON_FA_TIMES, side, ManifoldTheme::Error))
                 window.Close();
 
             window.AddDragArea(origin.x, origin.y, buttonsX, origin.y + height);
             window.AddDragArea(buttonsX, origin.y, origin.x + width, buttonsY);
             ImGui::SetCursorScreenPos(ImVec2(origin.x, origin.y + height));
-        }
-
-        void BeginCard(const char* id, const char* icon, const char* title, ImVec2 size, const char* note = nullptr)
-        {
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, ManifoldTheme::Card);
-            ImGui::PushStyleColor(ImGuiCol_Border, ManifoldTheme::CardBorder);
-            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, Px(6.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, PxWhole(14.0f, 12.0f));
-            ImGui::BeginChild(id, size, ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-            ImGui::PopStyleVar(3);
-            ImGui::PopStyleColor(2);
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Accent);
-            ImGui::TextUnformatted(icon);
-            ImGui::PopStyleColor();
-            ImGui::SameLine(0.0f, Px(8.0f));
-            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Label);
-            ImGui::TextUnformatted(title);
-            ImGui::PopStyleColor();
-            if (note && *note)
-            {
-                const float right = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x;
-                const float noteWidth = ImGui::CalcTextSize(note).x;
-                ImGui::SameLine(right - noteWidth);
-                ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
-                ImGui::TextUnformatted(note);
-                ImGui::PopStyleColor();
-            }
-            ImGui::Dummy(ImVec2(0.0f, Px(4.0f)));
-        }
-
-        void EndCard()
-        {
-            ImGui::EndChild();
         }
 
         void SectionHeader(const char* title, std::size_t count)
@@ -175,42 +107,6 @@ namespace Idler::SpriteCreator
                 ImGui::TextUnformatted(text.c_str());
             }
             ImGui::PopStyleColor();
-        }
-
-        void DrawGrid(const UI::CreatureSprites::Sprite* sprite, int frame)
-        {
-            const ImVec2 room = ImGui::GetContentRegionAvail();
-            const float cell = std::floor(std::min(room.x / SpriteFile::kColumns, room.y / SpriteFile::kRows));
-            if (cell < 2.0f)
-                return;
-            const ImVec2 size(cell * SpriteFile::kColumns, cell * SpriteFile::kRows);
-            const ImVec2 cursor = ImGui::GetCursorScreenPos();
-            const ImVec2 min(std::round(cursor.x + (room.x - size.x) * 0.5f), std::round(cursor.y + (room.y - size.y) * 0.5f));
-            const ImVec2 max(min.x + size.x, min.y + size.y);
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            const ImU32 light = Color(ImVec4(0.125f, 0.131f, 0.150f, 1.0f));
-            const ImU32 dark = Color(ImVec4(0.100f, 0.105f, 0.121f, 1.0f));
-            for (int row = 0; row < SpriteFile::kRows; ++row)
-            {
-                for (int column = 0; column < SpriteFile::kColumns; ++column)
-                {
-                    const ImVec2 cellMin(min.x + cell * static_cast<float>(column), min.y + cell * static_cast<float>(row));
-                    drawList->AddRectFilled(cellMin, ImVec2(cellMin.x + cell, cellMin.y + cell), (row + column) % 2 == 0 ? light : dark);
-                }
-            }
-            if (sprite)
-                Animation::DrawSpriteFrame(drawList, min, *sprite, frame, cell, false, Animation::Tint::Colors);
-            for (int column = 0; column <= SpriteFile::kColumns; ++column)
-            {
-                const float x = min.x + cell * static_cast<float>(column);
-                drawList->AddLine(ImVec2(x, min.y), ImVec2(x, max.y), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, column % 4 == 0 ? 0.09f : 0.04f)));
-            }
-            for (int row = 0; row <= SpriteFile::kRows; ++row)
-            {
-                const float y = min.y + cell * static_cast<float>(row);
-                drawList->AddLine(ImVec2(min.x, y), ImVec2(max.x, y), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, row == SpriteFile::kRows - 1 ? 0.09f : 0.04f)));
-            }
-            ImGui::Dummy(room);
         }
 
         void FactRow(const char* label, const std::string& value, ImVec4 color = ManifoldTheme::Text)
@@ -314,6 +210,21 @@ namespace Idler::SpriteCreator
             drawList->AddText(ImVec2(std::round(pos.x + (tileWidth - labelSize.x) * 0.5f), boxMax.y + Px(4.0f)), Color(ManifoldTheme::Muted), label);
             ImGui::Dummy(ImVec2(tileWidth, tileHeight + labelSize.y + Px(8.0f)));
         }
+
+        bool DialogButton(const char* label, bool primary)
+        {
+            if (primary)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ManifoldTheme::WithAlpha(ManifoldTheme::Accent, 0.22f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ManifoldTheme::WithAlpha(ManifoldTheme::Accent, 0.32f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ManifoldTheme::WithAlpha(ManifoldTheme::Accent, 0.42f));
+                ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Accent);
+            }
+            const bool clicked = ImGui::Button(label);
+            if (primary)
+                ImGui::PopStyleColor(4);
+            return clicked;
+        }
     }
 
     void Screen::SetCreatureFolder(std::filesystem::path folder)
@@ -334,6 +245,8 @@ namespace Idler::SpriteCreator
             if (m_files[index].Key == selectedKey)
                 m_selected = static_cast<int>(index);
         }
+        m_paint.Stroking = false;
+        ClampFrame(Selected(), m_paint);
     }
 
     void Screen::Select(std::string_view key)
@@ -342,10 +255,25 @@ namespace Idler::SpriteCreator
         {
             if (m_files[index].Key == key)
             {
-                m_selected = static_cast<int>(index);
+                ChangeSelection(static_cast<int>(index));
                 m_scrollToSelected = true;
             }
         }
+    }
+
+    void Screen::ChangeSelection(int index)
+    {
+        if (index == m_selected || m_paint.Stroking)
+            return;
+        m_selected = index;
+        m_paint.Frame = 0;
+    }
+
+    CreatureFile* Screen::Selected()
+    {
+        if (m_selected < 0 || m_selected >= static_cast<int>(m_files.size()))
+            return nullptr;
+        return &m_files[static_cast<std::size_t>(m_selected)];
     }
 
     const CreatureFile* Screen::Selected() const
@@ -367,6 +295,64 @@ namespace Idler::SpriteCreator
         return nullptr;
     }
 
+    std::size_t Screen::UnsavedCount() const
+    {
+        return static_cast<std::size_t>(std::count_if(m_files.begin(), m_files.end(), [](const CreatureFile& file) { return file.Dirty(); }));
+    }
+
+    void Screen::Say(std::string text, bool problem)
+    {
+        m_message = std::move(text);
+        m_messageIsProblem = problem;
+        m_messageAt = ImGui::GetCurrentContext() ? ImGui::GetTime() : 0.0;
+    }
+
+    void Screen::SaveSelected()
+    {
+        CreatureFile* file = Selected();
+        if (!file || !file->Dirty() || m_paint.Stroking)
+            return;
+        std::string problem;
+        if (SaveCreature(*file, problem))
+            Say("Saved " + WideToUtf8(file->Path.filename().wstring()) + ".", false);
+        else
+            Say(ErrorMessage(ErrorCode::SpriteNotSaved, problem), true);
+    }
+
+    bool Screen::SaveAll()
+    {
+        std::size_t saved = 0;
+        for (CreatureFile& file : m_files)
+        {
+            if (!file.Dirty())
+                continue;
+            std::string problem;
+            if (!SaveCreature(file, problem))
+            {
+                Say(ErrorMessage(ErrorCode::SpriteNotSaved, problem), true);
+                return false;
+            }
+            ++saved;
+        }
+        Say(saved == 1 ? std::string("Saved 1 creature.") : "Saved " + std::to_string(saved) + " creatures.", false);
+        return true;
+    }
+
+    void Screen::RequestClose()
+    {
+        if (UnsavedCount() > 0)
+            m_pending = Pending::Close;
+        else
+            m_quit = true;
+    }
+
+    bool Screen::TakeQuit()
+    {
+        const bool quit = m_quit;
+        m_quit = false;
+        return quit;
+    }
+
     std::filesystem::path FindCreatureFolder(const std::filesystem::path& start)
     {
         std::error_code ignored;
@@ -383,6 +369,47 @@ namespace Idler::SpriteCreator
                 break;
         }
         return {};
+    }
+
+    void Screen::HandleKeys()
+    {
+        const ImGuiIO& io = ImGui::GetIO();
+        if (io.WantTextInput || m_pending != Pending::None || m_paint.Stroking)
+            return;
+        CreatureFile* file = Selected();
+        if (io.KeyCtrl)
+        {
+            if (file && (ImGui::IsKeyPressed(ImGuiKey_Y) || (io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z))))
+                StepForward(*file);
+            else if (file && ImGui::IsKeyPressed(ImGuiKey_Z))
+                StepBack(*file);
+            else if (ImGui::IsKeyPressed(ImGuiKey_S, false))
+                SaveSelected();
+            return;
+        }
+        if (io.KeyAlt)
+            return;
+        const struct
+        {
+            ImGuiKey Key;
+            Tool Kind;
+        } tools[] = { { ImGuiKey_B, Tool::Pencil }, { ImGuiKey_E, Tool::Eraser }, { ImGuiKey_G, Tool::Fill }, { ImGuiKey_L, Tool::Line },
+            { ImGuiKey_R, Tool::Rectangle }, { ImGuiKey_I, Tool::Picker }, { ImGuiKey_M, Tool::Move } };
+        for (const auto& tool : tools)
+        {
+            if (ImGui::IsKeyPressed(tool.Key, false))
+                m_paint.Current = tool.Kind;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_X, false))
+            m_paint.Mirror = !m_paint.Mirror;
+        if (ImGui::IsKeyPressed(ImGuiKey_O, false))
+            m_paint.Onion = !m_paint.Onion;
+        if (file && ImGui::IsKeyPressed(ImGuiKey_H, false))
+            FlipFrame(*file, m_paint);
+        if (ImGui::IsKeyPressed(ImGuiKey_PageUp))
+            StepFrame(file, m_paint, -1);
+        if (ImGui::IsKeyPressed(ImGuiKey_PageDown))
+            StepFrame(file, m_paint, 1);
     }
 
     void Screen::DrawCreatureRows(bool evolved)
@@ -403,7 +430,7 @@ namespace Idler::SpriteCreator
             const ImVec2 pos = ImGui::GetCursorScreenPos();
             const float width = ImGui::GetContentRegionAvail().x;
             if (ImGui::InvisibleButton("##row", ImVec2(width, rowHeight)))
-                m_selected = static_cast<int>(index);
+                ChangeSelection(static_cast<int>(index));
             if (m_scrollToSelected && m_selected == static_cast<int>(index))
             {
                 ImGui::SetScrollHereY(0.3f);
@@ -448,7 +475,13 @@ namespace Idler::SpriteCreator
                     badgeColor = ManifoldTheme::Warning;
                 }
                 const float badgeWidth = badge.empty() ? 0.0f : ImGui::CalcTextSize(badge.c_str()).x;
-                const float right = max.x - Px(8.0f) - (badge.empty() ? 0.0f : badgeWidth + Px(8.0f));
+                float right = max.x - Px(8.0f) - (badge.empty() ? 0.0f : badgeWidth + Px(8.0f));
+                if (file.Dirty())
+                {
+                    const float radius = Px(3.5f);
+                    drawList->AddCircleFilled(ImVec2(right - radius, std::round(pos.y + rowHeight * 0.5f)), radius, Color(ManifoldTheme::Warning));
+                    right -= radius * 2.0f + Px(8.0f);
+                }
                 drawList->PushClipRect(ImVec2(textX, pos.y), ImVec2(std::max(textX, right), max.y), true);
                 drawList->AddText(ImVec2(textX, top), Color(ManifoldTheme::Text), file.Name.c_str());
                 drawList->AddText(ImVec2(textX, top + line), Color(ManifoldTheme::Muted), file.Key.c_str());
@@ -522,10 +555,14 @@ namespace Idler::SpriteCreator
         const ImVec2 resume = ImGui::GetCursorScreenPos();
         const float side = std::round(Px(22.0f));
         ImGui::SetCursorScreenPos(ImVec2(windowPos.x + ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x - side, windowPos.y + Px(8.0f)));
-        if (WindowButton("##reload", ICON_FA_SYNC, side, ManifoldTheme::Accent))
-            Reload();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Read the creature files again");
+        if (IconButton("##reload", ICON_FA_SYNC, side, ManifoldTheme::Accent))
+        {
+            if (UnsavedCount() > 0)
+                m_pending = Pending::Reload;
+            else
+                Reload();
+        }
+        Tooltip("Read the creature files again");
         ImGui::SetCursorScreenPos(resume);
 
         ImGui::SetNextItemWidth(-FLT_MIN);
@@ -551,23 +588,6 @@ namespace Idler::SpriteCreator
 
         ImGui::Dummy(ImVec2(0.0f, Px(6.0f)));
         DrawLight();
-        EndCard();
-    }
-
-    void Screen::DrawPaint(float width, float height)
-    {
-        const CreatureFile* file = Selected();
-        std::string note;
-        if (file && file->Sprite)
-            note = "Frame 1 of " + std::to_string(file->Sprite->Frames.size());
-        BeginCard("##paint", ICON_FA_PAINT_BRUSH, "Paint", ImVec2(width, height), note.c_str());
-        if (file && !file->View)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Warning);
-            ImGui::TextWrapped("%s cannot be read: %s", file->Key.c_str(), file->Problem.c_str());
-            ImGui::PopStyleColor();
-        }
-        DrawGrid(file && file->View ? &file->View->Get() : nullptr, 0);
         EndCard();
     }
 
@@ -631,9 +651,7 @@ namespace Idler::SpriteCreator
         ImGui::PopStyleColor();
         if (!file)
         {
-            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
-            ImGui::TextWrapped("Choose a creature in the Explorer.");
-            ImGui::PopStyleColor();
+            MutedText("Choose a creature in the Explorer.");
         }
         else
         {
@@ -663,7 +681,7 @@ namespace Idler::SpriteCreator
             if (!file->Sprite)
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Error);
-                ImGui::TextWrapped(ICON_FA_TIMES_CIRCLE " Cannot be read: %s", file->Problem.c_str());
+                ImGui::TextWrapped(ICON_FA_TIMES_CIRCLE " %s", ErrorMessage(ErrorCode::SpriteNotRead, file->Problem).c_str());
                 ImGui::PopStyleColor();
             }
             else if (file->Findings.Errors.empty() && file->Findings.Warnings.empty())
@@ -692,8 +710,83 @@ namespace Idler::SpriteCreator
         EndCard();
     }
 
+    void Screen::DrawUnsavedQuestion()
+    {
+        if (m_pending == Pending::None)
+            return;
+        if (!ImGui::IsPopupOpen("##unsaved"))
+            ImGui::OpenPopup("##unsaved");
+
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(std::round(Px(460.0f)), 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, PxWhole(18.0f, 16.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, Px(8.0f));
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, ManifoldTheme::Card);
+        const bool open = ImGui::BeginPopupModal("##unsaved", nullptr,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar(2);
+        if (!open)
+            return;
+
+        const bool closing = m_pending == Pending::Close;
+        const char* title = closing ? "Close the Sprite Creator?" : "Read the creature files again?";
+        BoldText(ImGui::GetWindowDrawList(), ImGui::GetCursorScreenPos(), ManifoldTheme::Text, title);
+        ImGui::Dummy(ImVec2(BoldWidth(title), ImGui::GetTextLineHeight()));
+        ImGui::Dummy(ImVec2(0.0f, Px(4.0f)));
+
+        const std::size_t unsaved = UnsavedCount();
+        ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Label);
+        ImGui::TextWrapped("%s", unsaved == 1 ? "This creature has changes that are not saved:" : (std::to_string(unsaved) + " creatures have changes that are not saved:").c_str());
+        ImGui::PopStyleColor();
+        std::size_t listed = 0;
+        for (const CreatureFile& file : m_files)
+        {
+            if (!file.Dirty())
+                continue;
+            if (listed == 6)
+            {
+                MutedText(("and " + std::to_string(unsaved - listed) + " more").c_str());
+                break;
+            }
+            ImGui::BulletText("%s", file.Name.c_str());
+            ++listed;
+        }
+        ImGui::Dummy(ImVec2(0.0f, Px(8.0f)));
+
+        Pending done = Pending::None;
+        bool cancel = ImGui::IsKeyPressed(ImGuiKey_Escape, false);
+        if (DialogButton(closing ? "Save all and close" : "Save all and read again", true))
+        {
+            if (SaveAll())
+                done = m_pending;
+            else
+                cancel = true;
+        }
+        ImGui::SameLine();
+        if (DialogButton(closing ? "Close without saving" : "Read again without them", false))
+            done = m_pending;
+        ImGui::SameLine();
+        if (DialogButton("Cancel", false))
+            cancel = true;
+
+        if (done != Pending::None || cancel)
+        {
+            m_pending = Pending::None;
+            ImGui::CloseCurrentPopup();
+            if (done == Pending::Close)
+                m_quit = true;
+            else if (done == Pending::Reload)
+                Reload();
+        }
+        ImGui::EndPopup();
+    }
+
     void Screen::Draw(WindowControls& window)
     {
+        HandleKeys();
+
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->Pos);
         ImGui::SetNextWindowSize(viewport->Size);
@@ -708,7 +801,28 @@ namespace Idler::SpriteCreator
         ImGui::PopStyleVar(3);
 
         Animation::BeginFrame();
-        TitleBar(window, m_folder, m_folderExists, m_files.size());
+
+        TitleStatus status{ std::string(), ManifoldTheme::Muted };
+        if (!m_message.empty() && ImGui::GetTime() - m_messageAt < kMessageSeconds)
+        {
+            status = { m_message, m_messageIsProblem ? ManifoldTheme::Error : ManifoldTheme::Accent };
+            Animation::RequestFrames();
+        }
+        else if (!m_folderExists)
+        {
+            status = { m_folder.empty() ? ErrorMessage(ErrorCode::NoCreatureFolder) : ErrorMessage(ErrorCode::CreatureFolderMissing, WideToUtf8(m_folder.wstring())),
+                ManifoldTheme::Warning };
+        }
+        else
+        {
+            status.Text = WideToUtf8(m_folder.wstring()) + "  \xC2\xB7  " + std::to_string(m_files.size()) + (m_files.size() == 1 ? " file" : " files");
+            if (const std::size_t unsaved = UnsavedCount(); unsaved > 0)
+            {
+                status.Text = std::to_string(unsaved) + " not saved  \xC2\xB7  " + status.Text;
+                status.Color = ManifoldTheme::Warning;
+            }
+        }
+        TitleBar(window, status);
 
         const float pad = std::round(Px(14.0f));
         const float gap = std::round(Px(12.0f));
@@ -731,7 +845,16 @@ namespace Idler::SpriteCreator
         DrawExplorer(explorer, height);
 
         ImGui::SetCursorScreenPos(ImVec2(middleX, start.y));
-        DrawPaint(paint, upper);
+        const PaintRequests requests = DrawPaintCard(Selected(), m_paint, ImVec2(paint, upper));
+        if (CreatureFile* file = Selected(); file && !m_paint.Stroking)
+        {
+            if (requests.Undo)
+                StepBack(*file);
+            if (requests.Redo)
+                StepForward(*file);
+        }
+        if (requests.Save)
+            SaveSelected();
 
         ImGui::SetCursorScreenPos(ImVec2(sideX, start.y));
         DrawPreview(side, previewHeight);
@@ -743,6 +866,7 @@ namespace Idler::SpriteCreator
         BeginCard("##timeline", ICON_FA_FILM, "Timeline", ImVec2(paint + gap + side, timeline));
         EndCard();
 
+        DrawUnsavedQuestion();
         ImGui::End();
     }
 }

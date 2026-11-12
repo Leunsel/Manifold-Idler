@@ -2,10 +2,12 @@
 
 #include "App/WindowControls.h"
 #include "SpriteCreator/CreatureLibrary.h"
+#include "SpriteCreator/PaintCard.h"
 #include "SpriteCreator/ScenePreview.h"
 
 #include <array>
 #include <filesystem>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -30,15 +32,31 @@ namespace Idler::SpriteCreator
         void SetDaylight(float daylight) { m_daylight = daylight; }
 
         void Draw(WindowControls& window);
+        void RequestClose();
+        bool TakeQuit();
 
     private:
+        enum class Pending
+        {
+            None,
+            Close,
+            Reload
+        };
+
         void DrawExplorer(float width, float height);
         void DrawCreatureRows(bool evolved);
         void DrawSceneRows();
         void DrawLight();
-        void DrawPaint(float width, float height);
         void DrawPreview(float width, float height);
         void DrawProperties(float width, float height);
+        void DrawUnsavedQuestion();
+        void HandleKeys();
+        void ChangeSelection(int index);
+        void SaveSelected();
+        bool SaveAll();
+        void Say(std::string text, bool problem);
+        std::size_t UnsavedCount() const;
+        CreatureFile* Selected();
         const CreatureFile* Selected() const;
         const CreatureFile* Counterpart(const CreatureFile& file) const;
 
@@ -50,5 +68,11 @@ namespace Idler::SpriteCreator
         Backdrop m_backdrop = Backdrop::OwnStage;
         float m_daylight = 1.0f;
         std::array<char, 64> m_search{};
+        PaintState m_paint;
+        Pending m_pending = Pending::None;
+        bool m_quit = false;
+        std::string m_message;
+        bool m_messageIsProblem = false;
+        double m_messageAt = -100.0;
     };
 }

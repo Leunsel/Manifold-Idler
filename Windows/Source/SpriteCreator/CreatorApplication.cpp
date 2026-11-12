@@ -48,7 +48,7 @@ namespace Idler
     {
         while (m_running)
         {
-            if (!m_host.PumpMessages())
+            if (!m_host.PumpMessages() || m_screen.TakeQuit())
                 m_running = false;
             if (!m_running)
                 break;

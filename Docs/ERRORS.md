@@ -18,6 +18,7 @@ This file is made from `Source/Core/Errors.cpp` with `idler explain --markdown`.
 | [Command line and server](#command-line-and-server) | MI-6001 to MI-6015 |
 | [Web page](#web-page) | MI-7001 to MI-7021 |
 | [Card farm](#card-farm) | MI-8001 to MI-8009 |
+| [Sprite Creator](#sprite-creator) | MI-9001 to MI-9004 |
 
 ## Steam
 
@@ -826,3 +827,37 @@ What to do: Close the Cards page and open it again. If it stays, restart the pro
 What happened: The account signed in on the Cards page is not the one logged on in the Steam client, so the drops shown belong to another account.
 
 What to do: Sign out on the Cards page and sign in with the account the Steam client uses.
+
+## Sprite Creator
+
+### MI-9001
+
+**This creature file cannot be read: ...**
+
+What happened: The file is no valid JSON, or one of its fields has the wrong form. The reason names the line or the field.
+
+What to do: Fix the file in a text editor, then read the folder again with the button beside Explorer.
+
+### MI-9002
+
+**The creature could not be saved: ...**
+
+What happened: Writing the file failed, for example because it is read-only, open in another program, or its folder is gone.
+
+What to do: Make sure the file can be written, then save again. The changes stay in the Sprite Creator until then.
+
+### MI-9003
+
+**No creature folder was found.**
+
+What happened: The Sprite Creator looks for a creatures folder beside the program and for Tools/CreatureForge/creatures in the folders above it.
+
+What to do: Start it from inside the repository, or start it with --creatures= and the path of the folder.
+
+### MI-9004
+
+**The creature folder ... does not exist.**
+
+What happened: The folder given with --creatures, or found at the start, is not there.
+
+What to do: Check the path, then start the Sprite Creator again with --creatures= and the right path.

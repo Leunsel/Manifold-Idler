@@ -65,6 +65,7 @@ namespace Idler::UI::IdleAnimation
         Grey
     };
     void DrawSpriteFrame(ImDrawList* drawList, ImVec2 at, const CreatureSprites::Sprite& sprite, int frame, float pixel, bool blink, Tint tint, bool mirrored = false);
+    ImU32 CellColor(const CreatureSprites::Sprite& sprite, char cell);
     void SetHaze(float amount, ImVec4 color);
     ImVec2 MotionOf(CreatureId id, std::uint32_t seed);
 

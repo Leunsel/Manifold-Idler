@@ -27,7 +27,7 @@ namespace Idler
             std::string_view Name;
         };
 
-        constexpr std::array<Area, 8> kAreas{ {
+        constexpr std::array<Area, 9> kAreas{ {
             { 1, "Steam" },
             { 2, "Idling" },
             { 3, "Library" },
@@ -36,6 +36,7 @@ namespace Idler
             { 6, "Command line and server" },
             { 7, "Web page" },
             { 8, "Card farm" },
+            { 9, "Sprite Creator" },
         } };
 
         constexpr ErrorInfo kErrors[] = {
@@ -343,6 +344,18 @@ namespace Idler
             { ErrorCode::OtherAccount, "This login is for another account than the one logged on to Steam.",
                 "The account signed in on the Cards page is not the one logged on in the Steam client, so the drops shown belong to another account.",
                 "Sign out on the Cards page and sign in with the account the Steam client uses." },
+            { ErrorCode::SpriteNotRead, "This creature file cannot be read: {}",
+                "The file is no valid JSON, or one of its fields has the wrong form. The reason names the line or the field.",
+                "Fix the file in a text editor, then read the folder again with the button beside Explorer." },
+            { ErrorCode::SpriteNotSaved, "The creature could not be saved: {}",
+                "Writing the file failed, for example because it is read-only, open in another program, or its folder is gone.",
+                "Make sure the file can be written, then save again. The changes stay in the Sprite Creator until then." },
+            { ErrorCode::NoCreatureFolder, "No creature folder was found.",
+                "The Sprite Creator looks for a creatures folder beside the program and for Tools/CreatureForge/creatures in the folders above it.",
+                "Start it from inside the repository, or start it with --creatures= and the path of the folder." },
+            { ErrorCode::CreatureFolderMissing, "The creature folder {} does not exist.",
+                "The folder given with --creatures, or found at the start, is not there.",
+                "Check the path, then start the Sprite Creator again with --creatures= and the right path." },
         };
 
         int Number(ErrorCode code)

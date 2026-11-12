@@ -11,6 +11,7 @@
 #include "Core/Settings.h"
 #include "Core/Stats.h"
 #include "Core/SmoothWheel.h"
+#include "Core/SpriteEdit.h"
 #include "Core/SpriteFile.h"
 #include "Core/Terrarium.h"
 #include "Core/WebPolicy.h"
@@ -3139,7 +3140,7 @@ namespace
             const ErrorInfo& info = table[index];
             const int number = static_cast<int>(info.Code);
             ordered &= index == 0 || static_cast<int>(table[index - 1].Code) < number;
-            areas &= number >= 1001 && number <= 8999 && number % 1000 != 0 && !ErrorArea(info.Code).empty();
+            areas &= number >= 1001 && number <= 9999 && number % 1000 != 0 && !ErrorArea(info.Code).empty();
             described &= !info.Message.empty() && !info.Cause.empty() && !info.Help.empty() && info.Cause.back() == '.' && info.Help.back() == '.';
             const std::size_t place = info.Message.find("{}");
             plain &= (place == std::string_view::npos || info.Message.find("{}", place + 2) == std::string_view::npos) &&
@@ -3159,6 +3160,7 @@ namespace
         CHECK(ErrorName(ErrorCode::SteamNotRunning) == "MI-1001");
         CHECK(ErrorArea(ErrorCode::SteamNotRunning) == "Steam");
         CHECK(ErrorArea(ErrorCode::OtherAccount) == "Card farm");
+        CHECK(ErrorArea(ErrorCode::SpriteNotSaved) == "Sprite Creator");
         CHECK(ErrorMessage(ErrorCode::SteamNotRunning) == "Steam is not running. (MI-1001)");
         CHECK(ErrorMessage(ErrorCode::AppInfoNewerFormat, "0756442A") == "Steam uses a newer format for its list of apps (0756442A). (MI-3002)");
         CHECK(ErrorMessage(ErrorCode::PageBadAnswer, "{}") == "The idler gave an answer the page cannot read (HTTP {}). (MI-7016)");
@@ -3185,6 +3187,7 @@ namespace
         for (const ErrorInfo& info : table)
             CHECK(markdown.find("\n### " + ErrorName(info.Code) + "\n") != std::string::npos);
         CHECK(markdown.find("| [Card farm](#card-farm) | MI-8001 to MI-8009 |") != std::string::npos);
+        CHECK(markdown.find("| [Sprite Creator](#sprite-creator) | MI-9001 to MI-9004 |") != std::string::npos);
 
         const std::filesystem::path file = FindErrorReference();
         std::ifstream in(file, std::ios::binary);
@@ -3354,6 +3357,57 @@ namespace
             "the lowest cell moves between frames [13, 12]: feet should stay on the ground, or set \"floats\": true"));
         CHECK(Has(lint(small, [](SpriteFile::Sprite& s) { s.ObjectLike = false; s.Frames[0][7] = s.Frames[0][6]; s.Frames[1][7] = s.Frames[1][6]; }).Warnings,
             "no eye cells (* or e) in any frame: set \"objectLike\": true if that is on purpose"));
+    }
+
+    void TestSpriteEdit()
+    {
+        using namespace SpriteEdit;
+        SpriteFile::Frame frame = EmptyFrame();
+        CHECK(frame.size() == 14 && frame[0] == std::string(16, '.'));
+        Paint(frame, 2, 3, '#', true);
+        CHECK(CellAt(frame, 2, 3) == '#' && CellAt(frame, 2, 12) == '#');
+        CHECK(!SetCell(frame, 20, 3, '#') && CellAt(frame, -1, 0) == '\0' && CellAt(frame, 0, 16) == '\0');
+        CHECK(!SetCell(frame, 2, 3, '#'));
+
+        PaintLine(frame, 0, 0, 0, 15, 'o', false);
+        CHECK(frame[0] == std::string(16, 'o'));
+        PaintLine(frame, 5, 0, 9, 4, 'a', false);
+        CHECK(CellAt(frame, 5, 0) == 'a' && CellAt(frame, 6, 1) == 'a' && CellAt(frame, 7, 2) == 'a' && CellAt(frame, 8, 3) == 'a' && CellAt(frame, 9, 4) == 'a');
+        CHECK(CellAt(frame, 5, 1) == '.' && CellAt(frame, 9, 3) == '.');
+        PaintLine(frame, 12, 15, 12, 13, 'k', true);
+        CHECK(CellAt(frame, 12, 13) == 'k' && CellAt(frame, 12, 15) == 'k' && CellAt(frame, 12, 0) == 'k' && CellAt(frame, 12, 2) == 'k');
+
+        frame = EmptyFrame();
+        PaintRectangle(frame, 8, 9, 4, 4, '#', false, false);
+        CHECK(CellAt(frame, 4, 4) == '#' && CellAt(frame, 8, 9) == '#' && CellAt(frame, 6, 4) == '#' && CellAt(frame, 4, 7) == '#');
+        CHECK(CellAt(frame, 6, 6) == '.' && CellAt(frame, 3, 4) == '.' && CellAt(frame, 4, 10) == '.');
+        Fill(frame, 6, 6, 'a', false);
+        CHECK(CellAt(frame, 6, 6) == 'a' && CellAt(frame, 5, 8) == 'a' && CellAt(frame, 7, 5) == 'a');
+        CHECK(CellAt(frame, 0, 0) == '.' && CellAt(frame, 4, 4) == '#');
+        Fill(frame, 0, 0, 'k', false);
+        CHECK(CellAt(frame, 0, 0) == 'k' && CellAt(frame, 13, 15) == 'k' && CellAt(frame, 6, 6) == 'a' && CellAt(frame, 4, 4) == '#');
+        Fill(frame, 6, 6, 'a', false);
+        CHECK(CellAt(frame, 6, 6) == 'a');
+
+        SpriteFile::Frame walled = EmptyFrame();
+        PaintLine(walled, 0, 7, 13, 7, '#', true);
+        Fill(walled, 0, 0, 'c', true);
+        CHECK(CellAt(walled, 5, 3) == 'c' && CellAt(walled, 5, 12) == 'c' && CellAt(walled, 5, 7) == '#' && CellAt(walled, 5, 8) == '#');
+
+        SpriteFile::Frame dot = EmptyFrame();
+        SetCell(dot, 0, 0, '#');
+        const SpriteFile::Frame moved = Shifted(dot, 2, 3);
+        CHECK(CellAt(moved, 2, 3) == '#' && CellAt(moved, 0, 0) == '.' && moved.size() == 14 && moved[13].size() == 16);
+        const SpriteFile::Frame gone = Shifted(dot, -1, 0);
+        CHECK(std::all_of(gone.begin(), gone.end(), [](const std::string& line) { return line == std::string(16, '.'); }));
+        FlipHorizontal(dot);
+        CHECK(CellAt(dot, 0, 15) == '#' && CellAt(dot, 0, 0) == '.');
+        CHECK(MirroredColumn(0) == 15 && MirroredColumn(7) == 8);
+
+        CHECK(CellName('o') == "Body shade" && CellName('.') == "Empty" && CellName('x') == "Unknown");
+        CHECK(std::size(kCellKinds) == SpriteFile::kCells.size());
+        for (const CellKind& kind : kCellKinds)
+            CHECK(SpriteFile::IsCell(kind.Cell));
     }
 
     std::filesystem::path FindCreatureFolder()
@@ -4304,6 +4358,7 @@ int main()
         { "Errors", TestErrors },
         { "Json", TestJson },
         { "SpriteFile", TestSpriteFile },
+        { "SpriteEdit", TestSpriteEdit },
         { "CreatureFiles", TestCreatureFiles },
         { "FileLock", TestFileLock },
     };

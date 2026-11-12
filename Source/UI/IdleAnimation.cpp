@@ -153,29 +153,31 @@ namespace Idler::UI::IdleAnimation
             return { shadow, shadow, shadow, shadow, shadow, shadow, shadow, shadow, shadow, shadow, shadow, shadow, shadow };
         }
 
+        ImU32 PaletteColor(const Palette& palette, char cell, bool blink)
+        {
+            switch (cell)
+            {
+            case '#': return palette.Body;
+            case 'o': return palette.Shade;
+            case '+': return palette.Light;
+            case 'a': return palette.Second;
+            case 'd': return palette.SecondShade;
+            case 'l': return palette.SecondLight;
+            case 'c': return palette.Third;
+            case 'C': return palette.ThirdShade;
+            case '*': return blink ? palette.Shade : palette.Eye;
+            case 'e': return blink ? palette.SecondShade : palette.Eye;
+            case 'r': return palette.Red;
+            case 'y': return palette.Yellow;
+            case 'w': return palette.White;
+            case 'k': return palette.Dark;
+            default: return 0;
+            }
+        }
+
         void DrawFrame(ImDrawList* drawList, ImVec2 at, const Frame& frame, float pixel, bool blink, const Palette& palette, bool mirrored = false)
         {
-            const auto colorOf = [&](char cell) -> ImU32
-                {
-                    switch (cell)
-                    {
-                    case '#': return palette.Body;
-                    case 'o': return palette.Shade;
-                    case '+': return palette.Light;
-                    case 'a': return palette.Second;
-                    case 'd': return palette.SecondShade;
-                    case 'l': return palette.SecondLight;
-                    case 'c': return palette.Third;
-                    case 'C': return palette.ThirdShade;
-                    case '*': return blink ? palette.Shade : palette.Eye;
-                    case 'e': return blink ? palette.SecondShade : palette.Eye;
-                    case 'r': return palette.Red;
-                    case 'y': return palette.Yellow;
-                    case 'w': return palette.White;
-                    case 'k': return palette.Dark;
-                    default: return 0;
-                    }
-                };
+            const auto colorOf = [&](char cell) { return PaletteColor(palette, cell, blink); };
 
             const float tall = pixel * (1.0f - g_squash * 0.55f);
             const float wide = pixel * (1.0f + g_squash * 0.25f);
@@ -376,6 +378,11 @@ namespace Idler::UI::IdleAnimation
             break;
         }
         }
+    }
+
+    ImU32 CellColor(const Sprite& sprite, char cell)
+    {
+        return PaletteColor(ColoredPalette(sprite.Body, sprite.Second, sprite.Third), cell, false);
     }
 
     void DrawSpriteFrame(ImDrawList* drawList, ImVec2 at, const Sprite& sprite, int frame, float pixel, bool blink, Tint tint, bool mirrored)

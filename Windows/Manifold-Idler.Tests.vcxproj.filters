@@ -39,6 +39,9 @@
     <ClCompile Include="..\Source\Core\SpriteFile.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Core\SpriteEdit.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\Core\MiniGames.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>

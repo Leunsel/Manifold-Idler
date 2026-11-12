@@ -81,6 +81,9 @@
     <ClCompile Include="..\Source\Core\Json.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Core\SpriteEdit.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\Core\SpriteFile.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
@@ -93,7 +96,13 @@
     <ClCompile Include="..\Source\SpriteCreator\CreatureLibrary.cpp">
       <Filter>Source\SpriteCreator</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\SpriteCreator\PaintCard.cpp">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\SpriteCreator\ScenePreview.cpp">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\SpriteCreator\Widgets.cpp">
       <Filter>Source\SpriteCreator</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\UI\Fonts.cpp">
@@ -179,6 +188,9 @@
     <ClInclude Include="..\Source\Core\Settings.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\Core\SpriteEdit.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\Core\SpriteFile.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
@@ -200,7 +212,13 @@
     <ClInclude Include="..\Source\SpriteCreator\CreatureLibrary.h">
       <Filter>Source\SpriteCreator</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\SpriteCreator\PaintCard.h">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\SpriteCreator\ScenePreview.h">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\SpriteCreator\Widgets.h">
       <Filter>Source\SpriteCreator</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\CreatureSprites.h">

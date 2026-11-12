@@ -30,7 +30,7 @@ namespace Idler
     private:
         void DrawFrame() override;
         void AfterDraw() override;
-        void CloseRequested() override { m_running = false; }
+        void CloseRequested() override { m_screen.RequestClose(); }
 
         bool m_running = false;
         std::filesystem::path m_captureFile;
