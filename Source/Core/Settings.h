@@ -110,5 +110,4 @@ namespace Idler
         void Load(const std::filesystem::path& path);
         bool Save(const std::filesystem::path& path) const;
     };
-    int TakeOverOldName(const std::filesystem::path& settings);
 }

@@ -2607,56 +2607,6 @@ namespace
         }
     }
 
-    void TestOldName()
-    {
-        const std::filesystem::path folder = TestFile("-old-name");
-        std::filesystem::create_directories(folder / "Steam-Idler.web");
-        const auto write = [&](const char* name, const char* text)
-            {
-                std::ofstream file(folder / name, std::ios::binary);
-                file << text;
-            };
-        const auto read = [&](const char* name)
-            {
-                std::ifstream file(folder / name, std::ios::binary);
-                return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
-            };
-        const std::filesystem::path settings = folder / "Manifold-Idler.ini";
-
-        write("Steam-Idler.stats", "only stats");
-        CHECK(TakeOverOldName(settings) == 0);
-        CHECK(read("Steam-Idler.stats") == "only stats");
-
-        write("Steam-Idler.ini", "the settings");
-        write("Steam-Idler.log", "the log");
-        write("Steam-Idler.previous.log", "the last log");
-        write("Steam-Idler.web/cookie", "the session");
-        write("Other.ini", "somebody else's");
-        CHECK(TakeOverOldName(settings) == 5);
-        CHECK(read("Manifold-Idler.ini") == "the settings");
-        CHECK(read("Manifold-Idler.stats") == "only stats");
-        CHECK(read("Manifold-Idler.log") == "the log");
-        CHECK(read("Manifold-Idler.previous.log") == "the last log");
-        CHECK(read("Manifold-Idler.web/cookie") == "the session");
-        CHECK(read("Other.ini") == "somebody else's");
-        CHECK(!std::filesystem::exists(folder / "Steam-Idler.ini"));
-
-        write("Steam-Idler.ini", "an old program ran again");
-        CHECK(TakeOverOldName(settings) == 0);
-        CHECK(read("Manifold-Idler.ini") == "the settings");
-        CHECK(read("Steam-Idler.ini") == "an old program ran again");
-
-        std::filesystem::remove(settings);
-        write("Steam-Idler.log", "old log");
-        CHECK(TakeOverOldName(settings) == 1);
-        CHECK(read("Manifold-Idler.log") == "the log");
-        CHECK(read("Steam-Idler.log") == "old log");
-        CHECK(read("Manifold-Idler.ini") == "an old program ran again");
-
-        std::error_code ignored;
-        std::filesystem::remove_all(folder, ignored);
-    }
-
     void TestSteamRegistry()
     {
         const std::string text = R"("Registry"
@@ -4055,7 +4005,6 @@ int main()
         { "RuntimeLog", TestRuntimeLog },
         { "VariedTimes", TestVariedTimes },
         { "SteamRegistry", TestSteamRegistry },
-        { "OldName", TestOldName },
         { "BondsAndSets", TestBondsAndSets },
         { "Encounters", TestEncounters },
         { "Characters", TestCharacters },

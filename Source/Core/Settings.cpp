@@ -406,27 +406,4 @@ namespace Idler
         }
         return true;
     }
-
-    int TakeOverOldName(const std::filesystem::path& settings)
-    {
-        std::error_code error;
-        std::filesystem::path oldFile = settings;
-        oldFile.replace_filename("Steam-Idler.ini");
-        if (std::filesystem::exists(settings, error) || !std::filesystem::exists(oldFile, error))
-            return 0;
-
-        int renamed = 0;
-        for (const char* ending : { ".stats", ".log", ".previous.log", ".cards", ".login", ".web", ".card-pictures", ".achievement-icons", ".ini" })
-        {
-            const std::filesystem::path from = std::filesystem::path(oldFile).replace_extension(ending);
-            const std::filesystem::path to = std::filesystem::path(settings).replace_extension(ending);
-            if (!std::filesystem::exists(from, error) || std::filesystem::exists(to, error))
-                continue;
-            error.clear();
-            std::filesystem::rename(from, to, error);
-            if (!error)
-                ++renamed;
-        }
-        return renamed;
-    }
 }

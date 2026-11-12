@@ -7,34 +7,21 @@
 ipch/
 
 /Build/
-/x64/
 
 /Source/codelines.cmd
 
 Manifold-Idler.ini
-Steam-Idler.ini
 Manifold-Idler.ini.tmp
-Steam-Idler.ini.tmp
 Manifold-Idler.stats
-Steam-Idler.stats
 Manifold-Idler.stats.tmp
-Steam-Idler.stats.tmp
 Manifold-Idler.web/
-Steam-Idler.web/
 Manifold-Idler.login
-Steam-Idler.login
 Manifold-Idler.login.tmp
-Steam-Idler.login.tmp
 Manifold-Idler.cards
-Steam-Idler.cards
 Manifold-Idler.card-pictures/
-Steam-Idler.card-pictures/
 Manifold-Idler.achievement-icons/
-Steam-Idler.achievement-icons/
 Manifold-Idler.log
-Steam-Idler.log
 Manifold-Idler.previous.log
-Steam-Idler.previous.log
 
 /Tools/CreatureForge/out/
 /Tools/CreatureForge/blind/

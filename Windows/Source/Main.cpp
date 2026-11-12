@@ -57,11 +57,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPWSTR c
             ::CloseHandle(single);
         return 1;
     }
-    const int takenOver = settings.empty() ? Idler::TakeOverOldName(settingsFile) : 0;
     if (capture.empty() || !settings.empty())
         Idler::RuntimeLog::OpenFile(std::filesystem::path(settingsFile).replace_extension(L".log"));
-    if (takenOver > 0)
-        LOG_INFO("Took over " + std::to_string(takenOver) + " files of the old name, Steam-Idler");
 
     Idler::Application app(settingsFile);
 
