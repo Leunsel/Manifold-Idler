@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Creature forge: renders and checks the idle creatures of Manifold-Idler the way the program draws them. Standard library only.
+"""Creature forge: renders and checks the idle creatures of Manifold Idler the way the program draws them. Standard library only.
 
 Every creature is a JSON file in creatures/, and the evolved form of one, where it has one, in creatures/evolved/ under the same name:
   {"key": "frog", "id": "Frog", "body": "#5CC756", "second": "#D1E58F", "third": null,
    "floats": false, "objectLike": false, "facing": 0, "stays": false,
-   "frames": [[11 strings of 12 cells], ...],
+   "frames": [[14 strings of 16 cells, as grid.json sets], ...],
    "steps": [[frame, lift, shift, blink, ticks], ...],
    "sleep": 0}
 
@@ -20,7 +20,7 @@ Cells:
 Commands (run from anywhere):
   forge.py sheet KEY                  out/KEY.png and the lint report; an evolved form is evolved/KEY
   forge.py lint [KEY]                 lint report
-  forge.py publish KEY ROUND CODE     lint, snapshot versions/KEY/rROUND.json, blind/CODE-large.png + CODE-small.png
+  forge.py publish KEY ROUND CODE     lint, keep versions/KEY/rROUND.json, and blind/CODE-large.png + CODE-small.png to compare drafts
   forge.py contact OUT [--scale N] [--frame N] [--keys a,b] [--sleep] [--shadow] [--nolabel] [--columns N]
   forge.py restore KEY ROUND          creatures/KEY.json from a snapshot
   forge.py header OUT                 generates the header, OUT being Source/UI/CreatureSprites.h
