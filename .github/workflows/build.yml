@@ -157,6 +157,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the version against the tag
+        run: |
+          version=$(sed -n 's/^#define IDLER_VERSION_TEXT "\(.*\)"$/\1/p' Source/Core/Version.h)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error file=Source/Core/Version.h::The program says version $version, the tag is $GITHUB_REF_NAME. Set the version in Source/Core/Version.h to the tag's."
+            exit 1
+          fi
+
       - uses: actions/download-artifact@v8
         with:
           path: artifacts

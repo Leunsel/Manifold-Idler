@@ -8,6 +8,7 @@
 #include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
+#include "Core/Version.h"
 #include "Core/WebPolicy.h"
 #include "Generated/IconsFontAwesome5.h"
 #include "UI/Covers.h"
@@ -5828,7 +5829,8 @@ namespace Idler::UI
 
         void SettingsPage(Shell& app)
         {
-            BeginPage(app, "");
+            static const std::string version = std::string("Version ") + kVersion;
+            BeginPage(app, version);
             ImGui::BeginChild("##settings_width", ImVec2(std::min(ImGui::GetContentRegionAvail().x, Px(kSettingsWidth)), 0.0f), ImGuiChildFlags_None,
                 ImGuiWindowFlags_NoBackground);
             SetScrollSurface(ManifoldTheme::Page);

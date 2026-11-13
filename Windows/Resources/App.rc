@@ -1,5 +1,6 @@
 #include <windows.h>
 #include "..\..\Source\Resource.h"
+#include "..\..\Source\Core\Version.h"
 
 #pragma code_page(65001)
 
@@ -8,8 +9,8 @@ IDR_FONT_FA_SOLID        RCDATA "..\\..\\Dependencies\\Fonts\\fa-solid-900.ttf"
 IDI_APPICON ICON "..\\..\\Source\\Resources\\icon.ico"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION    0,1,0,0
- PRODUCTVERSION 0,1,0,0
+ FILEVERSION    IDLER_VERSION_MAJOR,IDLER_VERSION_MINOR,IDLER_VERSION_PATCH,0
+ PRODUCTVERSION IDLER_VERSION_MAJOR,IDLER_VERSION_MINOR,IDLER_VERSION_PATCH,0
  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
 #ifdef _DEBUG
  FILEFLAGS      VS_FF_DEBUG
@@ -27,11 +28,11 @@ BEGIN
             VALUE "CompanyName",      "Manifold"
             VALUE "Comments",         "Idles Steam games through the running Steam client."
             VALUE "FileDescription",  "Manifold Idler"
-            VALUE "FileVersion",      "0.1.0.0"
+            VALUE "FileVersion",      IDLER_VERSION_TEXT
             VALUE "InternalName",     "Manifold-Idler"
             VALUE "OriginalFilename", "Manifold-Idler.exe"
             VALUE "ProductName",      "Manifold Idler"
-            VALUE "ProductVersion",   "0.1.0.0"
+            VALUE "ProductVersion",   IDLER_VERSION_TEXT
         END
     END
     BLOCK "VarFileInfo"

@@ -338,6 +338,9 @@
     <ClInclude Include="..\Source\Core\Vdf.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\Core\Version.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\Core\WebPolicy.h">
       <Filter>Source\Core</Filter>
     </ClInclude>

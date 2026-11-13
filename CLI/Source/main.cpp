@@ -1,6 +1,7 @@
 #include "BackupCommands.h"
 #include "Core/Errors.h"
 #include "Core/Text.h"
+#include "Core/Version.h"
 #include "Ipc.h"
 #include "Paths.h"
 #include "Request.h"
@@ -96,7 +97,7 @@ int main(int argc, char** argv)
                   "Steam has to run on this computer, logged on, as this user.", "idler" };
     argv = app.ensure_utf8(argv);
     app.require_subcommand(1);
-    app.set_version_flag("--version", "idler 0.1.0");
+    app.set_version_flag("--version", std::string("idler ") + Idler::kVersion);
 
     std::string settingsText;
     app.add_option("--settings", settingsText, "The settings file, also of the window program");

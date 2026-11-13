@@ -2,6 +2,7 @@
 
 #include "Core/CrashReport.h"
 #include "Core/Text.h"
+#include "Core/Version.h"
 
 #include <cxxabi.h>
 #include <dlfcn.h>
@@ -117,6 +118,7 @@ namespace Idler::CrashHandler
             CrashReport::Crash crash;
             crash.Time = std::time(nullptr);
             crash.Thread = static_cast<std::uint64_t>(::gettid());
+            crash.Version = kVersion;
             crash.Program = ProgramPath();
             const std::uintptr_t address = info && signal != SIGABRT ? reinterpret_cast<std::uintptr_t>(info->si_addr) : 0;
             crash.Problem = signal == SIGABRT && g_why[0] != 0 ? std::string(g_why) : CrashReport::SignalText(signal, address);

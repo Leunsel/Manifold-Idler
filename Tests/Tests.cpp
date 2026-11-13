@@ -19,6 +19,7 @@
 #include "Core/WebPolicy.h"
 #include "Core/Text.h"
 #include "Core/Vdf.h"
+#include "Core/Version.h"
 #include "Core/Zip.h"
 #include "UI/CreatureSprites.h"
 #include "UI/SpriteView.h"
@@ -4633,6 +4634,7 @@ void TestCrashReport()
     crash.Time = time;
     crash.Problem = "access violation, reading address 0x0";
     crash.Program = "C:\\Games\\Manifold-Idler.exe";
+    crash.Version = "1.3.0";
     crash.Built = "Nov 13 2026";
     crash.Thread = 4242;
     crash.Stack = { named, bare };
@@ -4640,7 +4642,10 @@ void TestCrashReport()
     const std::string text = ReportText(crash);
     CHECK(text.starts_with("Manifold Idler ended unexpectedly on 2026-11-13 at 12:14:05.\n"));
     CHECK(text.find("Problem: access violation, reading address 0x0\n") != std::string::npos);
-    CHECK(text.find("Program: C:\\Games\\Manifold-Idler.exe, built Nov 13 2026\n") != std::string::npos && text.find("Thread: 4242\n") != std::string::npos);
+    CHECK(text.find("Program: C:\\Games\\Manifold-Idler.exe, version 1.3.0, built Nov 13 2026\n") != std::string::npos && text.find("Thread: 4242\n") != std::string::npos);
+    crash.Version.clear();
+    CHECK(ReportText(crash).find("Program: C:\\Games\\Manifold-Idler.exe, built Nov 13 2026\n") != std::string::npos);
+    crash.Version = "1.3.0";
     CHECK(text.find("\nStack:\n#0 Manifold-Idler.exe+0x1a2b3c") != std::string::npos && text.find("\nDump: 2026-11-13 12-14-05.dmp\n") != std::string::npos);
     Crash empty;
     empty.Time = time;
@@ -4682,6 +4687,12 @@ void TestCrashReport()
     CHECK(std::filesystem::exists(folder / "notes.txt") && Prune(settings) == 0);
 
     std::filesystem::remove_all(root, error);
+}
+
+void TestVersion()
+{
+    const std::string numbers = std::to_string(IDLER_VERSION_MAJOR) + "." + std::to_string(IDLER_VERSION_MINOR) + "." + std::to_string(IDLER_VERSION_PATCH);
+    CHECK(std::string(kVersion) == numbers && std::string(IDLER_VERSION_TEXT) == numbers);
 }
 
 int main()
@@ -4740,6 +4751,7 @@ int main()
         { "Zip", TestZip },
         { "Backups", TestBackups },
         { "CrashReport", TestCrashReport },
+        { "Version", TestVersion },
     };
     for (const auto& test : tests)
     {

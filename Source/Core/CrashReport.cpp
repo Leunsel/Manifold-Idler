@@ -183,7 +183,8 @@ namespace Idler::CrashReport
         std::string text = "Manifold Idler ended unexpectedly on " + Stamp(crash.Time, "%Y-%m-%d at %H:%M:%S") + ".\n";
         text += std::string(kProblem) + crash.Problem + "\n";
         if (!crash.Program.empty())
-            text += "Program: " + crash.Program + (crash.Built.empty() ? std::string() : ", built " + crash.Built) + "\n";
+            text += "Program: " + crash.Program + (crash.Version.empty() ? std::string() : ", version " + crash.Version) +
+                (crash.Built.empty() ? std::string() : ", built " + crash.Built) + "\n";
         if (crash.Thread != 0)
             text += "Thread: " + std::to_string(crash.Thread) + "\n";
         text += "\nStack:\n";

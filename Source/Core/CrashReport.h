@@ -29,6 +29,7 @@ namespace Idler::CrashReport
         std::time_t Time = 0;
         std::string Problem;
         std::string Program;
+        std::string Version;
         std::string Built;
         std::uint64_t Thread = 0;
         std::vector<Frame> Stack;

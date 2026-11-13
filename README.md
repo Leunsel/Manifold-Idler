@@ -160,7 +160,8 @@ The window program and the CLI share their settings, lists and statistics: on Li
 next to `Manifold-Idler.exe`. Only one of them runs on a settings file at a time.
 
 GitHub Actions builds the window program for Windows and Linux, the CLI for both and the Sprite Creator on every push, and
-runs the tests. A tag `v*` puts the programs on a release.
+runs the tests. A tag `v*` puts the programs on a release. The version lives in `Source/Core/Version.h`; the tag has to
+name it (`v1.3.0` for 1.3.0), or the release stops.
 
 Creature pictures are JSON files in `Tools/CreatureForge/creatures`, drawn in the [Sprite Creator](#sprite-creator) or by
 hand; `Source/UI/CreatureSprites.h` is generated from them, and the core tests fail while it is behind them:

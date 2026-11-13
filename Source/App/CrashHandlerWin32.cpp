@@ -2,6 +2,7 @@
 
 #include "Core/CrashReport.h"
 #include "Core/Text.h"
+#include "Core/Version.h"
 
 #include <windows.h>
 #include <dbghelp.h>
@@ -326,6 +327,7 @@ namespace Idler::CrashHandler
             CrashReport::Crash crash;
             crash.Time = std::time(nullptr);
             crash.Thread = g_thread;
+            crash.Version = kVersion;
             crash.Program = WideToUtf8(ModulePath(nullptr));
             crash.Built = LinkedAt();
             const EXCEPTION_RECORD* record = g_pointers ? g_pointers->ExceptionRecord : nullptr;

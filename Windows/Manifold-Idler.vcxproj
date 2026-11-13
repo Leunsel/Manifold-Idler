@@ -179,6 +179,7 @@
     <ClInclude Include="..\Source\UI\TerrariumView.h" />
     <ClInclude Include="..\Source\Core\Text.h" />
     <ClInclude Include="..\Source\Core\Vdf.h" />
+    <ClInclude Include="..\Source\Core\Version.h" />
     <ClInclude Include="..\Source\Generated\IconsFontAwesome5.h" />
     <ClInclude Include="..\Source\Steam\LibraryScan.h" />
     <ClInclude Include="..\Source\Steam\SteamClient.h" />

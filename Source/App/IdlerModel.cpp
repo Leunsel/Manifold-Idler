@@ -5,6 +5,7 @@
 #include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
+#include "Core/Version.h"
 #include "Core/WebPolicy.h"
 #include "Steam/SteamWeb.h"
 
@@ -83,7 +84,7 @@ namespace Idler
         m_lists.push_back({ kDefaultListName, {} });
         m_active = m_settings.ResumeOnStart && m_settings.WasActive;
 
-        LOG_INFO("Manifold Idler started");
+        LOG_INFO("Manifold Idler " + std::string(kVersion) + " started");
         if constexpr (!kCardFarmEnabled)
             LOG_INFO("Card farm is off: nothing goes to Steam's web side");
         if (const std::optional<CrashReport::LastCrash> crash = CrashReport::TakeLastCrash(m_settingsPath))
