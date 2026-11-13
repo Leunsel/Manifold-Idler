@@ -66,8 +66,13 @@ Check both side by side: `contact <out.png> --keys slime,evolved/slime`.
 
 ## Working on a creature
 
-A creature is `creatures/<key>.json`, its evolved form `creatures/evolved/<key>.json`. The forge checks and renders them the way
-the program draws them, with nothing but Python's standard library:
+A creature is `creatures/<key>.json`, its evolved form `creatures/evolved/<key>.json`.
+
+The Sprite Creator (`Manifold-Idler-Sprite-Creator.exe`, Windows) edits them with a paint area, a timeline for frames and steps,
+the scenes and sizes the idler shows them in, and the same checks as the forge next to the picture. It starts new creatures and
+evolved forms too, and saves in the forge's own format. The main README lists its keys.
+
+The forge checks and renders them the way the program draws them, with nothing but Python's standard library:
 
     py Tools/CreatureForge/forge.py sheet <key>                          out/<key>.png and the lint report; evolved/<key> for an evolved form
     py Tools/CreatureForge/forge.py lint                                 the lint report of every creature

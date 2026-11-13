@@ -12,4 +12,6 @@ namespace Idler::SpriteCreator
     void BeginCard(const char* id, const char* icon, const char* title, ImVec2 size, const char* note = nullptr, ImVec4 noteColor = ImVec4(0.50f, 0.52f, 0.56f, 1.00f));
     void EndCard();
     void MutedText(const char* text);
+    void FieldLabel(const char* label, float width);
+    bool Segment(const char* id, const char* label, bool chosen, bool enabled = true);
 }

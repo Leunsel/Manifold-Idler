@@ -36,6 +36,20 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+      - name: Gather the Sprite Creator
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist-creator | Out-Null
+          Copy-Item Build\Windows\Release\Manifold-Idler-Sprite-Creator.exe, Tools\CreatureForge\STYLE.md, LICENSE, README.md dist-creator\
+          Copy-Item Tools\CreatureForge\creatures dist-creator\creatures -Recurse
+          Copy-Item Licenses dist-creator\Licenses -Recurse
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Manifold-Idler-Sprite-Creator-windows-x64
+          path: dist-creator/
+          if-no-files-found: error
+
   window-linux:
     name: Window program (Linux)
     runs-on: ubuntu-24.04

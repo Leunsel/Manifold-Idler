@@ -96,4 +96,30 @@ namespace Idler::SpriteCreator
         ImGui::TextWrapped("%s", text);
         ImGui::PopStyleColor();
     }
+
+    void FieldLabel(const char* label, float width)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+        ImGui::PopStyleColor();
+        ImGui::SameLine(width);
+    }
+
+    bool Segment(const char* id, const char* label, bool chosen, bool enabled)
+    {
+        const ImVec2 size(std::round(ImGui::CalcTextSize(label).x + Px(16.0f)), ImGui::GetFrameHeight());
+        const ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImGui::BeginDisabled(!enabled);
+        const bool clicked = ImGui::InvisibleButton(id, size);
+        ImGui::EndDisabled();
+        const bool hovered = enabled && ImGui::IsItemHovered();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        const ImVec4 fill = chosen ? ManifoldTheme::WithAlpha(ManifoldTheme::Accent, enabled ? 0.20f : 0.10f)
+            : ManifoldTheme::WithAlpha(ManifoldTheme::Text, hovered ? 0.08f : 0.04f);
+        drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), Color(fill), Px(4.0f));
+        const ImVec4 text = !enabled ? ManifoldTheme::Muted : chosen ? ManifoldTheme::Accent : ManifoldTheme::Label;
+        drawList->AddText(ImVec2(pos.x + Px(8.0f), std::round(pos.y + (size.y - ImGui::GetTextLineHeight()) * 0.5f)), Color(text), label);
+        return clicked && enabled;
+    }
 }

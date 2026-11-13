@@ -3,6 +3,7 @@
 #include "App/WindowControls.h"
 #include "SpriteCreator/CreatureLibrary.h"
 #include "SpriteCreator/PaintCard.h"
+#include "SpriteCreator/PropertiesCard.h"
 #include "SpriteCreator/ScenePreview.h"
 #include "SpriteCreator/TimelineCard.h"
 
@@ -15,10 +16,10 @@
 
 namespace Idler::SpriteCreator
 {
-    inline constexpr int kMinimumWidth = 1100;
+    inline constexpr int kMinimumWidth = 1160;
     inline constexpr int kMinimumHeight = 700;
-    inline constexpr int kStartWidth = 1240;
-    inline constexpr int kStartHeight = 800;
+    inline constexpr int kStartWidth = 1400;
+    inline constexpr int kStartHeight = 900;
 
     std::filesystem::path FindCreatureFolder(const std::filesystem::path& start);
 
@@ -50,8 +51,11 @@ namespace Idler::SpriteCreator
         void DrawSceneRows();
         void DrawLight();
         void DrawPreview(float width, float height);
-        void DrawProperties(float width, float height);
         void DrawUnsavedQuestion();
+        void OpenNewCreature();
+        void DrawNewCreature();
+        void CreateCreature(const std::string& key, const std::string& id, const CreatureFile* source, const CreatureFile* firstForm);
+        void Jump(const PropertiesRequests& requests);
         void HandleKeys();
         void ChangeSelection(int index);
         void SaveSelected();
@@ -61,6 +65,8 @@ namespace Idler::SpriteCreator
         CreatureFile* Selected();
         const CreatureFile* Selected() const;
         const CreatureFile* Counterpart(const CreatureFile& file) const;
+        CreatureFile* Counterpart(const CreatureFile& file);
+        const CreatureFile* FirstFormFor(const CreatureFile* file) const;
 
         std::filesystem::path m_folder;
         bool m_folderExists = false;
@@ -72,6 +78,17 @@ namespace Idler::SpriteCreator
         std::array<char, 64> m_search{};
         PaintState m_paint;
         TimelineState m_timeline;
+        PropertiesState m_properties;
+        struct NewCreatureForm
+        {
+            bool Open = false;
+            bool Evolved = false;
+            bool Copy = false;
+            bool IdEdited = false;
+            bool Focus = false;
+            std::array<char, 40> Key{};
+            std::array<char, 40> Id{};
+        } m_new;
         Pending m_pending = Pending::None;
         bool m_quit = false;
         std::string m_message;

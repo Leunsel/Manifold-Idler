@@ -99,6 +99,9 @@
     <ClCompile Include="..\Source\SpriteCreator\PaintCard.cpp">
       <Filter>Source\SpriteCreator</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\SpriteCreator\PropertiesCard.cpp">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\SpriteCreator\ScenePreview.cpp">
       <Filter>Source\SpriteCreator</Filter>
     </ClCompile>
@@ -216,6 +219,9 @@
       <Filter>Source\SpriteCreator</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\SpriteCreator\PaintCard.h">
+      <Filter>Source\SpriteCreator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\SpriteCreator\PropertiesCard.h">
       <Filter>Source\SpriteCreator</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\SpriteCreator\ScenePreview.h">

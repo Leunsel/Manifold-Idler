@@ -42,6 +42,15 @@ namespace Idler::SpriteCreator
             return static_cast<std::uint32_t>(index) * 7919u + 13u;
         }
 
+        std::string_view StemOf(const CreatureFile& file)
+        {
+            constexpr std::string_view kPrefix = "evolved/";
+            std::string_view key = file.Key;
+            if (file.Evolved && key.substr(0, kPrefix.size()) == kPrefix)
+                key.remove_prefix(kPrefix.size());
+            return key;
+        }
+
         struct TitleStatus
         {
             std::string Text;
@@ -107,64 +116,6 @@ namespace Idler::SpriteCreator
                 ImGui::TextUnformatted(text.c_str());
             }
             ImGui::PopStyleColor();
-        }
-
-        void FactRow(const char* label, const std::string& value, ImVec4 color = ManifoldTheme::Text)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
-            ImGui::TextUnformatted(label);
-            ImGui::PopStyleColor();
-            ImGui::SameLine(std::round(Px(84.0f)));
-            ImGui::PushStyleColor(ImGuiCol_Text, color);
-            ImGui::TextUnformatted(value.c_str());
-            ImGui::PopStyleColor();
-        }
-
-        std::string ColorName(const SpriteFile::Color& color)
-        {
-            if (color.Kind == SpriteFile::ColorKind::None)
-                return "none";
-            if (color.Kind == SpriteFile::ColorKind::Accent)
-                return "accent";
-            char text[16];
-            std::snprintf(text, sizeof(text), "#%06X", static_cast<unsigned>(color.Rgb & 0xFFFFFF));
-            return text;
-        }
-
-        void ColorRow(const char* label, const SpriteFile::Color& color)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
-            ImGui::TextUnformatted(label);
-            ImGui::PopStyleColor();
-            ImGui::SameLine(std::round(Px(84.0f)));
-            const float side = ImGui::GetTextLineHeight();
-            const ImVec2 at = ImGui::GetCursorScreenPos();
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            if (color.Kind != SpriteFile::ColorKind::None)
-                drawList->AddRectFilled(at, ImVec2(at.x + side, at.y + side), Color(UI::ColorOf(color)), Px(3.0f));
-            else
-                drawList->AddRect(at, ImVec2(at.x + side, at.y + side), Color(ManifoldTheme::Border), Px(3.0f));
-            ImGui::Dummy(ImVec2(side, side));
-            ImGui::SameLine(0.0f, Px(8.0f));
-            ImGui::PushStyleColor(ImGuiCol_Text, color.Kind == SpriteFile::ColorKind::None ? ManifoldTheme::Muted : ManifoldTheme::Text);
-            ImGui::TextUnformatted(ColorName(color).c_str());
-            ImGui::PopStyleColor();
-        }
-
-        const char* HabitName(Habit habit)
-        {
-            switch (habit)
-            {
-            case Habit::Floats:
-                return "floats";
-            case Habit::Swims:
-                return "swims in the lake";
-            case Habit::Stays:
-                return "stays in one place";
-            case Habit::Walks:
-                break;
-            }
-            return "walks";
         }
 
         const char* BackdropIcon(Backdrop backdrop)
@@ -286,14 +237,49 @@ namespace Idler::SpriteCreator
 
     const CreatureFile* Screen::Counterpart(const CreatureFile& file) const
     {
-        if (!file.Id)
-            return nullptr;
+        const std::string_view stem = StemOf(file);
         for (const CreatureFile& other : m_files)
         {
-            if (&other != &file && other.Id == file.Id && other.Evolved != file.Evolved)
+            if (&other != &file && other.Evolved != file.Evolved && StemOf(other) == stem)
                 return &other;
         }
         return nullptr;
+    }
+
+    CreatureFile* Screen::Counterpart(const CreatureFile& file)
+    {
+        return const_cast<CreatureFile*>(std::as_const(*this).Counterpart(file));
+    }
+
+    const CreatureFile* Screen::FirstFormFor(const CreatureFile* file) const
+    {
+        if (!file || file->Evolved || !file->Sprite || Counterpart(*file))
+            return nullptr;
+        std::error_code ignored;
+        if (std::filesystem::exists(m_folder / "evolved" / (std::string(StemOf(*file)) + ".json"), ignored))
+            return nullptr;
+        return file;
+    }
+
+    void Screen::Jump(const PropertiesRequests& requests)
+    {
+        CreatureFile* file = Selected();
+        if (!file || !file->Sprite || m_paint.Stroking)
+            return;
+        m_timeline.Playing = false;
+        const std::vector<SpriteFile::Step>& steps = file->Sprite->Steps;
+        int frame = requests.JumpFrame;
+        if (requests.JumpStep >= 0 && requests.JumpStep < static_cast<int>(steps.size()))
+        {
+            m_timeline.Step = requests.JumpStep;
+            if (frame < 0)
+                frame = steps[static_cast<std::size_t>(requests.JumpStep)].Frame;
+        }
+        if (frame >= 0)
+        {
+            m_paint.Frame = frame;
+            ClampFrame(file, m_paint);
+        }
     }
 
     std::size_t Screen::UnsavedCount() const
@@ -375,7 +361,7 @@ namespace Idler::SpriteCreator
     void Screen::HandleKeys()
     {
         const ImGuiIO& io = ImGui::GetIO();
-        if (io.WantTextInput || m_pending != Pending::None || m_paint.Stroking)
+        if (io.WantTextInput || m_pending != Pending::None || m_new.Open || m_paint.Stroking)
             return;
         CreatureFile* file = Selected();
         if (io.KeyCtrl)
@@ -386,6 +372,8 @@ namespace Idler::SpriteCreator
                 StepBack(*file);
             else if (ImGui::IsKeyPressed(ImGuiKey_S, false))
                 SaveSelected();
+            else if (ImGui::IsKeyPressed(ImGuiKey_N, false))
+                OpenNewCreature();
             return;
         }
         if (io.KeyAlt)
@@ -557,7 +545,12 @@ namespace Idler::SpriteCreator
         const ImVec2 windowPos = ImGui::GetWindowPos();
         const ImVec2 resume = ImGui::GetCursorScreenPos();
         const float side = std::round(Px(22.0f));
-        ImGui::SetCursorScreenPos(ImVec2(windowPos.x + ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x - side, windowPos.y + Px(8.0f)));
+        const float right = windowPos.x + ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x;
+        ImGui::SetCursorScreenPos(ImVec2(right - side * 2.0f - Px(4.0f), windowPos.y + Px(8.0f)));
+        if (IconButton("##new", ICON_FA_PLUS, side, ManifoldTheme::Accent, false, m_folderExists))
+            OpenNewCreature();
+        Tooltip("New creature (Ctrl+N)");
+        ImGui::SetCursorScreenPos(ImVec2(right - side, windowPos.y + Px(8.0f)));
         if (IconButton("##reload", ICON_FA_SYNC, side, ManifoldTheme::Accent))
         {
             if (UnsavedCount() > 0)
@@ -647,74 +640,6 @@ namespace Idler::SpriteCreator
         EndCard();
     }
 
-    void Screen::DrawProperties(float width, float height)
-    {
-        const CreatureFile* file = Selected();
-        BeginCard("##properties", ICON_FA_SLIDERS_H, "Properties", ImVec2(width, height));
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::BeginChild("##properties_body", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-        ImGui::PopStyleColor();
-        if (!file)
-        {
-            MutedText("Choose a creature in the Explorer.");
-        }
-        else
-        {
-            const ImVec2 at = ImGui::GetCursorScreenPos();
-            BoldText(ImGui::GetWindowDrawList(), at, ManifoldTheme::Text, file->Name.c_str());
-            ImGui::Dummy(ImVec2(BoldWidth(file->Name.c_str()), ImGui::GetTextLineHeight()));
-            FactRow("Key", file->Key, ManifoldTheme::Label);
-            FactRow("File", WideToUtf8(file->Path.filename().wstring()), ManifoldTheme::Label);
-            if (file->Sprite)
-            {
-                const SpriteFile::Sprite& sprite = *file->Sprite;
-                char loop[32];
-                std::snprintf(loop, sizeof(loop), "%.1f s", SpriteFile::LoopSeconds(sprite));
-                FactRow("Frames", std::to_string(sprite.Frames.size()));
-                FactRow("Steps", std::to_string(sprite.Steps.size()) + ", " + loop);
-                FactRow("Moves", HabitName(SpriteHabit(sprite)));
-                FactRow("Faces", sprite.Facing < 0 ? "left" : sprite.Facing > 0 ? "right" : "ahead");
-                ColorRow("Body", sprite.Body);
-                ColorRow("Second", sprite.Second);
-                ColorRow("Third", sprite.Third);
-            }
-
-            ImGui::Dummy(ImVec2(0.0f, Px(6.0f)));
-            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
-            ImGui::TextUnformatted("Checks");
-            ImGui::PopStyleColor();
-            if (!file->Sprite)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Error);
-                ImGui::TextWrapped(ICON_FA_TIMES_CIRCLE " %s", ErrorMessage(ErrorCode::SpriteNotRead, file->Problem).c_str());
-                ImGui::PopStyleColor();
-            }
-            else if (file->Findings.Errors.empty() && file->Findings.Warnings.empty())
-            {
-                ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Accent);
-                ImGui::TextUnformatted(ICON_FA_CHECK_CIRCLE " Nothing to fix");
-                ImGui::PopStyleColor();
-            }
-            else
-            {
-                for (const std::string& error : file->Findings.Errors)
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Error);
-                    ImGui::TextWrapped(ICON_FA_TIMES_CIRCLE " %s", error.c_str());
-                    ImGui::PopStyleColor();
-                }
-                for (const std::string& warning : file->Findings.Warnings)
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Warning);
-                    ImGui::TextWrapped(ICON_FA_EXCLAMATION_TRIANGLE " %s", warning.c_str());
-                    ImGui::PopStyleColor();
-                }
-            }
-        }
-        ImGui::EndChild();
-        EndCard();
-    }
-
     void Screen::DrawUnsavedQuestion()
     {
         if (m_pending == Pending::None)
@@ -788,6 +713,214 @@ namespace Idler::SpriteCreator
         ImGui::EndPopup();
     }
 
+    void Screen::OpenNewCreature()
+    {
+        if (!m_folderExists || m_paint.Stroking || m_pending != Pending::None)
+            return;
+        m_new = {};
+        m_new.Open = true;
+        m_new.Focus = true;
+    }
+
+    void Screen::CreateCreature(const std::string& key, const std::string& id, const CreatureFile* source, const CreatureFile* firstForm)
+    {
+        SpriteFile::Sprite sprite = source && source->Sprite ? *source->Sprite : StarterSprite();
+        if (firstForm && firstForm->Sprite)
+        {
+            const SpriteFile::Sprite& first = *firstForm->Sprite;
+            sprite.Facing = first.Facing;
+            sprite.Floats = first.Floats;
+            sprite.Swims = first.Swims;
+            sprite.Stays = first.Stays;
+            if (!source)
+            {
+                sprite.Body = first.Body;
+                sprite.Second = first.Second;
+                sprite.Third = first.Third;
+            }
+        }
+        CreatureFile created = NewCreature(m_folder, key, id, std::move(sprite), firstForm != nullptr);
+        const std::string createdKey = created.Key;
+        m_files.push_back(std::move(created));
+        SortCreatures(m_files);
+        m_selected = -1;
+        m_search.fill('\0');
+        Select(createdKey);
+        Say("Made " + createdKey + ". It is written when you save (Ctrl+S).", false);
+    }
+
+    void Screen::DrawNewCreature()
+    {
+        if (!m_new.Open)
+            return;
+        if (!ImGui::IsPopupOpen("##new_creature"))
+            ImGui::OpenPopup("##new_creature");
+
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(std::round(Px(500.0f)), 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, PxWhole(18.0f, 16.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, Px(8.0f));
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, ManifoldTheme::Card);
+        const bool open = ImGui::BeginPopupModal("##new_creature", nullptr,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar(2);
+        if (!open)
+            return;
+
+        constexpr const char* kTitle = "New creature";
+        BoldText(ImGui::GetWindowDrawList(), ImGui::GetCursorScreenPos(), ManifoldTheme::Text, kTitle);
+        ImGui::Dummy(ImVec2(BoldWidth(kTitle), ImGui::GetTextLineHeight()));
+        ImGui::Dummy(ImVec2(0.0f, Px(4.0f)));
+
+        const float labelWidth = std::round(Px(96.0f));
+        const CreatureFile* selected = Selected();
+        const CreatureFile* firstForm = FirstFormFor(selected);
+        if (!firstForm)
+            m_new.Evolved = false;
+        const bool canCopy = selected && selected->Sprite;
+        if (!canCopy)
+            m_new.Copy = false;
+
+        FieldLabel("Make", labelWidth);
+        if (Segment("##kind_new", "A new creature", !m_new.Evolved))
+        {
+            m_new.Evolved = false;
+            m_new.Focus = true;
+        }
+        ImGui::SameLine(0.0f, Px(4.0f));
+        const std::string evolvedLabel = firstForm ? "The evolved form of " + firstForm->Name : std::string("An evolved form");
+        if (Segment("##kind_evolved", evolvedLabel.c_str(), m_new.Evolved, firstForm != nullptr))
+            m_new.Evolved = true;
+        if (!firstForm)
+            Tooltip("Choose a creature without an evolved form in the Explorer first");
+
+        const auto keyFilter = [](ImGuiInputTextCallbackData* data) -> int
+            {
+                const ImWchar c = data->EventChar;
+                if (c >= 'A' && c <= 'Z')
+                {
+                    data->EventChar = static_cast<ImWchar>(c - 'A' + 'a');
+                    return 0;
+                }
+                return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ? 0 : 1;
+            };
+        const auto idFilter = [](ImGuiInputTextCallbackData* data) -> int
+            {
+                const ImWchar c = data->EventChar;
+                return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ? 0 : 1;
+            };
+
+        std::string key;
+        std::string id;
+        if (m_new.Evolved && firstForm)
+        {
+            key = std::string(StemOf(*firstForm));
+            id = firstForm->Sprite->Id;
+            FieldLabel("Key", labelWidth);
+            ImGui::TextUnformatted(("evolved/" + key).c_str());
+            FieldLabel("Id", labelWidth);
+            ImGui::TextUnformatted(id.c_str());
+        }
+        else
+        {
+            FieldLabel("Key", labelWidth);
+            ImGui::SetNextItemWidth(std::round(Px(200.0f)));
+            if (m_new.Focus)
+            {
+                ImGui::SetKeyboardFocusHere();
+                m_new.Focus = false;
+            }
+            if (ImGui::InputText("##key", m_new.Key.data(), m_new.Key.size(), ImGuiInputTextFlags_CallbackCharFilter, keyFilter) && !m_new.IdEdited)
+            {
+                const std::string suggested = IdFromKey(m_new.Key.data()).substr(0, m_new.Id.size() - 1);
+                m_new.Id.fill('\0');
+                std::copy(suggested.begin(), suggested.end(), m_new.Id.begin());
+            }
+            ImGui::SameLine(0.0f, Px(10.0f));
+            ImGui::AlignTextToFramePadding();
+            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
+            ImGui::TextUnformatted("its file name");
+            ImGui::PopStyleColor();
+
+            FieldLabel("Id", labelWidth);
+            ImGui::SetNextItemWidth(std::round(Px(200.0f)));
+            if (ImGui::InputText("##id", m_new.Id.data(), m_new.Id.size(), ImGuiInputTextFlags_CallbackCharFilter, idFilter))
+                m_new.IdEdited = std::string_view(m_new.Id.data()) != IdFromKey(m_new.Key.data());
+            ImGui::SameLine(0.0f, Px(10.0f));
+            ImGui::AlignTextToFramePadding();
+            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
+            ImGui::TextUnformatted("its name in the program code");
+            ImGui::PopStyleColor();
+            key = m_new.Key.data();
+            id = m_new.Id.data();
+        }
+
+        FieldLabel("Start from", labelWidth);
+        if (Segment("##start_shape", "A simple shape", !m_new.Copy))
+            m_new.Copy = false;
+        ImGui::SameLine(0.0f, Px(4.0f));
+        const std::string copyLabel = canCopy ? "A copy of " + selected->Name : std::string("A copy");
+        if (Segment("##start_copy", copyLabel.c_str(), m_new.Copy, canCopy))
+            m_new.Copy = true;
+        if (!canCopy)
+            Tooltip("Choose the creature to copy in the Explorer first");
+
+        std::string problem;
+        if (!m_new.Evolved)
+        {
+            std::error_code ignored;
+            const bool keyTaken = std::any_of(m_files.begin(), m_files.end(), [&](const CreatureFile& file) { return !file.Evolved && StemOf(file) == key; })
+                || (!key.empty() && std::filesystem::exists(m_folder / (key + ".json"), ignored));
+            const bool idTaken = std::any_of(m_files.begin(), m_files.end(), [&](const CreatureFile& file) { return !file.Evolved && file.Sprite && file.Sprite->Id == id; });
+            if (key.empty())
+                problem = "Give it a key: small letters and digits, starting with a letter.";
+            else if (!IsKeyText(key))
+                problem = "A key starts with a letter and has at most 32 small letters and digits.";
+            else if (keyTaken)
+                problem = "There is a creature with this key already.";
+            else if (!IsIdText(id))
+                problem = "An id starts with a capital letter and has at most 32 letters and digits.";
+            else if (idTaken)
+                problem = "Another creature has this id already.";
+        }
+        ImGui::Dummy(ImVec2(0.0f, Px(4.0f)));
+        if (!problem.empty())
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, key.empty() ? ManifoldTheme::Muted : ManifoldTheme::Warning);
+            ImGui::TextWrapped("%s", problem.c_str());
+            ImGui::PopStyleColor();
+        }
+        else
+        {
+            const std::string where = m_new.Evolved ? "creatures/evolved/" + key + ".json" : "creatures/" + key + ".json";
+            MutedText(("Saving writes " + where + ".").c_str());
+        }
+        ImGui::Dummy(ImVec2(0.0f, Px(8.0f)));
+
+        bool create = false;
+        bool cancel = ImGui::IsKeyPressed(ImGuiKey_Escape, false);
+        ImGui::BeginDisabled(!problem.empty());
+        if (DialogButton("Make it", true))
+            create = true;
+        ImGui::EndDisabled();
+        if (problem.empty() && (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false)))
+            create = true;
+        ImGui::SameLine();
+        if (DialogButton("Cancel", false))
+            cancel = true;
+
+        if (create || cancel)
+        {
+            m_new.Open = false;
+            ImGui::CloseCurrentPopup();
+            if (create)
+                CreateCreature(key, id, m_new.Copy ? selected : nullptr, m_new.Evolved ? firstForm : nullptr);
+        }
+        ImGui::EndPopup();
+    }
+
     void Screen::Draw(WindowControls& window)
     {
         HandleKeys();
@@ -837,24 +970,24 @@ namespace Idler::SpriteCreator
         const float width = ImGui::GetWindowWidth() - pad * 2.0f;
         const float height = windowPos.y + ImGui::GetWindowHeight() - pad - start.y;
 
-        const float explorer = std::round(Px(270.0f));
+        const float explorer = std::round(Px(240.0f));
         const float side = std::round(Px(330.0f));
         const float timeline = std::round(Px(200.0f));
         const float upper = std::max(Px(200.0f), height - timeline - gap);
-        const float paint = std::max(Px(160.0f), width - explorer - side - gap * 2.0f);
+        const float middle = std::max(Px(160.0f), width - explorer - side - gap * 2.0f);
         const ImGuiStyle& style = ImGui::GetStyle();
         const float tileHeight = std::round(Px(3.0f)) * static_cast<float>(UI::CreatureSprites::kRows) + Px(14.0f) + ImGui::GetTextLineHeight() + Px(8.0f);
         const float previewBox = (side - Px(28.0f)) * 0.62f;
         const float previewNeeds = Px(24.0f) + ImGui::GetTextLineHeight() + Px(4.0f) + style.ItemSpacing.y * 6.0f + previewBox + tileHeight * 2.0f + Px(4.0f);
-        const float previewHeight = std::round(std::min(upper * 0.7f, previewNeeds));
+        const float previewHeight = std::round(std::min(height * 0.6f, previewNeeds));
         const float middleX = start.x + explorer + gap;
-        const float sideX = middleX + paint + gap;
+        const float sideX = middleX + middle + gap;
 
         ImGui::SetCursorScreenPos(start);
         DrawExplorer(explorer, height);
 
         ImGui::SetCursorScreenPos(ImVec2(middleX, start.y));
-        const PaintRequests requests = DrawPaintCard(Selected(), m_paint, ImVec2(paint, upper));
+        const PaintRequests requests = DrawPaintCard(Selected(), m_paint, ImVec2(middle, upper));
         if (CreatureFile* file = Selected(); file && !m_paint.Stroking)
         {
             if (requests.Undo)
@@ -865,16 +998,20 @@ namespace Idler::SpriteCreator
         if (requests.Save)
             SaveSelected();
 
+        ImGui::SetCursorScreenPos(ImVec2(middleX, start.y + upper + gap));
+        DrawTimelineCard(Selected(), m_paint, m_timeline, ImVec2(middle, timeline));
+
         ImGui::SetCursorScreenPos(ImVec2(sideX, start.y));
         DrawPreview(side, previewHeight);
 
         ImGui::SetCursorScreenPos(ImVec2(sideX, start.y + previewHeight + gap));
-        DrawProperties(side, upper - previewHeight - gap);
-
-        ImGui::SetCursorScreenPos(ImVec2(middleX, start.y + upper + gap));
-        DrawTimelineCard(Selected(), m_paint, m_timeline, ImVec2(paint + gap + side, timeline));
+        CreatureFile* file = Selected();
+        const PropertiesRequests asked = DrawPropertiesCard(file, file ? Counterpart(*file) : nullptr, m_properties, ImVec2(side, height - previewHeight - gap));
+        if (asked.JumpFrame >= 0 || asked.JumpStep >= 0)
+            Jump(asked);
 
         DrawUnsavedQuestion();
+        DrawNewCreature();
         ImGui::End();
     }
 }

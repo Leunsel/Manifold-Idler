@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Idler::SpriteCreator
@@ -30,10 +31,11 @@ namespace Idler::SpriteCreator
         std::string Problem;
         SpriteFile::Findings Findings;
 
-        bool Dirty() const { return Sprite && Saved && *Sprite != *Saved; }
+        bool Dirty() const { return Sprite && (!Saved || *Sprite != *Saved); }
     };
 
     std::vector<CreatureFile> LoadCreatures(const std::filesystem::path& folder);
+    void SortCreatures(std::vector<CreatureFile>& files);
     Habit SpriteHabit(const SpriteFile::Sprite& sprite);
 
     void Refresh(CreatureFile& file);
@@ -42,6 +44,12 @@ namespace Idler::SpriteCreator
     bool StepBack(CreatureFile& file);
     bool StepForward(CreatureFile& file);
     bool SaveCreature(CreatureFile& file, std::string& problem);
+
+    bool IsKeyText(std::string_view key);
+    bool IsIdText(std::string_view id);
+    std::string IdFromKey(std::string_view key);
+    SpriteFile::Sprite StarterSprite();
+    CreatureFile NewCreature(const std::filesystem::path& folder, std::string key, std::string id, SpriteFile::Sprite sprite, bool evolved);
 
     template <typename Edit>
     bool Change(CreatureFile& file, Edit&& edit)

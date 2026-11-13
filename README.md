@@ -70,9 +70,9 @@ Settings, statistics and the log are kept next to the program: `Manifold-Idler.i
 
 ## Download
 
-The [Releases](../../releases) page has the window program and the CLI for Windows and Linux. Unzip and start; nothing
-needs installing but SDL3 for the Linux window program (`sudo pacman -S sdl3` on Arch and CachyOS). Steam has to run, logged
-on and online.
+The [Releases](../../releases) page has the window program and the CLI for Windows and Linux, and the Sprite Creator for
+Windows. Unzip and start; nothing needs installing but SDL3 for the Linux window program (`sudo pacman -S sdl3` on Arch and
+CachyOS). Steam has to run, logged on and online; the Sprite Creator does without it.
 
 ## How it works
 
@@ -93,17 +93,43 @@ Built in, but off in released builds. `Windows/Tools/build-alt.cmd` builds a ver
 into `Build/Windows/Alt`. It signs in through Steam's own page in a WebView2 dialog and keeps no password, cookie or token itself. It reads
 the badge pages and farms the games with drops left: those past the warm-up (3 hours) one at a time, the rest together.
 
+## Sprite Creator
+
+`Manifold-Idler-Sprite-Creator.exe` is an editor for the creature pictures, for Windows. It opens the `creatures` folder
+next to it, or `Tools/CreatureForge/creatures` when it runs inside a copy of the repository; `--creatures=<folder>` names
+another one. Its release zip holds every creature file and [the style guide](Tools/CreatureForge/STYLE.md).
+
+- **Explorer**: every creature and evolved form with its picture and the number of open checks, the scenes to look at it
+  in and the light. **+** (Ctrl+N) starts a new creature, from a simple shape or as a copy of the chosen one, or the evolved
+  form of a creature that has none yet.
+- **Paint**: pencil (B), eraser (E), fill (G), line (L), rectangle (R, Shift for a filled one), picker (I or Alt+click) and
+  move (M). The left button paints the first colour of the palette, the right button the second. X paints mirrored, O shows
+  the previous frame faintly, H flips the frame, Page Up and Page Down change it.
+- **Timeline**: the frames, to add, copy, move or remove and to choose the one it sleeps in, and the steps that play them,
+  each with its length, lift, sideways shift and closed eyes. Space plays the loop.
+- **Preview**: the creature in the chosen scene and the way the idler shows it in lists, in the collection, asleep, shiny
+  and not found yet, next to its other form.
+- **Properties**: the three colours, the way it faces, whether it floats, swims or stays in one place, and whether it has
+  no eyes on purpose. An evolved form moves like its first form, so those switches follow the first form. Below them are the
+  checks of the forge; a click on one that names a frame or a step opens it.
+
+Ctrl+Z and Ctrl+Y undo and redo, Ctrl+S saves the chosen creature. The files are written exactly the way the forge writes
+them, so a change shows as a small diff. The idler is built with the pictures: after a change, write the header with
+`forge.py header` and build it again. A new creature also needs an entry in `Source/Core/Creatures.h` and a place in the
+lists of `forge.py` before the idler shows it.
+
 ## Building
 
-The repository holds three programs that share one core:
+The repository holds the programs and the core they share:
 
 | Folder | Program | Built with |
 |---|---|---|
-| `Windows/` | the window program for Windows (Win32, Direct3D 11, WebView2) | Visual Studio 2022 (v143), `Manifold-Idler.sln`, x64 |
+| `Windows/` | the window program and the Sprite Creator for Windows (Win32, Direct3D 11, WebView2) | Visual Studio 2022 (v143), `Manifold-Idler.sln`, x64 |
 | `Linux/` | the window program for Linux (SDL3, OpenGL 3) | CMake, or Zig from any system: [Linux/README.md](Linux/README.md) |
 | `CLI/` | `idler`, without a window, for Windows and Linux | CMake: [CLI/README.md](CLI/README.md) |
 
-- `Source/`: what the three share, from the queue and the Steam access to the window programs' pages.
+- `Source/`: what they share, from the queue and the Steam access to the window programs' pages; `Source/SpriteCreator` is
+  the Sprite Creator's screen.
 - `Tests/`: the core tests, `Manifold-Idler.Tests` in the solution and `idler_core_tests` in the CLI.
 - `Dependencies/`: everything vendored. Dear ImGui 1.92.9b, the SDL3 headers, stb, Microsoft's WebView2 SDK 1.0.4314.35,
   CLI11, and the fonts (Noto Sans, Font Awesome, Press Start 2P, VT323).
@@ -114,11 +140,11 @@ The repository holds three programs that share one core:
 The window program and the CLI share their settings, lists and statistics: on Linux always, on Windows when `idler.exe` lies
 next to `Manifold-Idler.exe`. Only one of them runs on a settings file at a time.
 
-GitHub Actions builds the window program for Windows and Linux and the CLI for both on every push, and runs the tests. A tag
-`v*` puts the programs on a release.
+GitHub Actions builds the window program for Windows and Linux, the CLI for both and the Sprite Creator on every push, and
+runs the tests. A tag `v*` puts the programs on a release.
 
-Creature pictures are JSON files in `Tools/CreatureForge/creatures`; `Source/UI/CreatureSprites.h` is generated from them, and the
-core tests fail while it is behind them:
+Creature pictures are JSON files in `Tools/CreatureForge/creatures`, drawn in the [Sprite Creator](#sprite-creator) or by
+hand; `Source/UI/CreatureSprites.h` is generated from them, and the core tests fail while it is behind them:
 
 ```text
 py Tools/CreatureForge/forge.py sheet <key>                          renders out/<key>.png and checks the creature

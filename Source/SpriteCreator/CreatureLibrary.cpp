@@ -109,6 +109,8 @@ namespace Idler::SpriteCreator
             return false;
         }
         const std::string text = SpriteFile::Write(*file.Sprite);
+        std::error_code folderError;
+        std::filesystem::create_directories(file.Path.parent_path(), folderError);
         std::filesystem::path temporary = file.Path;
         temporary += L".saving";
         {
@@ -153,6 +155,12 @@ namespace Idler::SpriteCreator
             }
             ignored.clear();
         }
+        SortCreatures(files);
+        return files;
+    }
+
+    void SortCreatures(std::vector<CreatureFile>& files)
+    {
         std::stable_sort(files.begin(), files.end(), [](const CreatureFile& lhs, const CreatureFile& rhs)
             {
                 if (lhs.Evolved != rhs.Evolved)
@@ -163,11 +171,71 @@ namespace Idler::SpriteCreator
                     return *lhs.Id < *rhs.Id;
                 return lhs.Key < rhs.Key;
             });
-        return files;
     }
 
     Habit SpriteHabit(const SpriteFile::Sprite& sprite)
     {
         return sprite.Stays ? Habit::Stays : sprite.Swims.value_or(false) ? Habit::Swims : sprite.Floats ? Habit::Floats : Habit::Walks;
+    }
+
+    bool IsKeyText(std::string_view key)
+    {
+        if (key.empty() || key.size() > 32 || key.front() < 'a' || key.front() > 'z')
+            return false;
+        return std::all_of(key.begin(), key.end(), [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'); });
+    }
+
+    bool IsIdText(std::string_view id)
+    {
+        if (id.empty() || id.size() > 32 || id.front() < 'A' || id.front() > 'Z')
+            return false;
+        return std::all_of(id.begin(), id.end(), [](char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); });
+    }
+
+    std::string IdFromKey(std::string_view key)
+    {
+        std::string id(key);
+        if (!id.empty() && id.front() >= 'a' && id.front() <= 'z')
+            id.front() = static_cast<char>(id.front() - 'a' + 'A');
+        return id;
+    }
+
+    SpriteFile::Sprite StarterSprite()
+    {
+        SpriteFile::Sprite sprite;
+        sprite.Body = { SpriteFile::ColorKind::Accent, 0 };
+        sprite.Frames = { {
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            ".....######.....",
+            "...##########...",
+            "..###+########..",
+            "..##+#########..",
+            "..###**##**###..",
+            "..###**##**##o..",
+            "..###########o..",
+            "...#########oo..",
+            "....########o...",
+        } };
+        sprite.Steps = { { 0, 0, 0, false, 24 }, { 0, 0, 0, true, 1 }, { 0, 0, 0, false, 8 } };
+        return sprite;
+    }
+
+    CreatureFile NewCreature(const std::filesystem::path& folder, std::string key, std::string id, SpriteFile::Sprite sprite, bool evolved)
+    {
+        CreatureFile file;
+        file.Evolved = evolved;
+        file.Key = evolved ? "evolved/" + key : key;
+        file.Path = (evolved ? folder / "evolved" : folder) / (key + ".json");
+        file.Id = CreatureWithKey(key);
+        file.Name = NameOf(file.Id, evolved, key);
+        sprite.Key = file.Key;
+        sprite.Id = std::move(id);
+        file.Sprite = std::move(sprite);
+        Refresh(file);
+        return file;
     }
 }
