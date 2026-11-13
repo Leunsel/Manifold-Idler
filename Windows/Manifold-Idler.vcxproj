@@ -139,6 +139,17 @@
     <ClCompile Include="..\Source\UI\Scenes\StageMeadow.cpp" />
     <ClCompile Include="..\Source\UI\Scenes\StageUnderwater.cpp" />
     <ClCompile Include="..\Source\UI\ScreenMain.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenCards.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenCommon.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenCreatures.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenDialogs.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenGameWindow.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenIdling.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenLibrary.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenLog.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenSettings.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenStatistics.cpp" />
+    <ClCompile Include="..\Source\UI\Screen\ScreenToasts.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Resource.h" />
@@ -200,6 +211,7 @@
     <ClInclude Include="..\Source\UI\SceneKit.h" />
     <ClInclude Include="..\Source\UI\MiniGameView.h" />
     <ClInclude Include="..\Source\UI\ScreenMain.h" />
+    <ClInclude Include="..\Source\UI\Screen\Screen.h" />
     <ClInclude Include="..\Source\UI\Theme.h" />
     <ClInclude Include="..\Source\UI\UiScale.h" />
   </ItemGroup>

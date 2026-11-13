@@ -21,6 +21,7 @@ TARGET = "x86_64-linux-gnu.2.31"
 CORE = ["AppInfo", "Backups", "Cards", "CrashReport", "Creatures", "Deflate", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "Releases", "RuntimeLog", "Settings", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy", "Zip"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "SteamWebNone", "Worker", "WorkerProcessPosix"]
 UI = ["Covers", "Fonts", "IdleAnimation", "MenuWidgets", "MiniGameView", "SceneKit", "ScreenMain", "SpriteView", "TerrariumView",
+      "Screen/ScreenCards", "Screen/ScreenCommon", "Screen/ScreenCreatures", "Screen/ScreenDialogs", "Screen/ScreenGameWindow", "Screen/ScreenIdling", "Screen/ScreenLibrary", "Screen/ScreenLog", "Screen/ScreenSettings", "Screen/ScreenStatistics", "Screen/ScreenToasts",
       "Scenes/HomeAutumn", "Scenes/HomeSpring", "Scenes/HomeSummer", "Scenes/HomeWinter", "Scenes/StageClouds", "Scenes/StageMeadow", "Scenes/StageUnderwater"]
 APP = ["IdlerModel", "CardService", "CrashHandlerPosix", "ReleaseCheckCurl"]
 OWN = ["MainSdl", "App/SdlApplication", "App/Gl", "App/WebPanelNone", "App/DesktopLinux", "UI/CoversSdl"]

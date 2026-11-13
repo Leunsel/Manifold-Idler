@@ -31,6 +31,9 @@
     <Filter Include="Source\UI">
       <UniqueIdentifier>{b8271103-7aa4-5dbb-b5a8-06507a054a4d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\UI\Screen">
+      <UniqueIdentifier>{cd8073cc-4940-5c6a-a4bb-69bf12860351}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\UI\Scenes">
       <UniqueIdentifier>{9fd4dcc7-3ffc-568b-92b5-ce019f406958}</UniqueIdentifier>
     </Filter>
@@ -209,6 +212,39 @@
     </ClCompile>
     <ClCompile Include="..\Source\UI\ScreenMain.cpp">
       <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenCards.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenCommon.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenCreatures.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenDialogs.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenGameWindow.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenIdling.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenLibrary.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenLog.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenSettings.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenStatistics.cpp">
+      <Filter>Source\UI\Screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\UI\Screen\ScreenToasts.cpp">
+      <Filter>Source\UI\Screen</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\UI\TerrariumView.cpp">
       <Filter>Source\UI</Filter>
@@ -409,6 +445,9 @@
     </ClInclude>
     <ClInclude Include="..\Source\UI\ScreenMain.h">
       <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\Screen\Screen.h">
+      <Filter>Source\UI\Screen</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\StageScene.h">
       <Filter>Source\UI</Filter>
