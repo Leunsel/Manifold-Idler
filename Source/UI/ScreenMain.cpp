@@ -5542,10 +5542,6 @@ namespace Idler::UI
                 "You appear offline to friends while games idle. Afterwards your status goes back to online, also if you had set another one.", options.InvisibleWhileIdling);
             EndCard();
 
-            BeginCard("New games in the queue");
-            GoalControls("##default_goal", options.DefaultGoal, changed);
-            EndCard();
-
             BeginCard("Window");
             if (app.HasTray())
                 changed |= ToggleRow("Keep idling in the tray", "Closing the window while games idle moves it to the tray instead of ending the program.", options.KeepInTray);
@@ -5808,16 +5804,28 @@ namespace Idler::UI
             BackupDialog(app);
         }
 
+        void NewGamesCard(IdlerModel& model)
+        {
+            bool changed = false;
+            BeginCard("New games in the queue");
+            GoalControls("##default_goal", model.Options().DefaultGoal, changed);
+            EndCard();
+            if (changed)
+                model.SaveNow();
+        }
+
         void SettingsPage(Shell& app)
         {
             BeginPage(app, "");
             ImGui::BeginChild("##settings_width", ImVec2(std::min(ImGui::GetContentRegionAvail().x, Px(kSettingsWidth)), 0.0f), ImGuiChildFlags_None,
-                ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                ImGuiWindowFlags_NoBackground);
+            SetScrollSurface(ManifoldTheme::Page);
             CardColumns("##settings_columns",
                 [&]()
                 {
                     SteamCard(app.Model());
                     WhenCard(app.Model());
+                    NewGamesCard(app.Model());
                     BackupsCard(app);
                 },
                 [&]() { BehaviourCard(app); });
