@@ -13,6 +13,8 @@ namespace Idler::SpriteCreator
         double Started = 0.0;
         int Step = -1;
         int SeenFrame = -1;
+        double Position = 0.0;
+        bool Settle = false;
     };
 
     void TogglePlaying(TimelineState& timeline);

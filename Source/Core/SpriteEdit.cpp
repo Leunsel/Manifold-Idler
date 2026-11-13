@@ -260,6 +260,15 @@ namespace Idler::SpriteEdit
         return total;
     }
 
+    int TicksBefore(const SpriteFile::Sprite& sprite, int step)
+    {
+        int total = 0;
+        const std::size_t end = static_cast<std::size_t>(std::clamp(step, 0, static_cast<int>(sprite.Steps.size())));
+        for (std::size_t index = 0; index < end; ++index)
+            total += std::max(0, sprite.Steps[index].Ticks);
+        return total;
+    }
+
     int StepAtTick(const SpriteFile::Sprite& sprite, long long tick)
     {
         const int total = TotalTicks(sprite);

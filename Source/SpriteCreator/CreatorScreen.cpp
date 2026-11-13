@@ -220,6 +220,9 @@ namespace Idler::SpriteCreator
         m_paint.Frame = 0;
         m_timeline.Step = -1;
         m_timeline.SeenFrame = -1;
+        m_timeline.Position = 0.0;
+        m_timeline.Settle = false;
+        m_timeline.Started = ImGui::GetCurrentContext() ? ImGui::GetTime() : 0.0;
     }
 
     CreatureFile* Screen::Selected()
@@ -267,7 +270,9 @@ namespace Idler::SpriteCreator
         CreatureFile* file = Selected();
         if (!file || !file->Sprite || m_paint.Stroking)
             return;
-        m_timeline.Playing = false;
+        if (m_timeline.Playing)
+            TogglePlaying(m_timeline);
+        m_timeline.Settle = false;
         const std::vector<SpriteFile::Step>& steps = file->Sprite->Steps;
         int frame = requests.JumpFrame;
         if (requests.JumpStep >= 0 && requests.JumpStep < static_cast<int>(steps.size()))

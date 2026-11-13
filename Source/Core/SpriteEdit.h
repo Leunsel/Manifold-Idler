@@ -54,4 +54,5 @@ namespace Idler::SpriteEdit
     bool MoveStep(SpriteFile::Sprite& sprite, int from, int to);
     int StepAtTick(const SpriteFile::Sprite& sprite, long long tick);
     int TotalTicks(const SpriteFile::Sprite& sprite);
+    int TicksBefore(const SpriteFile::Sprite& sprite, int step);
 }

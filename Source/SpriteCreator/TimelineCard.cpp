@@ -35,11 +35,105 @@ namespace Idler::SpriteCreator
             return (ImGui::GetTime() - timeline.Started) / SpriteFile::kTickSeconds;
         }
 
-        void Label(const char* text, float width)
+        float ThinScrollbar()
         {
+            return std::round(Px(8.0f));
+        }
+
+        float RulerHeight()
+        {
+            return std::round(Px(18.0f));
+        }
+
+        float TrackHeight()
+        {
+            return std::round(Px(34.0f));
+        }
+
+        double Now(const TimelineState& timeline, int total)
+        {
+            if (total <= 0)
+                return 0.0;
+            const double ticks = timeline.Playing ? PlayedTicks(timeline) : timeline.Position;
+            const double wrapped = std::fmod(ticks, static_cast<double>(total));
+            return wrapped < 0.0 ? wrapped + static_cast<double>(total) : wrapped;
+        }
+
+        void SeekTo(const SpriteFile::Sprite& sprite, PaintState& paint, TimelineState& timeline, double ticks)
+        {
+            timeline.Position = ticks;
+            if (timeline.Playing)
+            {
+                timeline.Started = ImGui::GetTime() - ticks * SpriteFile::kTickSeconds;
+                return;
+            }
+            timeline.Step = SpriteEdit::StepAtTick(sprite, static_cast<long long>(std::floor(ticks)));
+            if (timeline.Step < 0 || paint.Stroking)
+                return;
+            const int frame = sprite.Steps[static_cast<std::size_t>(timeline.Step)].Frame;
+            if (frame >= 0 && frame < static_cast<int>(sprite.Frames.size()))
+                paint.Frame = frame;
+        }
+
+        void StepsHeader(const SpriteFile::Sprite& sprite, const TimelineState& timeline, float width)
+        {
+            const int total = SpriteEdit::TotalTicks(sprite);
+            const double now = Now(timeline, total);
             const ImVec2 at = ImGui::GetCursorScreenPos();
-            ImGui::GetWindowDrawList()->AddText(ImVec2(at.x, at.y), Color(ManifoldTheme::Muted), text);
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            drawList->AddText(at, Color(ManifoldTheme::Muted), "Steps");
+            char readout[64];
+            std::snprintf(readout, sizeof(readout), "%.2f s  \xC2\xB7  tick %d of %d", now * SpriteFile::kTickSeconds, static_cast<int>(std::floor(now)), total);
+            const float readoutWidth = ImGui::CalcTextSize(readout).x;
+            drawList->AddText(ImVec2(std::round(at.x + width - readoutWidth), at.y), Color(timeline.Playing ? ManifoldTheme::Accent : ManifoldTheme::Label), readout);
             ImGui::Dummy(ImVec2(width, ImGui::GetTextLineHeight()));
+        }
+
+        void Ruler(ImDrawList* drawList, ImVec2 origin, float tick, int total, float height)
+        {
+            const float labelRoom = ImGui::CalcTextSize("00.0 s").x + Px(12.0f);
+            constexpr int kLabelSteps[] = { 4, 8, 16, 40, 80, 160, 400, 800 };
+            int labelEvery = kLabelSteps[std::size(kLabelSteps) - 1];
+            for (const int candidate : kLabelSteps)
+            {
+                if (static_cast<float>(candidate) * tick >= labelRoom)
+                {
+                    labelEvery = candidate;
+                    break;
+                }
+            }
+            constexpr int kMarkSteps[] = { 1, 2, 4, 8 };
+            int markEvery = labelEvery;
+            for (const int candidate : kMarkSteps)
+            {
+                if (static_cast<float>(candidate) * tick >= Px(5.0f) && labelEvery % candidate == 0)
+                {
+                    markEvery = candidate;
+                    break;
+                }
+            }
+
+            const float bottom = origin.y + height;
+            const float right = std::round(origin.x + tick * static_cast<float>(total));
+            drawList->AddRectFilled(origin, ImVec2(right, bottom), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, 0.03f)), Px(3.0f), ImDrawFlags_RoundCornersTop);
+            drawList->AddLine(ImVec2(origin.x, bottom - 0.5f), ImVec2(right, bottom - 0.5f), Color(ManifoldTheme::RowSeparator));
+            for (int at = 0; at < total; at += markEvery)
+            {
+                const float x = std::round(origin.x + tick * static_cast<float>(at));
+                const bool labelled = at % labelEvery == 0;
+                const bool second = at % 8 == 0;
+                const float length = labelled ? std::round(height * 0.5f) : second ? std::round(Px(6.0f)) : std::round(Px(3.0f));
+                drawList->AddLine(ImVec2(x + 0.5f, bottom - length), ImVec2(x + 0.5f, bottom), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, labelled ? 0.45f : 0.22f)));
+                if (!labelled)
+                    continue;
+                char text[16];
+                if (at % 8 == 0)
+                    std::snprintf(text, sizeof(text), "%d s", at / 8);
+                else
+                    std::snprintf(text, sizeof(text), "%.1f s", static_cast<double>(at) * SpriteFile::kTickSeconds);
+                drawList->AddText(ImVec2(x + Px(4.0f), origin.y + Px(1.0f)), Color(ManifoldTheme::Muted), text);
+            }
+            drawList->AddLine(ImVec2(right - 0.5f, origin.y + Px(2.0f)), ImVec2(right - 0.5f, bottom), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, 0.45f)));
         }
 
         void Header(const CreatureFile& file, TimelineState& timeline)
@@ -148,8 +242,9 @@ namespace Idler::SpriteCreator
             const float rowWidth = box.x * static_cast<float>(count) + gap * static_cast<float>(std::max(0, count - 1));
 
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            ImGui::BeginChild("##frames", ImVec2(width, box.y + ImGui::GetStyle().ScrollbarSize), ImGuiChildFlags_None,
-                ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, ThinScrollbar());
+            ImGui::BeginChild("##frames", ImVec2(width, box.y + ThinScrollbar()), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::PopStyleVar();
             ImGui::PopStyleColor();
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             for (int index = 0; index < count; ++index)
@@ -200,34 +295,49 @@ namespace Idler::SpriteCreator
         {
             const SpriteFile::Sprite& sprite = *file.Sprite;
             const int total = std::max(1, SpriteEdit::TotalTicks(sprite));
-            const float height = std::round(Px(34.0f));
+            const float ruler = RulerHeight();
+            const float height = TrackHeight();
             const float tick = std::clamp(std::floor(width / static_cast<float>(total)), std::round(Px(3.0f)), std::round(Px(18.0f)));
             const float trackWidth = tick * static_cast<float>(total);
             const bool scrolls = trackWidth > width;
-            const float scrollbar = scrolls ? ImGui::GetStyle().ScrollbarSize : 0.0f;
 
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            ImGui::BeginChild("##steps", ImVec2(width, height + scrollbar), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, ThinScrollbar());
+            ImGui::BeginChild("##steps", ImVec2(width, ruler + height + ThinScrollbar()), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::PopStyleVar();
             ImGui::PopStyleColor();
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             const ImVec2 start = ImGui::GetCursorScreenPos();
+            const float top = start.y + ruler;
+
+            ImGui::InvisibleButton("##ruler", ImVec2(trackWidth, ruler));
+            if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+            if (ImGui::IsItemActive())
+            {
+                const double ticks = std::clamp(std::floor(static_cast<double>(ImGui::GetIO().MousePos.x - start.x) / tick), 0.0, static_cast<double>(total - 1));
+                SeekTo(sprite, paint, timeline, ticks);
+            }
+            Tooltip("Click or drag to move the playhead");
+            Ruler(drawList, start, tick, total, ruler);
+
             float x = start.x;
+            int startTick = 0;
             for (std::size_t index = 0; index < sprite.Steps.size(); ++index)
             {
                 const SpriteFile::Step& step = sprite.Steps[index];
                 const float blockWidth = tick * static_cast<float>(std::max(0, step.Ticks));
                 ImGui::PushID(static_cast<int>(index));
-                ImGui::SetCursorScreenPos(ImVec2(x, start.y));
+                ImGui::SetCursorScreenPos(ImVec2(x, top));
                 if (ImGui::InvisibleButton("##step", ImVec2(std::max(1.0f, blockWidth), height)))
                 {
+                    SeekTo(sprite, paint, timeline, static_cast<double>(startTick));
                     timeline.Step = static_cast<int>(index);
-                    if (!timeline.Playing && step.Frame >= 0 && step.Frame < static_cast<int>(sprite.Frames.size()))
-                        paint.Frame = step.Frame;
                 }
                 const bool hovered = ImGui::IsItemHovered();
                 const bool selected = timeline.Step == static_cast<int>(index);
-                const ImVec2 min(x, start.y);
-                const ImVec2 max(x + blockWidth - 1.0f, start.y + height);
+                const ImVec2 min(x, top);
+                const ImVec2 max(x + blockWidth - 1.0f, top + height);
                 const ImVec4 tint = TintOf(step.Frame);
                 drawList->AddRectFilled(min, max, Color(ManifoldTheme::WithAlpha(tint, hovered || selected ? 0.42f : 0.26f)), Px(3.0f));
                 if (selected)
@@ -237,32 +347,36 @@ namespace Idler::SpriteCreator
                     text += " " ICON_FA_EYE_SLASH;
                 if (blockWidth > ImGui::CalcTextSize(text.c_str()).x + Px(8.0f))
                 {
-                    drawList->AddText(ImVec2(x + Px(4.0f), start.y + Px(3.0f)), Color(ManifoldTheme::Text), text.c_str());
+                    drawList->AddText(ImVec2(x + Px(4.0f), top + Px(3.0f)), Color(ManifoldTheme::Text), text.c_str());
                     std::string motion;
                     if (step.Lift != 0)
                         motion += "up " + std::to_string(step.Lift);
                     if (step.Shift != 0)
                         motion += std::string(motion.empty() ? "" : ", ") + (step.Shift < 0 ? "left " : "right ") + std::to_string(std::abs(step.Shift));
                     if (!motion.empty() && blockWidth > ImGui::CalcTextSize(motion.c_str()).x + Px(8.0f))
-                        drawList->AddText(ImVec2(x + Px(4.0f), start.y + height - ImGui::GetTextLineHeight() - Px(3.0f)), Color(ManifoldTheme::Label), motion.c_str());
+                        drawList->AddText(ImVec2(x + Px(4.0f), top + height - ImGui::GetTextLineHeight() - Px(3.0f)), Color(ManifoldTheme::Label), motion.c_str());
                 }
-                char tip[160];
-                std::snprintf(tip, sizeof(tip), "Step %zu: frame %d for %d ticks (%.2f s), up %d, sideways %d%s", index + 1, step.Frame + 1, step.Ticks,
-                    step.Ticks * SpriteFile::kTickSeconds, step.Lift, step.Shift, step.Blink ? ", eyes shut" : "");
+                const int endTick = startTick + std::max(0, step.Ticks);
+                char tip[200];
+                std::snprintf(tip, sizeof(tip), "Step %zu: frame %d from %.2f s to %.2f s (%d %s), up %d, sideways %d%s", index + 1, step.Frame + 1,
+                    startTick * SpriteFile::kTickSeconds, endTick * SpriteFile::kTickSeconds, step.Ticks, step.Ticks == 1 ? "tick" : "ticks", step.Lift, step.Shift,
+                    step.Blink ? ", eyes shut" : "");
                 Tooltip(tip);
                 ImGui::PopID();
                 x += blockWidth;
+                startTick = endTick;
             }
-            if (timeline.Playing)
-            {
-                const double played = std::fmod(PlayedTicks(timeline), static_cast<double>(total));
-                const float head = start.x + static_cast<float>(played) * tick;
-                drawList->AddLine(ImVec2(head, start.y - Px(2.0f)), ImVec2(head, start.y + height + Px(2.0f)), Color(ManifoldTheme::Text), Px(2.0f));
-                if (scrolls)
-                    ImGui::SetScrollX(std::max(0.0f, head - start.x - width * 0.5f));
-            }
-            ImGui::SetCursorScreenPos(ImVec2(start.x, start.y));
-            ImGui::Dummy(ImVec2(trackWidth, height));
+
+            const double now = Now(timeline, total);
+            const float head = std::round(start.x + static_cast<float>(now) * tick);
+            const ImVec4 headColor = timeline.Playing ? ManifoldTheme::Text : ManifoldTheme::Accent;
+            const float knob = std::round(Px(5.0f));
+            drawList->AddLine(ImVec2(head, start.y + knob), ImVec2(head, top + height + Px(1.0f)), Color(headColor), Px(2.0f));
+            drawList->AddTriangleFilled(ImVec2(head - knob, start.y), ImVec2(head + knob, start.y), ImVec2(head, start.y + knob * 1.4f), Color(headColor));
+            if (timeline.Playing && scrolls)
+                ImGui::SetScrollX(std::max(0.0f, head - start.x - width * 0.5f));
+            ImGui::SetCursorScreenPos(start);
+            ImGui::Dummy(ImVec2(trackWidth, ruler + height));
             ImGui::EndChild();
         }
 
@@ -444,18 +558,27 @@ namespace Idler::SpriteCreator
 
     float TimelineCardHeight()
     {
-        const ImGuiStyle& style = ImGui::GetStyle();
         const float line = ImGui::GetTextLineHeight();
-        const float spacing = style.ItemSpacing.y;
+        const float spacing = ImGui::GetStyle().ItemSpacing.y;
         const float chrome = UI::PxWhole(14.0f, 12.0f).y * 2.0f + line + spacing + Px(4.0f) + spacing;
-        const float left = std::round(Px(24.0f)) + spacing + FrameBox().y + style.ScrollbarSize + spacing + line + spacing + std::round(Px(34.0f)) + style.ScrollbarSize;
+        const float left = std::round(Px(24.0f)) + spacing + FrameBox().y + ThinScrollbar() + spacing + line + spacing + RulerHeight() + TrackHeight() + ThinScrollbar();
         return std::ceil(chrome + std::max(left, FieldsHeight()) + Px(2.0f));
     }
 
     void TogglePlaying(TimelineState& timeline)
     {
-        timeline.Playing = !timeline.Playing;
-        timeline.Started = ImGui::GetTime();
+        const double now = ImGui::GetTime();
+        if (timeline.Playing)
+        {
+            timeline.Position = (now - timeline.Started) / SpriteFile::kTickSeconds;
+            timeline.Playing = false;
+            timeline.Settle = true;
+        }
+        else
+        {
+            timeline.Started = now - timeline.Position * SpriteFile::kTickSeconds;
+            timeline.Playing = true;
+        }
     }
 
     void DrawTimelineCard(CreatureFile* file, PaintState& paint, TimelineState& timeline, ImVec2 size)
@@ -472,6 +595,15 @@ namespace Idler::SpriteCreator
         if (timeline.Step >= static_cast<int>(sprite.Steps.size()))
             timeline.Step = static_cast<int>(sprite.Steps.size()) - 1;
         ClampFrame(file, paint);
+        if (!timeline.Playing)
+        {
+            timeline.Position = Now(timeline, SpriteEdit::TotalTicks(sprite));
+            if (timeline.Settle)
+                SeekTo(sprite, paint, timeline, timeline.Position);
+            else if (timeline.Step >= 0 && SpriteEdit::StepAtTick(sprite, static_cast<long long>(std::floor(timeline.Position))) != timeline.Step)
+                timeline.Position = static_cast<double>(SpriteEdit::TicksBefore(sprite, timeline.Step));
+            timeline.Settle = false;
+        }
 
         if (timeline.Playing)
         {
@@ -495,7 +627,7 @@ namespace Idler::SpriteCreator
 
         FrameButtons(*file, paint, timeline, left);
         FrameRow(*file, paint, timeline, left);
-        Label("Steps", left);
+        StepsHeader(sprite, timeline, left);
         StepTrack(*file, paint, timeline, left);
 
         const float fieldsX = start.x + left + gap;

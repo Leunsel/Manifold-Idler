@@ -3435,6 +3435,10 @@ namespace
         CHECK(TotalTicks(sprite) == 14);
         CHECK(StepAtTick(sprite, 0) == 0 && StepAtTick(sprite, 3) == 0 && StepAtTick(sprite, 4) == 1 && StepAtTick(sprite, 12) == 3 && StepAtTick(sprite, 14) == 0);
         CHECK(StepAtTick(sprite, -1) == 3);
+        CHECK(TicksBefore(sprite, 0) == 0 && TicksBefore(sprite, 1) == 4 && TicksBefore(sprite, 3) == 12 && TicksBefore(sprite, 4) == 14);
+        CHECK(TicksBefore(sprite, -1) == 0 && TicksBefore(sprite, 9) == 14);
+        for (int step = 0; step < 4; ++step)
+            CHECK(StepAtTick(sprite, TicksBefore(sprite, step)) == step);
 
         CHECK(InsertFrame(sprite, 1, marked(3)));
         CHECK(sprite.Frames.size() == 4 && sprite.Frames[1] == marked(3) && sprite.Frames[2] == marked(1));
