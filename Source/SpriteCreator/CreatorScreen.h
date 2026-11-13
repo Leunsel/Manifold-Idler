@@ -59,6 +59,7 @@ namespace Idler::SpriteCreator
         void HandleKeys();
         void ChangeSelection(int index);
         void SaveSelected();
+        void UndoSelected(bool forward);
         bool SaveAll();
         void Say(std::string text, bool problem);
         std::size_t UnsavedCount() const;

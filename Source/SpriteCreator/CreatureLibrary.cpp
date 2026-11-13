@@ -178,6 +178,23 @@ namespace Idler::SpriteCreator
         return sprite.Stays ? Habit::Stays : sprite.Swims.value_or(false) ? Habit::Swims : sprite.Floats ? Habit::Floats : Habit::Walks;
     }
 
+    Motion MotionOf(const SpriteFile::Sprite& sprite)
+    {
+        return { sprite.Facing, sprite.Floats, sprite.Swims.value_or(false), sprite.Stays };
+    }
+
+    bool SetMotion(SpriteFile::Sprite& sprite, const Motion& motion)
+    {
+        if (MotionOf(sprite) == motion)
+            return false;
+        sprite.Facing = motion.Facing;
+        sprite.Floats = motion.Floats;
+        if (sprite.Swims || motion.Swims)
+            sprite.Swims = motion.Swims;
+        sprite.Stays = motion.Stays;
+        return true;
+    }
+
     bool IsKeyText(std::string_view key)
     {
         if (key.empty() || key.size() > 32 || key.front() < 'a' || key.front() > 'z')

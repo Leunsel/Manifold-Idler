@@ -294,6 +294,21 @@ namespace Idler::SpriteCreator
         m_messageAt = ImGui::GetCurrentContext() ? ImGui::GetTime() : 0.0;
     }
 
+    void Screen::UndoSelected(bool forward)
+    {
+        CreatureFile* file = Selected();
+        if (!file || !file->Sprite || m_paint.Stroking)
+            return;
+        const Motion before = MotionOf(*file->Sprite);
+        if (!(forward ? StepForward(*file) : StepBack(*file)) || file->Evolved || !file->Sprite)
+            return;
+        const Motion after = MotionOf(*file->Sprite);
+        CreatureFile* evolved = Counterpart(*file);
+        if (after == before || !evolved || !evolved->Sprite)
+            return;
+        Change(*evolved, [&](SpriteFile::Sprite& edited) { return SetMotion(edited, after); });
+    }
+
     void Screen::SaveSelected()
     {
         CreatureFile* file = Selected();
@@ -367,9 +382,9 @@ namespace Idler::SpriteCreator
         if (io.KeyCtrl)
         {
             if (file && (ImGui::IsKeyPressed(ImGuiKey_Y) || (io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z))))
-                StepForward(*file);
+                UndoSelected(true);
             else if (file && ImGui::IsKeyPressed(ImGuiKey_Z))
-                StepBack(*file);
+                UndoSelected(false);
             else if (ImGui::IsKeyPressed(ImGuiKey_S, false))
                 SaveSelected();
             else if (ImGui::IsKeyPressed(ImGuiKey_N, false))
@@ -972,7 +987,7 @@ namespace Idler::SpriteCreator
 
         const float explorer = std::round(Px(240.0f));
         const float side = std::round(Px(330.0f));
-        const float timeline = std::round(Px(200.0f));
+        const float timeline = std::max(std::round(Px(200.0f)), TimelineCardHeight());
         const float upper = std::max(Px(200.0f), height - timeline - gap);
         const float middle = std::max(Px(160.0f), width - explorer - side - gap * 2.0f);
         const ImGuiStyle& style = ImGui::GetStyle();
@@ -991,9 +1006,9 @@ namespace Idler::SpriteCreator
         if (CreatureFile* file = Selected(); file && !m_paint.Stroking)
         {
             if (requests.Undo)
-                StepBack(*file);
+                UndoSelected(false);
             if (requests.Redo)
-                StepForward(*file);
+                UndoSelected(true);
         }
         if (requests.Save)
             SaveSelected();

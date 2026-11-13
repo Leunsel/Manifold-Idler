@@ -238,35 +238,63 @@ namespace Idler::SpriteCreator
             ImGui::EndChild();
         }
 
-        bool Stepper(const char* id, const char* label, int value, int low, int high, int& result, const char* suffix = nullptr)
+        struct FieldMetrics
+        {
+            float Button;
+            float Row;
+            float Gap;
+            float TitleGap;
+            float Label;
+        };
+
+        FieldMetrics Fields()
+        {
+            return { std::round(Px(22.0f)), std::round(Px(20.0f)), std::round(Px(3.0f)), std::round(Px(7.0f)), std::round(Px(64.0f)) };
+        }
+
+        float FieldsHeight()
+        {
+            const FieldMetrics metrics = Fields();
+            return metrics.Button + metrics.TitleGap + metrics.Row * 5.0f + metrics.Gap * 4.0f;
+        }
+
+        void StepLabel(const char* label, const char* tip, ImVec2 pos, float height)
+        {
+            const FieldMetrics metrics = Fields();
+            ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, std::round(pos.y + (height - ImGui::GetTextLineHeight()) * 0.5f)), Color(ManifoldTheme::Muted), label);
+            if (ImGui::IsWindowHovered() && ImGui::IsMouseHoveringRect(pos, ImVec2(pos.x + metrics.Label, pos.y + height)))
+                ImGui::SetTooltip("%s", tip);
+        }
+
+        bool Stepper(const char* id, const char* label, const char* tip, bool enabled, int value, int low, int high, int& result, const char* suffix = nullptr)
         {
             ImGui::PushID(id);
-            const float side = std::round(Px(20.0f));
-            const float labelWidth = std::round(Px(52.0f));
+            const FieldMetrics metrics = Fields();
+            const float side = metrics.Row;
             const ImVec2 pos = ImGui::GetCursorScreenPos();
             ImDrawList* drawList = ImGui::GetWindowDrawList();
-            drawList->AddText(ImVec2(pos.x, std::round(pos.y + (side - ImGui::GetTextLineHeight()) * 0.5f)), Color(ManifoldTheme::Muted), label);
-            ImGui::SetCursorScreenPos(ImVec2(pos.x + labelWidth, pos.y));
+            StepLabel(label, tip, pos, side);
+            ImGui::SetCursorScreenPos(ImVec2(pos.x + metrics.Label, pos.y));
             bool changed = false;
-            if (IconButton("##less", ICON_FA_MINUS, side, ManifoldTheme::Text, false, value > low))
+            if (IconButton("##less", ICON_FA_MINUS, side, ManifoldTheme::Text, false, enabled && value > low))
             {
                 result = value - 1;
                 changed = true;
             }
             ImGui::SameLine(0.0f, 0.0f);
-            const std::string text = std::to_string(value);
+            const std::string text = enabled ? std::to_string(value) : std::string("-");
             const float valueWidth = std::round(Px(30.0f));
             const ImVec2 valuePos = ImGui::GetCursorScreenPos();
             drawList->AddText(ImVec2(std::round(valuePos.x + (valueWidth - ImGui::CalcTextSize(text.c_str()).x) * 0.5f), std::round(valuePos.y + (side - ImGui::GetTextLineHeight()) * 0.5f)),
-                Color(ManifoldTheme::Text), text.c_str());
+                Color(enabled ? ManifoldTheme::Text : ManifoldTheme::Muted), text.c_str());
             ImGui::Dummy(ImVec2(valueWidth, side));
             ImGui::SameLine(0.0f, 0.0f);
-            if (IconButton("##more", ICON_FA_PLUS, side, ManifoldTheme::Text, false, value < high))
+            if (IconButton("##more", ICON_FA_PLUS, side, ManifoldTheme::Text, false, enabled && value < high))
             {
                 result = value + 1;
                 changed = true;
             }
-            if (suffix && *suffix)
+            if (enabled && suffix && *suffix)
             {
                 ImGui::SameLine(0.0f, Px(6.0f));
                 const ImVec2 suffixPos = ImGui::GetCursorScreenPos();
@@ -277,24 +305,36 @@ namespace Idler::SpriteCreator
             return changed;
         }
 
-        void StepFields(CreatureFile& file, PaintState& paint, TimelineState& timeline)
+        void StepFields(CreatureFile& file, PaintState& paint, TimelineState& timeline, float width)
         {
             const SpriteFile::Sprite& sprite = *file.Sprite;
             const int count = static_cast<int>(sprite.Steps.size());
-            if (timeline.Step < 0 || timeline.Step >= count)
-            {
-                MutedText("Choose a step in the row on the left to change it.");
-                return;
-            }
-            const int at = timeline.Step;
-            const SpriteFile::Step step = sprite.Steps[static_cast<std::size_t>(at)];
-            const std::string title = "Step " + std::to_string(at + 1) + " of " + std::to_string(count);
-            const float button = std::round(Px(22.0f));
+            const bool chosen = timeline.Step >= 0 && timeline.Step < count;
+            const int at = chosen ? timeline.Step : -1;
+            const SpriteFile::Step step = chosen ? sprite.Steps[static_cast<std::size_t>(at)] : SpriteFile::Step{};
+            const FieldMetrics metrics = Fields();
+            const float button = metrics.Button;
             const float gap = Px(2.0f);
-            const ImVec2 titleAt = ImGui::GetCursorScreenPos();
-            BoldText(ImGui::GetWindowDrawList(), ImVec2(titleAt.x, std::round(titleAt.y + (button - ImGui::GetTextLineHeight()) * 0.5f)), ManifoldTheme::Text, title.c_str());
-            ImGui::SetCursorScreenPos(ImVec2(titleAt.x + std::round(Px(250.0f)) - button * 4.0f - gap * 3.0f, titleAt.y));
-            if (IconButton("##add_step", ICON_FA_PLUS, button, ManifoldTheme::Text, false, !timeline.Playing))
+            const ImVec2 origin = ImGui::GetCursorScreenPos();
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            const float titleY = std::round(origin.y + (button - ImGui::GetTextLineHeight()) * 0.5f);
+            if (chosen)
+            {
+                const std::string title = "Step " + std::to_string(at + 1) + " of " + std::to_string(count);
+                BoldText(drawList, ImVec2(origin.x, titleY), ManifoldTheme::Text, title.c_str());
+            }
+            else
+            {
+                constexpr const char* kNone = "No step chosen";
+                drawList->AddText(ImVec2(origin.x, titleY), Color(ManifoldTheme::Muted), kNone);
+                const ImVec2 size = ImGui::CalcTextSize(kNone);
+                if (ImGui::IsWindowHovered() && ImGui::IsMouseHoveringRect(ImVec2(origin.x, titleY), ImVec2(origin.x + size.x, titleY + size.y)))
+                    ImGui::SetTooltip("Click a block in the Steps row to change it here");
+            }
+
+            const bool editable = chosen && !timeline.Playing;
+            ImGui::SetCursorScreenPos(ImVec2(origin.x + width - button * 4.0f - gap * 3.0f, origin.y));
+            if (IconButton("##add_step", ICON_FA_PLUS, button, ManifoldTheme::Text, false, editable))
             {
                 SpriteFile::Step added = step;
                 added.Blink = false;
@@ -303,29 +343,32 @@ namespace Idler::SpriteCreator
             }
             Tooltip("Add a step after this one");
             ImGui::SameLine(0.0f, gap);
-            if (IconButton("##step_left", ICON_FA_ARROW_LEFT, button, ManifoldTheme::Text, false, at > 0 && !timeline.Playing))
+            if (IconButton("##step_left", ICON_FA_ARROW_LEFT, button, ManifoldTheme::Text, false, editable && at > 0))
             {
                 if (Change(file, [&](SpriteFile::Sprite& edited) { return SpriteEdit::MoveStep(edited, at, at - 1); }))
                     timeline.Step = at - 1;
             }
             Tooltip("Move this step earlier");
             ImGui::SameLine(0.0f, gap);
-            if (IconButton("##step_right", ICON_FA_ARROW_RIGHT, button, ManifoldTheme::Text, false, at + 1 < count && !timeline.Playing))
+            if (IconButton("##step_right", ICON_FA_ARROW_RIGHT, button, ManifoldTheme::Text, false, editable && at + 1 < count))
             {
                 if (Change(file, [&](SpriteFile::Sprite& edited) { return SpriteEdit::MoveStep(edited, at, at + 1); }))
                     timeline.Step = at + 1;
             }
             Tooltip("Move this step later");
             ImGui::SameLine(0.0f, gap);
-            if (IconButton("##remove_step", ICON_FA_TRASH_ALT, button, ManifoldTheme::Error, false, count > 1 && !timeline.Playing))
+            if (IconButton("##remove_step", ICON_FA_TRASH_ALT, button, ManifoldTheme::Error, false, editable && count > 1))
             {
                 if (Change(file, [&](SpriteFile::Sprite& edited) { return SpriteEdit::RemoveStep(edited, at); }))
                     timeline.Step = std::min(at, count - 2);
             }
             Tooltip("Remove this step");
-            if (timeline.Step != at)
-                return;
 
+            const auto rowAt = [&](int row)
+                {
+                    ImGui::SetCursorScreenPos(ImVec2(origin.x, origin.y + button + metrics.TitleGap + static_cast<float>(row) * (metrics.Row + metrics.Gap)));
+                };
+            const bool live = chosen && timeline.Step == at;
             const auto set = [&](auto&& apply)
                 {
                     Change(file, [&](SpriteFile::Sprite& edited)
@@ -338,7 +381,8 @@ namespace Idler::SpriteCreator
                 };
             const int frames = std::max(1, static_cast<int>(sprite.Frames.size()));
             int value = 0;
-            if (Stepper("frame", "Frame", step.Frame + 1, 1, frames, value))
+            rowAt(0);
+            if (Stepper("frame", "Frame", "The frame this step shows", live, step.Frame + 1, 1, frames, value))
             {
                 set([&](SpriteFile::Step& target) { target.Frame = value - 1; });
                 if (!timeline.Playing)
@@ -346,21 +390,40 @@ namespace Idler::SpriteCreator
             }
             char seconds[32];
             std::snprintf(seconds, sizeof(seconds), "%.2f s", step.Ticks * SpriteFile::kTickSeconds);
-            if (Stepper("ticks", "Ticks", step.Ticks, 1, 400, value, seconds))
+            rowAt(1);
+            if (Stepper("ticks", "Ticks", "How long the step lasts; 8 ticks are one second", live, step.Ticks, 1, 400, value, seconds))
                 set([&](SpriteFile::Step& target) { target.Ticks = value; });
-            if (Stepper("lift", "Up", step.Lift, 0, SpriteFile::kMaxLift, value))
+            rowAt(2);
+            if (Stepper("lift", "Up", "How many cells higher the frame is drawn", live, step.Lift, 0, SpriteFile::kMaxLift, value))
                 set([&](SpriteFile::Step& target) { target.Lift = value; });
-            if (Stepper("shift", "Sideways", step.Shift, -SpriteFile::kMaxShift, SpriteFile::kMaxShift, value))
+            rowAt(3);
+            if (Stepper("shift", "Sideways", "How many cells to the right the frame is drawn; below zero to the left", live, step.Shift, -SpriteFile::kMaxShift,
+                    SpriteFile::kMaxShift, value))
                 set([&](SpriteFile::Step& target) { target.Shift = value; });
 
-            const float side = std::round(Px(20.0f));
+            rowAt(4);
             const ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, std::round(pos.y + (side - ImGui::GetTextLineHeight()) * 0.5f)), Color(ManifoldTheme::Muted), "Eyes");
-            ImGui::SetCursorScreenPos(ImVec2(pos.x + std::round(Px(52.0f)), pos.y));
-            if (IconButton("##blink", ICON_FA_EYE_SLASH, side, ManifoldTheme::Text, step.Blink))
+            StepLabel("Eyes", "Whether the eyes are shut in this step", pos, metrics.Row);
+            ImGui::SetCursorScreenPos(ImVec2(pos.x + metrics.Label, pos.y));
+            if (IconButton("##blink", ICON_FA_EYE_SLASH, metrics.Row, ManifoldTheme::Text, live && step.Blink, live))
                 set([&](SpriteFile::Step& target) { target.Blink = !target.Blink; });
-            Tooltip(step.Blink ? "The eyes are shut in this step" : "Shut the eyes in this step");
+            Tooltip(!live ? "Whether the eyes are shut in this step" : step.Blink ? "The eyes are shut in this step" : "Shut the eyes in this step");
+
+            ImGui::SetCursorScreenPos(origin);
+            ImGui::Dummy(ImVec2(width, FieldsHeight()));
         }
+    }
+
+    float TimelineCardHeight()
+    {
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float line = ImGui::GetTextLineHeight();
+        const float spacing = style.ItemSpacing.y;
+        const float chrome = UI::PxWhole(14.0f, 12.0f).y * 2.0f + line + spacing + Px(4.0f) + spacing;
+        const float pixel = std::max(2.0f, std::round(Px(3.0f)));
+        const float box = pixel * static_cast<float>(SpriteFile::kRows) + std::round(Px(3.0f)) * 2.0f;
+        const float left = line + spacing + box + spacing + Px(4.0f) + spacing + line + spacing + std::round(Px(34.0f)) + style.ScrollbarSize;
+        return std::ceil(chrome + std::max(left, FieldsHeight()) + Px(2.0f));
     }
 
     void TogglePlaying(TimelineState& timeline)
@@ -414,7 +477,7 @@ namespace Idler::SpriteCreator
         ImGui::GetWindowDrawList()->AddLine(ImVec2(fieldsX - gap * 0.5f, start.y), ImVec2(fieldsX - gap * 0.5f, start.y + room.y), Color(ManifoldTheme::RowSeparator));
         ImGui::SetCursorScreenPos(ImVec2(fieldsX, start.y));
         ImGui::BeginGroup();
-        StepFields(*file, paint, timeline);
+        StepFields(*file, paint, timeline, fieldsWidth);
         ImGui::EndGroup();
         EndCard();
     }

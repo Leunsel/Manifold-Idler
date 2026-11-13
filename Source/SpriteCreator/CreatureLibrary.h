@@ -16,6 +16,16 @@ namespace Idler::SpriteCreator
 {
     inline constexpr std::size_t kUndoDepth = 200;
 
+    struct Motion
+    {
+        int Facing = 0;
+        bool Floats = false;
+        bool Swims = false;
+        bool Stays = false;
+
+        bool operator==(const Motion&) const = default;
+    };
+
     struct CreatureFile
     {
         std::string Key;
@@ -37,6 +47,8 @@ namespace Idler::SpriteCreator
     std::vector<CreatureFile> LoadCreatures(const std::filesystem::path& folder);
     void SortCreatures(std::vector<CreatureFile>& files);
     Habit SpriteHabit(const SpriteFile::Sprite& sprite);
+    Motion MotionOf(const SpriteFile::Sprite& sprite);
+    bool SetMotion(SpriteFile::Sprite& sprite, const Motion& motion);
 
     void Refresh(CreatureFile& file);
     void Remember(CreatureFile& file);

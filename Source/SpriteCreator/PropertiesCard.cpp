@@ -201,33 +201,6 @@ namespace Idler::SpriteCreator
             }
         }
 
-        struct Motion
-        {
-            int Facing = 0;
-            bool Floats = false;
-            bool Swims = false;
-            bool Stays = false;
-
-            bool operator==(const Motion&) const = default;
-        };
-
-        Motion MotionOf(const SpriteFile::Sprite& sprite)
-        {
-            return { sprite.Facing, sprite.Floats, sprite.Swims.value_or(false), sprite.Stays };
-        }
-
-        bool SetMotion(SpriteFile::Sprite& sprite, const Motion& motion)
-        {
-            if (MotionOf(sprite) == motion)
-                return false;
-            sprite.Facing = motion.Facing;
-            sprite.Floats = motion.Floats;
-            if (sprite.Swims || motion.Swims)
-                sprite.Swims = motion.Swims;
-            sprite.Stays = motion.Stays;
-            return true;
-        }
-
         void ChangeMotion(CreatureFile& file, CreatureFile* evolved, const Motion& motion)
         {
             Change(file, [&](SpriteFile::Sprite& edited) { return SetMotion(edited, motion); });

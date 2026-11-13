@@ -15,5 +15,6 @@ namespace Idler::SpriteCreator
     };
 
     void TogglePlaying(TimelineState& timeline);
+    float TimelineCardHeight();
     void DrawTimelineCard(CreatureFile* file, PaintState& paint, TimelineState& timeline, ImVec2 size);
 }
