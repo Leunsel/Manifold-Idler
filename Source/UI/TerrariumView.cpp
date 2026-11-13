@@ -51,8 +51,8 @@ namespace Idler::UI
         bool g_shellInHand = false;
         std::unordered_map<std::uint32_t, double> g_crossUntil;
         float g_daylight = -1.0f;
+        int g_daylightFrame = -1;
         float g_lightPreview = -1.0f;
-        std::vector<HomeScene::Prop> g_props;
         struct PropsKey
         {
             int Columns = -1;
@@ -62,7 +62,13 @@ namespace Idler::UI
             SceneSeason Season = SceneSeason::ByDate;
             bool operator==(const PropsKey&) const = default;
         };
-        PropsKey g_propsKey;
+
+        struct PlacedProps
+        {
+            PropsKey Key;
+            std::vector<HomeScene::Prop> Props;
+        };
+        PlacedProps g_placed[2];
         TerrariumSize g_sceneCells;
         ImVec2 g_sceneMax;
 
@@ -108,6 +114,9 @@ namespace Idler::UI
         {
             if (g_lightPreview >= 0.0f)
                 return g_daylight = g_lightPreview;
+            if (g_daylightFrame == ImGui::GetFrameCount())
+                return g_daylight;
+            g_daylightFrame = ImGui::GetFrameCount();
             const float target = model.RunningCount() > 0 ? 1.0f : 0.0f;
             if (g_daylight < 0.0f || !IdleAnimation::Enabled())
                 g_daylight = target;
@@ -644,18 +653,6 @@ namespace Idler::UI
         }
 
 
-        void DrawGroundShadow(ImDrawList* drawList, ImVec2 min, float pixel, float left, float right, float ground, float height)
-        {
-            const float shrink = std::min((right - left) * 0.3f, height * 0.15f);
-            left += shrink;
-            right -= shrink;
-            const int alpha = static_cast<int>(std::max(20.0f, kShadowAlpha - height * 2.0f));
-            const auto at = [&](float x, float y) { return ImVec2(std::round(min.x + x * pixel), std::round(min.y + y * pixel)); };
-            drawList->AddRectFilled(at(left, ground - 0.5f), at(right, ground + 0.5f), IM_COL32(0, 0, 0, alpha));
-            drawList->AddRectFilled(at(left - 1.0f, ground - 0.5f), at(left, ground + 0.5f), IM_COL32(0, 0, 0, alpha / 2));
-            drawList->AddRectFilled(at(right, ground - 0.5f), at(right + 1.0f, ground + 0.5f), IM_COL32(0, 0, 0, alpha / 2));
-        }
-
         void DrawBallAt(ImDrawList* drawList, ImVec2 center, float pixel, float turned)
         {
             static constexpr const char* kTurns[3][5] = {
@@ -815,21 +812,22 @@ namespace Idler::UI
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             const float daylight = UpdateDaylight(model);
             const SceneSeason season = model.CurrentSeason();
-            HomeScene::Frame frame;
-            if (home)
+            HomeScene::Frame frame = HomeFrame(drawList, min, pixel, size, cells, daylight, season);
+            frame.Narrow = !home;
+            frame.HazeColor = HomeScene::SceneOf(season).HazeColor(frame);
+            PlacedProps& placed = g_placed[home ? 1 : 0];
+            const std::vector<HomeScene::Prop>& props = placed.Props;
             {
-                frame = HomeFrame(drawList, min, pixel, size, cells, daylight, season);
-                frame.HazeColor = HomeScene::SceneOf(season).HazeColor(frame);
                 const PropsKey key{ frame.Columns, frame.Rows, frame.Surface, frame.Shore, season };
-                if (!(key == g_propsKey))
+                if (!(key == placed.Key))
                 {
-                    g_propsKey = key;
-                    g_props.clear();
-                    HomeScene::SceneOf(season).PlaceProps(frame, g_props);
-                    std::stable_sort(g_props.begin(), g_props.end(), [](const HomeScene::Prop& lhs, const HomeScene::Prop& rhs) { return lhs.Ground < rhs.Ground; });
+                    placed.Key = key;
+                    placed.Props.clear();
+                    HomeScene::SceneOf(season).PlaceProps(frame, placed.Props);
+                    std::stable_sort(placed.Props.begin(), placed.Props.end(), [](const HomeScene::Prop& lhs, const HomeScene::Prop& rhs) { return lhs.Ground < rhs.Ground; });
                 }
                 std::vector<TerrariumCover> covers;
-                for (const HomeScene::Prop& prop : g_props)
+                for (const HomeScene::Prop& prop : props)
                 {
                     const float scale = frame.ScaleAt(prop.Ground);
                     covers.push_back({ prop.X, prop.Ground, prop.Foot * scale, prop.Cover * scale });
@@ -848,16 +846,9 @@ namespace Idler::UI
                 model.FetchedBall(HomeCreature(seed));
 
             drawList->PushClipRect(min, max, true);
-            if (home)
-            {
-                g_sceneCells = cells;
-                g_sceneMax = max;
-                HomeScene::SceneOf(season).DrawBack(frame);
-            }
-            else
-            {
-                DrawScene(Canvas{ drawList, min, pixel }, max, cells, home, daylight, season);
-            }
+            g_sceneCells = cells;
+            g_sceneMax = max;
+            HomeScene::SceneOf(season).DrawBack(frame);
             drawList->PopClipRect();
 
             std::vector<const TerrariumResident*> order;
@@ -870,17 +861,16 @@ namespace Idler::UI
                 });
 
             const TerrariumResident* underMouse = nullptr;
-            const Palette palette = PaletteAt(daylight, season);
-            const ImVec4 haze = home ? frame.HazeColor : Mix(palette.HillFar, palette.Sky, 0.5f);
+            const ImVec4 haze = frame.HazeColor;
 
             const float feetBack = cells.Height - cells.GroundDepth;
             const float feetFront = cells.Height - cells.LakeDepth - 1.0f;
             (void)feetBack;
             (void)feetFront;
-            const auto depthAt = [&](float feet) { return home ? Depth{ frame.ScaleAt(feet), frame.HazeAt(feet) } : Depth{}; };
+            const auto depthAt = [&](float feet) { return Depth{ frame.ScaleAt(feet), frame.HazeAt(feet) }; };
             const auto depthOf = [&](const TerrariumResident& resident)
                 {
-                    if (!home || resident.State == ResidentState::Held)
+                    if (resident.State == ResidentState::Held)
                         return Depth{};
                     if (resident.Habit == Habit::Swims)
                         return Depth{ kFrontScale, 0.0f };
@@ -906,13 +896,10 @@ namespace Idler::UI
                 else
                     IdleAnimation::RequestFrames();
             }
-            if (home)
+            for (const HomeScene::Prop& prop : props)
             {
-                for (const HomeScene::Prop& prop : g_props)
-                {
-                    const float scale = frame.ScaleAt(prop.Ground);
-                    HomeScene::DrawCastShadow(frame, prop.X, prop.Ground, prop.Foot * scale, prop.Height * scale, prop.Crown * scale);
-                }
+                const float scale = frame.ScaleAt(prop.Ground);
+                HomeScene::DrawCastShadow(frame, prop.X, prop.Ground, prop.Foot * scale, prop.Height * scale, prop.Crown * scale);
             }
             const float landTop = cells.Height - cells.SpriteHeight - cells.GroundDepth;
             const float landBottom = cells.Height - cells.SpriteHeight - cells.LakeDepth - 1.0f;
@@ -931,10 +918,7 @@ namespace Idler::UI
                 const float right = middle + (static_cast<float>(feet.Right) + 1.0f - half) * depth.Scale;
                 const float line = std::round(resident->Y) + cells.SpriteHeight + (static_cast<float>(feet.Ground) - cells.SpriteHeight) * depth.Scale;
                 const float hop = std::round(resident->Lift) * depth.Scale;
-                if (home)
-                    HomeScene::DrawCastShadow(frame, (left + right) * 0.5f, line, (right - left) * 0.5f, cells.SpriteHeight * 0.7f * depth.Scale, (right - left) * 0.55f, std::max(0.3f, 1.0f - hop * 0.08f));
-                else
-                    DrawGroundShadow(drawList, min, pixel, left, right, line, hop);
+                HomeScene::DrawCastShadow(frame, (left + right) * 0.5f, line, (right - left) * 0.5f, cells.SpriteHeight * 0.7f * depth.Scale, (right - left) * 0.55f, std::max(0.3f, 1.0f - hop * 0.08f));
             }
             const TerrariumBall& ball = box.Ball();
             const TerrariumShell& shell = box.Shell();
@@ -954,8 +938,7 @@ namespace Idler::UI
                 if (IdleAnimation::Enabled() && (shell.State != BallState::None || ball.State == BallState::Flying || ball.State == BallState::Carried || ball.Fetcher != 0))
                     IdleAnimation::KeepFrames();
             }
-            if (home)
-                HomeScene::SceneOf(season).DrawFront(frame);
+            HomeScene::SceneOf(season).DrawFront(frame);
             const auto thingScale = [](const TerrariumThing& thing, const Depth& depth) { return thing.State == BallState::Held ? 1.0f : depth.Scale; };
             const auto thingAt = [&](const TerrariumThing& thing, float scale)
                 {
@@ -984,13 +967,13 @@ namespace Idler::UI
                 };
             const auto drawUpTo = [&](float limit)
                 {
-                    while (home)
+                    for (;;)
                     {
                         float nearest = limit;
                         int which = -1;
-                        if (nextProp < g_props.size() && g_props[nextProp].Ground <= nearest)
+                        if (nextProp < props.size() && props[nextProp].Ground <= nearest)
                         {
-                            nearest = g_props[nextProp].Ground;
+                            nearest = props[nextProp].Ground;
                             which = 0;
                         }
                         if (!ballDrawn && onTheLand(ball) && ball.Floor + ball.Radius <= nearest)
@@ -1003,7 +986,7 @@ namespace Idler::UI
                         if (which < 0)
                             return;
                         if (which == 0)
-                            drawProp(g_props[nextProp++]);
+                            drawProp(props[nextProp++]);
                         else if (which == 1)
                         {
                             drawBall();
@@ -1121,8 +1104,7 @@ namespace Idler::UI
             for (const TerrariumMess& mess : box.Messes())
                 DrawMessAir(ground, mess, box.Clock(), daylight, cells.SpriteHeight, landBack);
             DrawWeather(Canvas{ drawList, min, pixel }, cells, columns, season, daylight);
-            if (home)
-                MaskCorners(drawList, min, max, Px(5.0f), ImGui::GetColorU32(ManifoldTheme::Page));
+            MaskCorners(drawList, min, max, Px(5.0f), ImGui::GetColorU32(home ? ManifoldTheme::Page : ManifoldTheme::Sidebar));
             drawList->PopClipRect();
             drawList->AddRect(min, max, ImGui::GetColorU32(ManifoldTheme::CardBorder), Px(5.0f));
 
@@ -1201,6 +1183,11 @@ namespace Idler::UI
         cells.GroundDepth = std::round(cells.Height * 2.0f / 3.0f);
         cells.LakeDepth = std::max(kTerrariumLakeDepth, std::round(cells.Height / 3.0f));
         DrawBox(model, g_terrarium, g_pettedAt, GuestsOf(model), size, pixel, cells, false);
+    }
+
+    float HomeDaylight(const IdlerModel& model)
+    {
+        return UpdateDaylight(model);
     }
 
     void SetHomeLightPreview(float daylight)

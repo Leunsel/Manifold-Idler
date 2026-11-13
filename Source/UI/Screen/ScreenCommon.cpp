@@ -452,7 +452,8 @@ namespace Idler::UI::Screen
             Desktop::OpenSteam();
         const ImVec2 badgeMin(labelPos.x + Px(8.0f), labelPos.y);
         const ImVec2 badgeMax(labelPos.x + labelWidth, labelPos.y + footerHeight);
-        if (ImGui::IsItemHovered())
+        const bool badgeHovered = ImGui::IsItemHovered();
+        if (badgeHovered)
             drawList->AddRectFilled(badgeMin, badgeMax, IM_COL32(255, 255, 255, 9), Px(4.0f));
         const std::string badgeTip = running > 0 ? std::to_string(running) + (running == 1 ? " game idling. Opens Steam." : " games idling. Opens Steam.") : std::string("Opens Steam.");
         ItemTooltip(badgeTip.c_str());
@@ -488,6 +489,8 @@ namespace Idler::UI::Screen
         drawList->PushClipRect(labelPos, ImVec2(labelPos.x + labelWidth - Px(4.0f), labelPos.y + footerHeight), true);
         DrawCutText(drawList, ImVec2(labelPos.x + Px(50.0f), labelY), labelPos.x + labelWidth - Px(4.0f), !ready ? ManifoldTheme::Warning : running > 0 ? ManifoldTheme::Text : ManifoldTheme::Label, label);
         drawList->PopClipRect();
+        const float textEnd = std::min(labelPos.x + Px(50.0f) + ImGui::CalcTextSize(label.c_str()).x, labelPos.x + labelWidth - Px(4.0f));
+        DrawSeasonFrame(drawList, badgeMin, badgeMax, textEnd, model.CurrentSeason(), HomeDaylight(model), badgeHovered);
 
         ImGui::SameLine(0.0f, 0.0f);
         if (IconLink("##reload", ICON_FA_SYNC, ImVec2(reloadWidth, footerHeight), "Reads the library again."))

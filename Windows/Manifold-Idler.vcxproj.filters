@@ -246,6 +246,9 @@
     <ClCompile Include="..\Source\UI\Screen\ScreenToasts.cpp">
       <Filter>Source\UI\Screen</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\UI\SeasonFrame.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\UI\TerrariumView.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
@@ -453,6 +456,9 @@
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\SceneKit.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\UI\SeasonFrame.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\UI\TerrariumView.h">

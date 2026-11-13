@@ -43,6 +43,7 @@ namespace Idler::UI::HomeScene
         ImVec4 HazeColor;
         float FeetBack = 0.0f;
         float FeetFront = 0.0f;
+        bool Narrow = false;
 
         float ScaleAt(float ground) const;
         float HazeAt(float ground) const;

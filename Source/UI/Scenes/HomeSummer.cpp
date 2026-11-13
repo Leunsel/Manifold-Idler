@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace Idler::UI::HomeScene
@@ -391,6 +392,11 @@ namespace Idler::UI::HomeScene
             { kBoulder, 0.92f, 0.86f },
         };
 
+        constexpr PropPlace kNarrowPlaces[] = {
+            { kOak, 0.10f, 0.22f },
+            { kRose, 0.86f, 0.72f },
+        };
+
         struct Leaves
         {
             float X;
@@ -729,7 +735,7 @@ namespace Idler::UI::HomeScene
                 const float front = std::max(back, std::floor(frame.FeetFront - 6.0f));
                 const std::uint32_t salt = Noise(static_cast<std::uint32_t>(frame.Columns) * 2654435761u ^ static_cast<std::uint32_t>(frame.Rows) * 40503u);
                 std::uint32_t index = 0;
-                for (const PropPlace& place : kPlaces)
+                for (const PropPlace& place : frame.Narrow ? std::span<const PropPlace>(kNarrowPlaces) : std::span<const PropPlace>(kPlaces))
                 {
                     const std::uint32_t mixed = Noise(salt + ++index * 7919u);
                     const PropSize& size = kSizes[place.What];

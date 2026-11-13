@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <span>
 
 namespace Idler::UI::HomeScene
 {
@@ -1059,11 +1060,14 @@ namespace Idler::UI::HomeScene
                     { Kind::Spruce, 0.09f, 0.30f }, { Kind::Bush, 0.27f, 0.78f }, { Kind::Oak, 0.42f, 0.05f },
                     { Kind::Fence, 0.59f, 0.50f }, { Kind::Boulder, 0.76f, 0.86f }, { Kind::Saplings, 0.90f, 0.24f },
                 };
+                constexpr Plan kNarrowPlans[] = {
+                    { Kind::Spruce, 0.12f, 0.25f }, { Kind::Bush, 0.88f, 0.74f },
+                };
                 const auto width = static_cast<float>(frame.Columns);
                 const float farthest = frame.FeetBack + 2.0f;
                 const float nearest = frame.FeetFront - 6.0f;
                 std::uint32_t index = 0;
-                for (const Plan& plan : kPlans)
+                for (const Plan& plan : frame.Narrow ? std::span<const Plan>(kNarrowPlans) : std::span<const Plan>(kPlans))
                 {
                     const std::uint32_t mixed = Noise((static_cast<std::uint32_t>(frame.Columns) * 2654435761u) ^ (index * 40503u + 7u));
                     Prop prop;

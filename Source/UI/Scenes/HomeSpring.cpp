@@ -1304,6 +1304,30 @@ namespace Idler::UI::HomeScene
 
             void PlaceProps(const Frame& frame, std::vector<Prop>& props) override
             {
+                if (frame.Narrow)
+                {
+                    constexpr Kind kNarrowKinds[] = { Kind::Cherry, Kind::Forsythia };
+                    constexpr float kNarrowAcross[] = { 0.12f, 0.86f };
+                    const float nearBack = frame.FeetBack + 2.0f;
+                    const float nearFront = std::max(nearBack, frame.FeetFront - 6.0f);
+                    for (int index = 0; index < 2; ++index)
+                    {
+                        const Kind kind = kNarrowKinds[index];
+                        const KindShape& shape = kShapes[static_cast<std::size_t>(kind)];
+                        Prop prop;
+                        prop.X = std::round(F(frame.Columns) * kNarrowAcross[index]);
+                        prop.Ground = std::round(nearBack + (nearFront - nearBack) * (shape.DepthFrom + shape.DepthTo) * 0.5f);
+                        prop.Foot = shape.Foot;
+                        prop.Cover = shape.Cover;
+                        prop.CoverHeight = shape.CoverHeight;
+                        prop.Height = shape.Height;
+                        prop.Crown = shape.Crown;
+                        prop.Kind = static_cast<std::uint32_t>(kind);
+                        prop.Seed = Hash(index, 603u + static_cast<std::uint32_t>(kind));
+                        props.push_back(prop);
+                    }
+                    return;
+                }
                 constexpr float kEdge = 10.0f;
                 const float right = F(frame.Columns) - kEdge;
                 const float back = frame.FeetBack + 2.0f;

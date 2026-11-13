@@ -114,6 +114,7 @@
     <ClCompile Include="..\Source\Core\Zip.cpp" />
     <ClCompile Include="..\Source\Core\Stats.cpp" />
     <ClCompile Include="..\Source\Core\Terrarium.cpp" />
+    <ClCompile Include="..\Source\UI\SeasonFrame.cpp" />
     <ClCompile Include="..\Source\UI\TerrariumView.cpp" />
     <ClCompile Include="..\Source\UI\SceneKit.cpp" />
     <ClCompile Include="..\Source\Core\Text.cpp" />
@@ -191,6 +192,7 @@
     <ClInclude Include="..\Source\UI\CoverPlatform.h" />
     <ClInclude Include="Source\App\Splash.h" />
     <ClInclude Include="..\Source\Core\WebPolicy.h" />
+    <ClInclude Include="..\Source\UI\SeasonFrame.h" />
     <ClInclude Include="..\Source\UI\TerrariumView.h" />
     <ClInclude Include="..\Source\Core\Text.h" />
     <ClInclude Include="..\Source\Core\Vdf.h" />

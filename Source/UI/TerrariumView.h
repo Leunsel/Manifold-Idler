@@ -14,6 +14,7 @@ namespace Idler::UI
     void DrawTerrarium(IdlerModel& model, ImVec2 size);
     void DrawCreatureHome(IdlerModel& model, ImVec2 size);
     void SetHomeLightPreview(float daylight);
+    float HomeDaylight(const IdlerModel& model);
 
     struct CreatureStage
     {

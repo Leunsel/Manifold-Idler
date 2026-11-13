@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace Idler::UI::HomeScene
@@ -1088,14 +1089,19 @@ namespace Idler::UI::HomeScene
             { Thing::Birch, 0.93f, 0.3f },
         };
 
+        constexpr Spot kNarrowSpots[] = {
+            { Thing::Maple, 0.0f, 0.22f },
+            { Thing::Pumpkins, 1.0f, 0.78f },
+        };
+
         void Arrange(const Frame& frame, std::vector<Prop>& props)
         {
             const auto columns = static_cast<float>(frame.Columns);
             const float back = frame.FeetBack + 2.0f;
             const float front = std::max(back, frame.FeetFront - 6.0f);
-            for (const Spot& spot : kSpots)
+            for (const Spot& spot : frame.Narrow ? std::span<const Spot>(kNarrowSpots) : std::span<const Spot>(kSpots))
             {
-                if (frame.Columns < 200 && (spot.What == Thing::Stump || spot.What == Thing::Pumpkins))
+                if (!frame.Narrow && frame.Columns < 200 && (spot.What == Thing::Stump || spot.What == Thing::Pumpkins))
                     continue;
                 const Measure measure = MeasureOf(spot.What);
                 const float ground = std::round(back + (front - back) * spot.Depth);

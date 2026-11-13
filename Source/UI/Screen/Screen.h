@@ -17,6 +17,7 @@
 #include "UI/IdleAnimation.h"
 #include "UI/MenuWidgets.h"
 #include "UI/MiniGameView.h"
+#include "UI/SeasonFrame.h"
 #include "UI/TerrariumView.h"
 #include "UI/Theme.h"
 #include "UI/UiScale.h"
