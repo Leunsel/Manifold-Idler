@@ -78,6 +78,9 @@
     <ClCompile Include="..\Source\App\CrashHandlerWin32.cpp">
       <Filter>Source\App</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\App\ReleaseCheckWin32.cpp">
+      <Filter>Source\App</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\App\IdlerModel.cpp">
       <Filter>Source\App</Filter>
     </ClCompile>
@@ -112,6 +115,9 @@
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Core\Queue.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Releases.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp">
@@ -254,6 +260,9 @@
     <ClInclude Include="..\Source\App\CrashHandler.h">
       <Filter>Source\App</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\App\ReleaseCheck.h">
+      <Filter>Source\App</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\App\IdlerModel.h">
       <Filter>Source\App</Filter>
     </ClInclude>
@@ -306,6 +315,9 @@
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Core\Queue.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Releases.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Core\RuntimeLog.h">

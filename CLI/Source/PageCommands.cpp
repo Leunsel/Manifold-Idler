@@ -338,6 +338,7 @@ namespace Idler::Cli
             { "hours", "Only at certain hours", "Idling only runs from the first hour up to the second, also over midnight. The computer's clock counts.", "bool" },
             { "from", "From", "The hour idling may start.", "int", 0.0, 23.0, 1.0 },
             { "until", "Until", "The hour idling stops.", "int", 0.0, 23.0, 1.0 },
+            { "updates", "Look for new versions", "Once a day the idler asks GitHub for its newest release and says so in its status and log. The question carries only the version. Nothing is downloaded.", "bool" },
         };
 
         std::string GoalSetting(const Goal& goal)
@@ -371,6 +372,7 @@ namespace Idler::Cli
             if (key == "hours") return YesNo(options.OnlyInHours);
             if (key == "from") return std::to_string(options.FromHour);
             if (key == "until") return std::to_string(options.ToHour);
+            if (key == "updates") return YesNo(options.UpdateCheck);
             return {};
         }
 
@@ -447,7 +449,7 @@ namespace Idler::Cli
                     return Failed(std::string(setting->Label) + ": on or off.");
                 bool* target = key == "pause" ? &options.PauseWhilePlaying : key == "resume" ? &options.ResumeOnStart : key == "awake" ? &options.KeepAwake
                     : key == "refund" ? &options.RefundGuard : key == "invisible" ? &options.InvisibleWhileIdling : key == "vary" ? &options.VaryTimes
-                    : key == "away" ? &options.OnlyWhenAway : &options.OnlyInHours;
+                    : key == "away" ? &options.OnlyWhenAway : key == "updates" ? &options.UpdateCheck : &options.OnlyInHours;
                 *target = *value;
             }
             else

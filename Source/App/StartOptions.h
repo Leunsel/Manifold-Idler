@@ -62,6 +62,13 @@ namespace Idler::StartOptions
             UI::SetStartCreature(creature);
         if (const std::wstring game = Argument(commandLine, L"--mini-game="); !settings.empty() && !game.empty())
             UI::SetMiniGamePreview(game);
+        if (const std::wstring newer = Argument(commandLine, L"--update-preview="); !settings.empty() && !newer.empty())
+        {
+            std::string version;
+            for (const wchar_t c : newer)
+                version.push_back(c >= L'0' && c <= L'9' ? static_cast<char>(c) : '.');
+            app.Model().SetUpdatePreview(version);
+        }
         if (const std::wstring crash = Argument(commandLine, L"--crash-test="); !settings.empty() && !crash.empty())
             UI::SetCrashTest(crash);
         if (const std::wstring light = Argument(commandLine, L"--home-light="); !settings.empty() && !light.empty())

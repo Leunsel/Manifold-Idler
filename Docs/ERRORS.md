@@ -14,7 +14,7 @@ This file is made from `Source/Core/Errors.cpp` with `idler explain --markdown`.
 | [Idling](#idling) | MI-2001 to MI-2007 |
 | [Library](#library) | MI-3001 to MI-3009 |
 | [Achievements and stats](#achievements-and-stats) | MI-4001 to MI-4012 |
-| [The program](#the-program) | MI-5001 to MI-5021 |
+| [The program](#the-program) | MI-5001 to MI-5022 |
 | [Command line and server](#command-line-and-server) | MI-6001 to MI-6015 |
 | [Web page](#web-page) | MI-7001 to MI-7021 |
 | [Card farm](#card-farm) | MI-8001 to MI-8009 |
@@ -501,6 +501,14 @@ What to do: Start it again. If it happens again, report the code with the report
 What happened: The program crashed the last time it ran. The lines after this one are where it happened, read from that report.
 
 What to do: Start it again. If it happens again, report the code with the report from the crashes folder next to the settings. Look into it first: it can hold your Steam name and the names of your games.
+
+### MI-5022
+
+**Could not look for a new version: ....**
+
+What happened: The program asks GitHub once a day for its newest release. This time no usable answer came: the computer may be offline, a firewall may keep the program off the internet, or GitHub had a problem.
+
+What to do: Nothing to do: the program asks again in an hour. To stop it asking, turn off Look for new versions in the settings.
 
 ## Command line and server
 

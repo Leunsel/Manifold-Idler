@@ -38,6 +38,7 @@ add_library(idler_core STATIC
     ${IDLER_SOURCE}/Core/Json.cpp
     ${IDLER_SOURCE}/Core/MiniGames.cpp
     ${IDLER_SOURCE}/Core/Queue.cpp
+    ${IDLER_SOURCE}/Core/Releases.cpp
     ${IDLER_SOURCE}/Core/RuntimeLog.cpp
     ${IDLER_SOURCE}/Core/Settings.cpp
     ${IDLER_SOURCE}/Core/SpriteEdit.cpp
@@ -61,10 +62,10 @@ add_library(idler_engine STATIC
     Source/Desktop.cpp
     ${IDLER_SOURCE}/Steam/SteamWebNone.cpp)
 if(WIN32)
-    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcess.cpp ${IDLER_SOURCE}/App/CrashHandlerWin32.cpp)
-    target_link_libraries(idler_engine PUBLIC shell32)
+    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcess.cpp ${IDLER_SOURCE}/App/CrashHandlerWin32.cpp ${IDLER_SOURCE}/App/ReleaseCheckWin32.cpp)
+    target_link_libraries(idler_engine PUBLIC shell32 winhttp)
 else()
-    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcessPosix.cpp ${IDLER_SOURCE}/App/CrashHandlerPosix.cpp)
+    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcessPosix.cpp ${IDLER_SOURCE}/App/CrashHandlerPosix.cpp ${IDLER_SOURCE}/App/ReleaseCheckCurl.cpp)
     target_link_libraries(idler_engine PUBLIC ${CMAKE_DL_LIBS})
 endif()
 target_include_directories(idler_engine BEFORE PUBLIC Shim)

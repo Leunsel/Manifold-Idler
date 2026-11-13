@@ -18,11 +18,11 @@ from concurrent.futures import ThreadPoolExecutor
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
 TARGET = "x86_64-linux-gnu.2.31"
-CORE = ["AppInfo", "Backups", "Cards", "CrashReport", "Creatures", "Deflate", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy", "Zip"]
+CORE = ["AppInfo", "Backups", "Cards", "CrashReport", "Creatures", "Deflate", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "Releases", "RuntimeLog", "Settings", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy", "Zip"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "SteamWebNone", "Worker", "WorkerProcessPosix"]
 UI = ["Covers", "Fonts", "IdleAnimation", "MenuWidgets", "MiniGameView", "SceneKit", "ScreenMain", "SpriteView", "TerrariumView",
       "Scenes/HomeAutumn", "Scenes/HomeSpring", "Scenes/HomeSummer", "Scenes/HomeWinter", "Scenes/StageClouds", "Scenes/StageMeadow", "Scenes/StageUnderwater"]
-APP = ["IdlerModel", "CardService", "CrashHandlerPosix"]
+APP = ["IdlerModel", "CardService", "CrashHandlerPosix", "ReleaseCheckCurl"]
 OWN = ["MainSdl", "App/SdlApplication", "App/Gl", "App/WebPanelNone", "App/DesktopLinux", "UI/CoversSdl"]
 IMGUI = ["imgui", "imgui_draw", "imgui_tables", "imgui_widgets", "backends/imgui_impl_sdl3", "backends/imgui_impl_opengl3"]
 FONTS = [("Text", "NotoSans-Regular.ttf"), ("Bold", "NotoSans-Bold.ttf"), ("Icons", "fa-solid-900.ttf")]

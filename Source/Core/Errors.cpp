@@ -223,6 +223,10 @@ namespace Idler
             { ErrorCode::LastRunCrashed, "The last run ended unexpectedly. Its report is in {}.",
                 "The program crashed the last time it ran. The lines after this one are where it happened, read from that report.",
                 kCrashHelp },
+            { ErrorCode::UpdateCheckFailed, "Could not look for a new version: {}.",
+                "The program asks GitHub once a day for its newest release. This time no usable answer came: the computer may be offline, "
+                "a firewall may keep the program off the internet, or GitHub had a problem.",
+                "Nothing to do: the program asks again in an hour. To stop it asking, turn off Look for new versions in the settings." },
 
             { ErrorCode::NoServer, "No idler runs with these settings. Start one with: idler serve",
                 "The command found no running server for this settings file.",

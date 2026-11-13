@@ -273,6 +273,10 @@ namespace Idler
         const Settings& Options() const { return m_settings; }
         void SaveNow();
 
+        std::optional<std::string> NewerVersion() const;
+        bool TakeUpdateNews();
+        void SetUpdatePreview(std::string version) { m_updatePreview = std::move(version); }
+
         Backups::Result BackUpNow();
         Backups::Result RestoreBackup(const std::filesystem::path& backup);
         bool SavesBlocked() const { return m_savesBlocked; }
@@ -318,6 +322,21 @@ namespace Idler
         std::string UniqueListName(std::string_view name, int except) const;
         void MarkDirty() { m_dirty = true; }
         void BackUpDaily(std::int32_t today);
+
+        struct UpdateJob
+        {
+            std::atomic<bool> Done{ false };
+            bool Ok = false;
+            std::string Body;
+            std::string Problem;
+        };
+        void RefreshUpdates(double now);
+        void FinishUpdateCheck(double now);
+        std::shared_ptr<UpdateJob> m_updateJob;
+        double m_updateRetryAt = 0.0;
+        bool m_updateWarned = false;
+        std::string m_updatePreview;
+        bool m_updatePreviewNoted = false;
         void StopAllWorkers();
         void UpdateKeepAwake(bool force);
         void UpdateInvisible(double now);

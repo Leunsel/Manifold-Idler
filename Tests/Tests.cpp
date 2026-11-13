@@ -9,6 +9,7 @@
 #include "Core/Json.h"
 #include "Core/Library.h"
 #include "Core/Queue.h"
+#include "Core/Releases.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Settings.h"
 #include "Core/Stats.h"
@@ -4689,6 +4690,64 @@ void TestCrashReport()
     std::filesystem::remove_all(root, error);
 }
 
+void TestReleases()
+{
+    using namespace Releases;
+
+    CHECK(ParseVersion("1.3.0") && (*ParseVersion("1.3.0") == std::array<int, 3>{ 1, 3, 0 }));
+    CHECK(ParseVersion("v12.0.7") && (*ParseVersion("v12.0.7") == std::array<int, 3>{ 12, 0, 7 }));
+    CHECK(!ParseVersion("") && !ParseVersion("v") && !ParseVersion("1.3") && !ParseVersion("1.3.0.1") && !ParseVersion("1.3.0-beta"));
+    CHECK(!ParseVersion("1..3") && !ParseVersion(".1.3") && !ParseVersion("1.3.") && !ParseVersion("1.3.x") && !ParseVersion("1234567.0.0"));
+    CHECK(IsNewer("1.4.0", "1.3.0") && IsNewer("v1.3.1", "1.3.0") && IsNewer("2.0.0", "1.99.99") && IsNewer("1.10.0", "1.9.0"));
+    CHECK(!IsNewer("1.3.0", "1.3.0") && !IsNewer("1.2.0", "1.3.0") && !IsNewer("", "1.3.0") && !IsNewer("1.4.0", "") && !IsNewer("1.4", "1.3.0"));
+
+    CHECK(PageOf("1.4.0") == "https://github.com/Leunsel/Manifold-Idler/releases/tag/v1.4.0");
+    CHECK(PageOf("v1.4.0") == "https://github.com/Leunsel/Manifold-Idler/releases/tag/v1.4.0");
+    CHECK(PageOf("nonsense") == "https://github.com/Leunsel/Manifold-Idler/releases");
+    CHECK(IsReleasePage("https://github.com/Leunsel/Manifold-Idler/releases") && IsReleasePage("https://github.com/Leunsel/Manifold-Idler/releases/tag/v1.4.0"));
+    CHECK(!IsReleasePage("https://github.com/Leunsel/Manifold-Idler/releases/tag/v1.4.0/../../evil") && !IsReleasePage("https://github.com/Leunsel/Manifold-Idler/releasesx"));
+    CHECK(!IsReleasePage("https://github.com.evil.example/Leunsel/Manifold-Idler/releases") && !IsReleasePage("http://github.com/Leunsel/Manifold-Idler/releases"));
+    CHECK(!IsReleasePage("https://github.com/Leunsel/Manifold-Idler/releases/download/v1.4.0/x.zip"));
+
+    const std::string answer =
+        "{\"url\":\"https://api.github.com/repos/Leunsel/Manifold-Idler/releases/1\",\"html_url\":\"https://github.com/Leunsel/Manifold-Idler/releases/tag/v1.4.0\","
+        "\"id\":1,\"tag_name\":\"v1.4.0\",\"name\":\"v1.4.0\",\"draft\":false,\"prerelease\":false,\"published_at\":\"2026-11-20T18:00:00Z\","
+        "\"assets\":[{\"name\":\"Manifold-Idler-windows-x64.zip\",\"size\":1234}],\"body\":\"What's new\\n- Backups\"}";
+    std::string problem;
+    const std::optional<Release> release = ParseLatest(answer, problem);
+    CHECK(release && release->Version == "1.4.0" && release->Page == "https://github.com/Leunsel/Manifold-Idler/releases/tag/v1.4.0");
+
+    std::string elsewhere = answer;
+    elsewhere.replace(elsewhere.find("https://github.com/Leunsel/Manifold-Idler/releases/tag/v1.4.0"), 61, "https://evil.example/download/1.4.0/whatever/now");
+    const std::optional<Release> safe = ParseLatest(elsewhere, problem);
+    CHECK(safe && safe->Page == PageOf("1.4.0"));
+
+    std::string draft = answer;
+    draft.replace(draft.find("\"draft\":false"), 13, "\"draft\":true");
+    CHECK(!ParseLatest(draft, problem) && problem == "the newest release is not final");
+    std::string early = answer;
+    early.replace(early.find("\"prerelease\":false"), 18, "\"prerelease\":true");
+    CHECK(!ParseLatest(early, problem));
+    CHECK(!ParseLatest("{\"message\":\"Not Found\"}", problem) && problem == "the answer names no release");
+    CHECK(!ParseLatest("{\"tag_name\":\"nightly\"}", problem) && problem.starts_with("the newest release has no version number"));
+    CHECK(!ParseLatest("[1,2]", problem) && !ParseLatest("not json", problem) && !ParseLatest("", problem));
+
+    CHECK(Due(0, 1794000000u) && Due(1794000000u, 1794000000u + kCheckSeconds) && Due(1794000000u, 1793000000u));
+    CHECK(!Due(1794000000u, 1794000000u) && !Due(1794000000u, 1794000000u + kCheckSeconds - 1));
+
+    Settings options;
+    CHECK(options.UpdateCheck && options.UpdateCheckedAt == 0 && options.UpdateLatest.empty());
+    options.Read("UpdateCheck=false\r\nUpdateCheckedAt=1794000000\r\nUpdateLatest=1.4.0\r\nUpdateNoted=1.4.0\r\n");
+    CHECK(!options.UpdateCheck && options.UpdateCheckedAt == 1794000000u && options.UpdateLatest == "1.4.0" && options.UpdateNoted == "1.4.0");
+    const std::filesystem::path saved = TestFile("-updates.ini");
+    CHECK(options.Save(saved));
+    Settings again;
+    again.Load(saved);
+    CHECK(!again.UpdateCheck && again.UpdateCheckedAt == 1794000000u && again.UpdateLatest == "1.4.0" && again.UpdateNoted == "1.4.0");
+    std::error_code error;
+    std::filesystem::remove(saved, error);
+}
+
 void TestVersion()
 {
     const std::string numbers = std::to_string(IDLER_VERSION_MAJOR) + "." + std::to_string(IDLER_VERSION_MINOR) + "." + std::to_string(IDLER_VERSION_PATCH);
@@ -4752,6 +4811,7 @@ int main()
         { "Backups", TestBackups },
         { "CrashReport", TestCrashReport },
         { "Version", TestVersion },
+        { "Releases", TestReleases },
     };
     for (const auto& test : tests)
     {

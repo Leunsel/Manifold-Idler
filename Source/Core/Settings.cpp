@@ -285,6 +285,14 @@ namespace Idler
                 HomeBall = ParseBool(value, HomeBall);
             else if (key == "CreaturesTugMouse")
                 CreaturesTugMouse = ParseBool(value, CreaturesTugMouse);
+            else if (key == "UpdateCheck")
+                UpdateCheck = ParseBool(value, UpdateCheck);
+            else if (key == "UpdateCheckedAt")
+                UpdateCheckedAt = ParseUnsigned(value).value_or(0);
+            else if (key == "UpdateLatest")
+                UpdateLatest = std::string(value);
+            else if (key == "UpdateNoted")
+                UpdateNoted = std::string(value);
             else if (key == "Creature")
             {
                 const auto parts = SplitBars(value);
@@ -378,6 +386,13 @@ namespace Idler
             file << "CreatureHome=" << (CreatureHome ? "true" : "false") << "\r\n";
             file << "HomeBall=" << (HomeBall ? "true" : "false") << "\r\n";
             file << "CreaturesTugMouse=" << (CreaturesTugMouse ? "true" : "false") << "\r\n";
+            file << "UpdateCheck=" << (UpdateCheck ? "true" : "false") << "\r\n";
+            if (UpdateCheckedAt != 0)
+                file << "UpdateCheckedAt=" << UpdateCheckedAt << "\r\n";
+            if (!UpdateLatest.empty())
+                file << "UpdateLatest=" << UpdateLatest << "\r\n";
+            if (!UpdateNoted.empty())
+                file << "UpdateNoted=" << UpdateNoted << "\r\n";
             for (const StoredCreature& creature : Creatures)
             {
                 file << "Creature=" << creature.Key << " | " << creature.Found << " | " << creature.Pets;

@@ -81,6 +81,7 @@
     <ClCompile Include="..\Source\Core\FileLock.cpp" />
     <ClCompile Include="..\Source\Core\MiniGames.cpp" />
     <ClCompile Include="..\Source\Core\Queue.cpp" />
+    <ClCompile Include="..\Source\Core\Releases.cpp" />
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp" />
     <ClCompile Include="..\Source\Core\Settings.cpp" />
     <ClCompile Include="..\Source\Core\Backups.cpp" />

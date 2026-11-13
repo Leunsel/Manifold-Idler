@@ -126,6 +126,12 @@ namespace Idler::Desktop
         StartAndForget({ "xdg-open", folder.string() });
     }
 
+    void OpenWebPage(std::string_view address)
+    {
+        if (address.starts_with("https://"))
+            StartAndForget({ "xdg-open", std::string(address) });
+    }
+
     void SetSteamStatus(const wchar_t* status)
     {
         OpenLink("steam://friends/status/" + WideToUtf8(status));

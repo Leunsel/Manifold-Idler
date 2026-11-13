@@ -101,6 +101,10 @@ namespace Idler
         bool CreatureHome = false;
         bool HomeBall = false;
         bool CreaturesTugMouse = true;
+        bool UpdateCheck = true;
+        std::uint32_t UpdateCheckedAt = 0;
+        std::string UpdateLatest;
+        std::string UpdateNoted;
         std::vector<StoredCreature> Creatures;
         std::string CreatureBuddy;
         std::uint32_t CreatureGoals = 0;

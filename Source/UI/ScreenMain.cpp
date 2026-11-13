@@ -6,6 +6,7 @@
 #include "App/Desktop.h"
 #include "App/WebPanel.h"
 #include "Core/Errors.h"
+#include "Core/Releases.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
 #include "Core/Version.h"
@@ -5144,6 +5145,11 @@ namespace Idler::UI
                 else
                     crashed = true;
             }
+            if (model.TakeUpdateNews())
+            {
+                const CreatureId creature = model.Buddy() ? *model.Buddy() : IdleAnimation::CreatureOf(model.Account());
+                g_toasts.push_back({ creature, 4u, "New version", "Version " + model.NewerVersion().value_or(std::string()) + " is out", Page::Settings, 0 });
+            }
             if (crashed)
             {
                 g_crashLogShown = true;
@@ -5561,6 +5567,18 @@ namespace Idler::UI
             bool startsAtLogin = Desktop::StartsAtLogin();
             if (ToggleRow(Desktop::StartAtLoginLabel(), Desktop::StartAtLoginNote(), startsAtLogin))
                 Desktop::SetStartsAtLogin(startsAtLogin);
+            changed |= ToggleRow("Look for new versions",
+                "Once a day the program asks GitHub for its newest release and says so when there is a newer one. The question carries only the program's version. "
+                "Nothing is downloaded.", options.UpdateCheck);
+            if (const std::optional<std::string> newer = model.NewerVersion())
+            {
+                Notice("##newer", ICON_FA_GIFT, ManifoldTheme::Accent, "Version " + *newer + " is out.");
+                BeginRow("##release");
+                if (const std::string page = Releases::PageOf(*newer); ActionButton(ICON_FA_EXTERNAL_LINK_ALT, "Open the release page") && Releases::IsReleasePage(page))
+                    Desktop::OpenWebPage(page);
+                EndActionButtons();
+                ImGui::PopID();
+            }
             EndCard();
 
             if (changed)
@@ -5829,8 +5847,9 @@ namespace Idler::UI
 
         void SettingsPage(Shell& app)
         {
-            static const std::string version = std::string("Version ") + kVersion;
-            BeginPage(app, version);
+            const std::optional<std::string> newer = app.Model().NewerVersion();
+            const std::string version = std::string("Version ") + kVersion + (newer ? ", " + *newer + " is out" : std::string());
+            BeginPage(app, version, newer ? ManifoldTheme::Accent : ManifoldTheme::Muted);
             ImGui::BeginChild("##settings_width", ImVec2(std::min(ImGui::GetContentRegionAvail().x, Px(kSettingsWidth)), 0.0f), ImGuiChildFlags_None,
                 ImGuiWindowFlags_NoBackground);
             SetScrollSurface(ManifoldTheme::Page);

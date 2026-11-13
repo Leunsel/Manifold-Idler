@@ -93,6 +93,7 @@
     <ClCompile Include="..\Source\App\CardService.cpp" />
     <ClCompile Include="..\Source\App\Desktop.cpp" />
     <ClCompile Include="..\Source\App\CrashHandlerWin32.cpp" />
+    <ClCompile Include="..\Source\App\ReleaseCheckWin32.cpp" />
     <ClCompile Include="..\Source\App\IdlerModel.cpp" />
     <ClCompile Include="..\Source\Core\AppInfo.cpp" />
     <ClCompile Include="..\Source\Core\Cards.cpp" />
@@ -105,6 +106,7 @@
     <ClCompile Include="..\Source\Core\FileLock.cpp" />
     <ClCompile Include="..\Source\Core\MiniGames.cpp" />
     <ClCompile Include="..\Source\Core\Queue.cpp" />
+    <ClCompile Include="..\Source\Core\Releases.cpp" />
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp" />
     <ClCompile Include="..\Source\Core\Settings.cpp" />
     <ClCompile Include="..\Source\Core\Backups.cpp" />
@@ -149,6 +151,7 @@
     <ClInclude Include="..\Source\App\CardService.h" />
     <ClInclude Include="..\Source\App\Desktop.h" />
     <ClInclude Include="..\Source\App\CrashHandler.h" />
+    <ClInclude Include="..\Source\App\ReleaseCheck.h" />
     <ClInclude Include="..\Source\App\IdlerModel.h" />
     <ClInclude Include="..\Source\Core\AppInfo.h" />
     <ClInclude Include="..\Source\Core\Cards.h" />
@@ -163,6 +166,7 @@
     <ClInclude Include="..\Source\Core\Queue.h" />
     <ClInclude Include="..\Source\UI\CreatureSprites.h" />
     <ClInclude Include="..\Source\UI\SpriteView.h" />
+    <ClInclude Include="..\Source\Core\Releases.h" />
     <ClInclude Include="..\Source\Core\RuntimeLog.h" />
     <ClInclude Include="..\Source\Core\Settings.h" />
     <ClInclude Include="..\Source\Core\SmoothWheel.h" />

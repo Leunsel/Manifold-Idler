@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = "x86_64-linux-gnu.2.31"
-CORE = ["AppInfo", "Backups", "Cards", "CrashReport", "Creatures", "Deflate", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteEdit", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy", "Zip"]
+CORE = ["AppInfo", "Backups", "Cards", "CrashReport", "Creatures", "Deflate", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "Releases", "RuntimeLog", "Settings", "SpriteEdit", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy", "Zip"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "Worker", "WorkerProcessPosix"]
 BASE = ["BackupCommands", "Http", "Ipc", "Paths", "Request", "Service", "Themes", "Web", "WebAssets", "WebPage", "WebServer"]
 PROGRAM = ["main", "Commands", "PageCommands", "Serve", "Desktop"]
@@ -35,7 +35,7 @@ def main():
     os.makedirs(objects, exist_ok=True)
 
     core = [os.path.join(source, "Core", name + ".cpp") for name in CORE]
-    engine = [os.path.join(source, "App", "IdlerModel.cpp"), os.path.join(source, "App", "CrashHandlerPosix.cpp")] + [os.path.join(source, "Steam", name + ".cpp") for name in STEAM + ["SteamWebNone"]]
+    engine = [os.path.join(source, "App", "IdlerModel.cpp"), os.path.join(source, "App", "CrashHandlerPosix.cpp"), os.path.join(source, "App", "ReleaseCheckCurl.cpp")] + [os.path.join(source, "Steam", name + ".cpp") for name in STEAM + ["SteamWebNone"]]
     base = [os.path.join(src, name + ".cpp") for name in BASE]
     program = [os.path.join(src, name + ".cpp") for name in PROGRAM]
     cli_tests = os.path.join(HERE, "Tests", "CliTests.cpp")

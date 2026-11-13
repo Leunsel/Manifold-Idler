@@ -1,6 +1,7 @@
 #include "App/Desktop.h"
 
 #include "Core/Clock.h"
+#include "Core/Text.h"
 
 #include <windows.h>
 #include <d3d11.h>
@@ -70,6 +71,12 @@ namespace Idler::Desktop
     void OpenFolder(const std::filesystem::path& folder)
     {
         OpenLink(folder.wstring());
+    }
+
+    void OpenWebPage(std::string_view address)
+    {
+        if (address.starts_with("https://"))
+            OpenLink(Utf8ToWide(address));
     }
 
     void SetSteamStatus(const wchar_t* status)

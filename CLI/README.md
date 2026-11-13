@@ -41,7 +41,7 @@ it is.
 idler serve --start          runs in this terminal; --start starts the queue once the library is read
 idler serve --web            also serves a web page, see The web page
 idler service install        runs it as a systemd user service instead (Linux), see Staying up
-idler status                 what it is doing
+idler status                 what it is doing, its version, and a newer one when there is one
 idler games portal           the account's games, found by name or app id
 idler add 620 730 --for 3    adds games, optionally --for <hours> or --until <hours played>
 idler queue                  the games in the queue
@@ -86,7 +86,8 @@ idler stats                  what was idled: today, the last 7 days, all time, r
 idler stats games sessions   the games by time, sessions, longest, days or recent
 idler history 2026-11-12     idle time by day; with a day, that day's games
 idler settings               the settings the server goes by
-idler set pause off          changes one: set goal for 3, set hours on, set from 22, ...
+idler set pause off          changes one: set goal for 3, set hours on, set from 22, ...; set updates off stops the
+                             daily question to GitHub for a newer version
 ```
 
 Apart from `serve`, `service`, `themes` and `explain`, the commands talk to the server, so it has to run: in a second terminal, or as

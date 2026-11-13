@@ -65,6 +65,8 @@ runs the same queue without a window, on Windows and Linux.
 - Protect refunds: a game under 2 hours and within 14 days of purchase stops 10 minutes short of the limit.
 - Appear offline to friends while idling.
 - Goal for new games, keep running in the tray, start with Windows, season, let angry creatures tug the mouse, log page.
+- Look for new versions: once a day the program asks GitHub for its newest release, and only its own version goes along.
+  A newer one shows on the Settings page with a link to its release page; nothing is downloaded. It can be turned off.
 
 Settings, statistics and the log are kept next to the program: `Manifold-Idler.ini`, `.stats`, `.log`.
 
@@ -190,6 +192,7 @@ Flags for checking a build next to a running program:
 --pretend-messages        shows the goal and queue-finished messages once
 --web-preview             opens Steam's sign-in page in its dialog, for the look; do not sign in there
 --fake-shutdown=<file>    writes that file instead of shutting down
+--update-preview=<x.y.z>  acts as if that version were out, without asking GitHub
 --crash-test=<how>        crashes on purpose at the first frame, to check the report: access, abort, terminate, throw,
                           noexcept, stack or thread
 --scale=<factor>          overrides the DPI scaling

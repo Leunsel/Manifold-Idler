@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 #ifdef _WIN32
 struct ID3D11Device;
@@ -18,6 +19,7 @@ namespace Idler::Desktop
     void OpenStorePage(std::uint32_t appId);
     void OpenInLibrary(std::uint32_t appId);
     void OpenFolder(const std::filesystem::path& folder);
+    void OpenWebPage(std::string_view address);
 
     void SetSteamStatus(const wchar_t* status);
 

@@ -3,7 +3,9 @@
 #include "App/IdlerModel.h"
 #include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
+#include "Core/Releases.h"
 #include "Core/Text.h"
+#include "Core/Version.h"
 #include "Request.h"
 
 #include <algorithm>
@@ -178,6 +180,9 @@ namespace Idler::Cli
                 line("left", "Time left", "no end: a game has no limit");
             else if (forecast.Seconds > 0.0)
                 line("left", "Time left", DurationText(static_cast<std::uint64_t>(std::ceil(forecast.Seconds))) + (model.Options().VaryTimes ? " plus breaks" : ""));
+            line("version", "Version", std::string(kVersion));
+            if (const std::optional<std::string> newer = model.NewerVersion())
+                line("newer", "Newer version", *newer + " is out: " + Releases::PageOf(*newer));
             result.Rows.push_back({ "active", "", model.Active() ? "yes" : "no" });
             result.Rows.push_back({ "persona", "", steam.LoggedOn() ? model.Persona() : std::string() });
             result.Rows.push_back({ "undo", "", model.Undoable().Any() ? "yes" : "no" });

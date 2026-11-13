@@ -51,6 +51,9 @@
     <ClCompile Include="..\Source\Core\Queue.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Core\Releases.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
