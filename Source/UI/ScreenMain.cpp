@@ -74,6 +74,7 @@ namespace Idler::UI
 
         bool g_logTabShown = false;
         bool g_crashLogShown = false;
+        ImVec2 g_statusCorner;
         std::wstring g_crashTest;
 
         bool PageShown(Page page)
@@ -696,7 +697,7 @@ namespace Idler::UI
             ImGui::PopStyleColor();
         }
 
-        void BeginPage(Shell& app, std::string_view status, ImVec4 statusColor = ManifoldTheme::Muted, bool queueButton = true)
+        bool BeginPage(Shell& app, std::string_view status, ImVec4 statusColor = ManifoldTheme::Muted, bool queueButton = true, const char* statusTip = nullptr)
         {
             const PageEntry* page = &kPages[0];
             for (const PageEntry& entry : kPages)
@@ -714,7 +715,7 @@ namespace Idler::UI
             const float queueGap = queueButton ? Px(10.0f) : 0.0f;
             const ImVec2 pos = ImGui::GetCursorScreenPos();
             const float width = ImGui::GetContentRegionAvail().x;
-            PageHeader(PageIcon(app.Model(), *page), page->Label, status, statusColor, buttons + queueWidth + queueGap);
+            const HeaderStatus statusArea = PageHeader(PageIcon(app.Model(), *page), page->Label, status, statusColor, buttons + queueWidth + queueGap);
             const ImVec2 body = ImGui::GetCursorScreenPos();
 
             const float buttonsX = pos.x + width - Px(6.0f) - buttons;
@@ -734,12 +735,37 @@ namespace Idler::UI
             ImGui::SameLine(0.0f, gap);
             if (IconLink("##close", ICON_FA_TIMES, ImVec2(button, button), nullptr, ManifoldTheme::Error))
                 app.Close();
-            ImGui::SetCursorScreenPos(body);
 
             const ImVec2 area = ImGui::GetWindowPos();
-            app.AddDragArea(area.x, area.y, queueX, pos.y + headerHeight);
+            const float headerBottom = pos.y + headerHeight;
+            bool clicked = false;
+            if (statusTip && statusArea.Shown)
+            {
+                const ImVec2 min(std::floor(statusArea.Min.x - Px(4.0f)), pos.y + Px(4.0f));
+                const ImVec2 max(std::ceil(statusArea.Max.x + Px(4.0f)), headerBottom - Px(4.0f));
+                ImGui::SetCursorScreenPos(min);
+                clicked = ImGui::InvisibleButton("##page_status", ImVec2(max.x - min.x, max.y - min.y));
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                    const float line = std::round(statusArea.Max.y + Px(1.0f));
+                    ImGui::GetWindowDrawList()->AddLine(ImVec2(statusArea.Min.x, line), ImVec2(statusArea.Max.x, line), ImGui::GetColorU32(statusColor), Px(1.0f));
+                }
+                ItemTooltip(statusTip);
+                g_statusCorner = ImVec2(max.x, headerBottom);
+                app.AddDragArea(area.x, area.y, min.x, headerBottom);
+                app.AddDragArea(max.x, area.y, queueX, headerBottom);
+                app.AddDragArea(min.x, area.y, max.x, min.y);
+                app.AddDragArea(min.x, max.y, max.x, headerBottom);
+            }
+            else
+            {
+                app.AddDragArea(area.x, area.y, queueX, headerBottom);
+            }
             app.AddDragArea(queueX, area.y, area.x + ImGui::GetWindowWidth(), pos.y);
+            ImGui::SetCursorScreenPos(body);
             BeginPageBody();
+            return clicked;
         }
 
         std::pair<std::string, ImVec4> EntryDetail(const QueueEntry& entry, RunState state, double restSeconds)
@@ -5567,18 +5593,6 @@ namespace Idler::UI
             bool startsAtLogin = Desktop::StartsAtLogin();
             if (ToggleRow(Desktop::StartAtLoginLabel(), Desktop::StartAtLoginNote(), startsAtLogin))
                 Desktop::SetStartsAtLogin(startsAtLogin);
-            changed |= ToggleRow("Look for new versions",
-                "Once a day the program asks GitHub for its newest release and says so when there is a newer one. The question carries only the program's version. "
-                "Nothing is downloaded.", options.UpdateCheck);
-            if (const std::optional<std::string> newer = model.NewerVersion())
-            {
-                Notice("##newer", ICON_FA_GIFT, ManifoldTheme::Accent, "Version " + *newer + " is out.");
-                BeginRow("##release");
-                if (const std::string page = Releases::PageOf(*newer); ActionButton(ICON_FA_EXTERNAL_LINK_ALT, "Open the release page") && Releases::IsReleasePage(page))
-                    Desktop::OpenWebPage(page);
-                EndActionButtons();
-                ImGui::PopID();
-            }
             EndCard();
 
             if (changed)
@@ -5835,6 +5849,44 @@ namespace Idler::UI
             BackupDialog(app);
         }
 
+        void UpdatesPopup(IdlerModel& model)
+        {
+            ImGui::SetNextWindowSize(ImVec2(Px(400.0f), 0.0f));
+            ImGui::SetNextWindowPos(g_statusCorner, ImGuiCond_Appearing, ImVec2(1.0f, 0.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, Px(12.0f, 10.0f));
+            const bool open = ImGui::BeginPopup("##updates");
+            ImGui::PopStyleVar();
+            if (!open)
+                return;
+
+            Settings& options = model.Options();
+            if (ToggleRow("Look for new versions", nullptr, options.UpdateCheck))
+                model.SaveNow();
+            ImGui::PushStyleColor(ImGuiCol_Text, ManifoldTheme::Muted);
+            ImGui::PushTextWrapPos(ImGui::GetContentRegionMax().x);
+            ImGui::TextUnformatted("Once a day the program asks GitHub for its newest release. The question carries only the program's version, and nothing is downloaded.");
+            ImGui::PopTextWrapPos();
+            ImGui::PopStyleColor();
+
+            if (const std::optional<std::string> newer = model.NewerVersion())
+            {
+                ImGui::Dummy(ImVec2(0.0f, Px(2.0f)));
+                Notice("##newer", ICON_FA_GIFT, ManifoldTheme::Accent, "Version " + *newer + " is out.");
+                const std::string page = Releases::PageOf(*newer);
+                if (ImGui::Button(ICON_FA_EXTERNAL_LINK_ALT "  Open the release page") && Releases::IsReleasePage(page))
+                {
+                    Desktop::OpenWebPage(page);
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+            else if (options.UpdateCheck && options.UpdateCheckedAt != 0)
+            {
+                ImGui::Dummy(ImVec2(0.0f, Px(2.0f)));
+                ImGui::TextDisabled("Last looked on %s: none is newer.", DateText(options.UpdateCheckedAt).c_str());
+            }
+            ImGui::EndPopup();
+        }
+
         void NewGamesCard(IdlerModel& model)
         {
             bool changed = false;
@@ -5849,7 +5901,10 @@ namespace Idler::UI
         {
             const std::optional<std::string> newer = app.Model().NewerVersion();
             const std::string version = std::string("Version ") + kVersion + (newer ? ", " + *newer + " is out" : std::string());
-            BeginPage(app, version, newer ? ManifoldTheme::Accent : ManifoldTheme::Muted);
+            const bool versionClicked = BeginPage(app, version, newer ? ManifoldTheme::Accent : ManifoldTheme::Muted, true, "Look for new versions");
+            if (versionClicked)
+                ImGui::OpenPopup("##updates");
+            UpdatesPopup(app.Model());
             ImGui::BeginChild("##settings_width", ImVec2(std::min(ImGui::GetContentRegionAvail().x, Px(kSettingsWidth)), 0.0f), ImGuiChildFlags_None,
                 ImGuiWindowFlags_NoBackground);
             SetScrollSurface(ManifoldTheme::Page);

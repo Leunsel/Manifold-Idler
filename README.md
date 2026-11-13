@@ -66,7 +66,8 @@ runs the same queue without a window, on Windows and Linux.
 - Appear offline to friends while idling.
 - Goal for new games, keep running in the tray, start with Windows, season, let angry creatures tug the mouse, log page.
 - Look for new versions: once a day the program asks GitHub for its newest release, and only its own version goes along.
-  A newer one shows on the Settings page with a link to its release page; nothing is downloaded. It can be turned off.
+  A newer one shows in the header of the Settings page; a click on the version there opens its release page or turns the
+  question off. Nothing is downloaded.
 
 Settings, statistics and the log are kept next to the program: `Manifold-Idler.ini`, `.stats`, `.log`.
 

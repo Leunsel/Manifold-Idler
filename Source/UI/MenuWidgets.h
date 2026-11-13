@@ -18,7 +18,14 @@ namespace Idler::UI
     void DrawWindowBackground(float rounding);
     bool SidebarItem(const char* icon, const char* label, bool current);
 
-    void PageHeader(const char* icon, const char* title, std::string_view status, ImVec4 statusColor, float reserve);
+    struct HeaderStatus
+    {
+        ImVec2 Min;
+        ImVec2 Max;
+        bool Shown = false;
+    };
+
+    HeaderStatus PageHeader(const char* icon, const char* title, std::string_view status, ImVec4 statusColor, float reserve);
     void BeginPageBody();
     void EndPageBody();
 

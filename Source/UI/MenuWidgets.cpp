@@ -104,8 +104,9 @@ namespace Idler::UI
         return clicked;
     }
 
-    void PageHeader(const char* icon, const char* title, std::string_view status, ImVec4 statusColor, float reserve)
+    HeaderStatus PageHeader(const char* icon, const char* title, std::string_view status, ImVec4 statusColor, float reserve)
     {
+        HeaderStatus shown;
         const float headerHeight = Px(34.0f);
         const ImVec2 pos = ImGui::GetCursorScreenPos();
         const float width = ImGui::GetContentRegionAvail().x;
@@ -124,14 +125,19 @@ namespace Idler::UI
         if (!status.empty())
         {
             const float right = max.x - Px(14.0f) - reserve;
-            const float statusX = std::max(x + Px(16.0f), right - ImGui::CalcTextSize(status.data(), status.data() + status.size()).x);
+            const float statusWidth = ImGui::CalcTextSize(status.data(), status.data() + status.size()).x;
+            const float statusX = std::max(x + Px(16.0f), right - statusWidth);
             drawList->PushClipRect(ImVec2(x + Px(16.0f), pos.y), ImVec2(right, max.y), true);
             drawList->AddText(ImVec2(statusX, textY), ImGui::GetColorU32(statusColor), status.data(), status.data() + status.size());
             drawList->PopClipRect();
+            shown.Min = ImVec2(statusX, textY);
+            shown.Max = ImVec2(std::min(statusX + statusWidth, right), textY + ImGui::GetTextLineHeight());
+            shown.Shown = shown.Max.x > shown.Min.x;
         }
 
         ImGui::Dummy(ImVec2(width, headerHeight));
         ImGui::Dummy(ImVec2(0.0f, 1.0f));
+        return shown;
     }
 
     void BeginPageBody()
