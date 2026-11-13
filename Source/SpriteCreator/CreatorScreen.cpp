@@ -219,6 +219,7 @@ namespace Idler::SpriteCreator
         m_selected = index;
         m_paint.Frame = 0;
         m_timeline.Step = -1;
+        m_timeline.SeenFrame = -1;
     }
 
     CreatureFile* Screen::Selected()

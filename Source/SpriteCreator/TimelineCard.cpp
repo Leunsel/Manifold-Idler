@@ -62,60 +62,18 @@ namespace Idler::SpriteCreator
             ImGui::SetCursorScreenPos(resume);
         }
 
-        void FrameRow(CreatureFile& file, PaintState& paint, const TimelineState& timeline, float width)
+        void FrameButtons(CreatureFile& file, PaintState& paint, const TimelineState& timeline, float width)
         {
             const SpriteFile::Sprite& sprite = *file.Sprite;
             const int count = static_cast<int>(sprite.Frames.size());
-            std::set<int> used;
-            for (const SpriteFile::Step& step : sprite.Steps)
-                used.insert(step.Frame);
-
-            const float pixel = std::max(2.0f, std::round(Px(3.0f)));
-            const float inset = std::round(Px(3.0f));
-            const ImVec2 box(pixel * static_cast<float>(SpriteFile::kColumns) + inset * 2.0f, pixel * static_cast<float>(SpriteFile::kRows) + inset * 2.0f);
-            const float gap = Px(6.0f);
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            const ImVec2 rowStart = ImGui::GetCursorScreenPos();
-            for (int index = 0; index < count; ++index)
-            {
-                if (index > 0)
-                    ImGui::SameLine(0.0f, gap);
-                ImGui::PushID(index);
-                const ImVec2 pos = ImGui::GetCursorScreenPos();
-                if (ImGui::InvisibleButton("##frame", box) && !timeline.Playing)
-                    paint.Frame = index;
-                const bool hovered = ImGui::IsItemHovered();
-                const ImVec2 max(pos.x + box.x, pos.y + box.y);
-                const bool current = paint.Frame == index;
-                const bool unused = !used.contains(index) && sprite.Sleep != index;
-                drawList->AddRectFilled(pos, max, Color(ManifoldTheme::Sidebar), Px(4.0f));
-                if (file.View)
-                    Animation::DrawSpriteFrame(drawList, ImVec2(pos.x + inset, pos.y + inset), file.View->Get(), index, pixel, false, Animation::Tint::Colors);
-                if (unused)
-                    drawList->AddRectFilled(pos, max, Color(ManifoldTheme::WithAlpha(ManifoldTheme::Sidebar, 0.55f)), Px(4.0f));
-                const ImVec4 border = current ? ManifoldTheme::Accent : hovered ? ManifoldTheme::WithAlpha(ManifoldTheme::Text, 0.35f) : ManifoldTheme::WithAlpha(TintOf(index), 0.55f);
-                drawList->AddRect(pos, max, Color(border), Px(4.0f), 0, current ? Px(2.0f) : Px(1.0f));
-                const std::string number = std::to_string(index + 1);
-                drawList->AddText(ImVec2(pos.x + Px(4.0f), pos.y + Px(2.0f)), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, 0.7f)), number.c_str());
-                if (sprite.Sleep == index)
-                {
-                    const ImVec2 moonSize = ImGui::CalcTextSize(ICON_FA_MOON);
-                    drawList->AddText(ImVec2(max.x - moonSize.x - Px(4.0f), pos.y + Px(2.0f)), Color(ManifoldTheme::Label), ICON_FA_MOON);
-                }
-                std::string tip = "Frame " + number;
-                if (sprite.Sleep == index)
-                    tip += ", the sleeping frame";
-                if (unused)
-                    tip += ". No step shows it.";
-                Tooltip(tip.c_str());
-                ImGui::PopID();
-            }
-
             const float side = std::round(Px(24.0f));
             const float buttonGap = Px(2.0f);
             const float buttonsWidth = side * 6.0f + buttonGap * 5.0f;
-            const float buttonsX = std::max(ImGui::GetItemRectMax().x + Px(14.0f), rowStart.x + width - buttonsWidth);
-            ImGui::SetCursorScreenPos(ImVec2(buttonsX, rowStart.y + std::round((box.y - side) * 0.5f)));
+            const ImVec2 rowStart = ImGui::GetCursorScreenPos();
+            constexpr const char* kLabel = "Frames";
+            ImGui::GetWindowDrawList()->AddText(ImVec2(rowStart.x, std::round(rowStart.y + (side - ImGui::GetTextLineHeight()) * 0.5f)), Color(ManifoldTheme::Muted), kLabel);
+            const float buttonsX = std::max(rowStart.x + ImGui::CalcTextSize(kLabel).x + Px(10.0f), rowStart.x + width - buttonsWidth);
+            ImGui::SetCursorScreenPos(ImVec2(buttonsX, rowStart.y));
             const int at = paint.Frame;
             const bool free = count < SpriteFile::kMaxFrames && !timeline.Playing;
             if (IconButton("##add_frame", ICON_FA_PLUS, side, ManifoldTheme::Text, false, free))
@@ -164,8 +122,78 @@ namespace Idler::SpriteCreator
             }
             Tooltip("Remove this frame and the steps that show it");
 
-            ImGui::SetCursorScreenPos(ImVec2(rowStart.x, rowStart.y + box.y));
-            ImGui::Dummy(ImVec2(width, 0.0f));
+            ImGui::SetCursorScreenPos(rowStart);
+            ImGui::Dummy(ImVec2(width, side));
+        }
+
+        ImVec2 FrameBox()
+        {
+            const float pixel = std::max(2.0f, std::round(Px(3.0f)));
+            const float inset = std::round(Px(3.0f));
+            return ImVec2(pixel * static_cast<float>(SpriteFile::kColumns) + inset * 2.0f, pixel * static_cast<float>(SpriteFile::kRows) + inset * 2.0f);
+        }
+
+        void FrameRow(CreatureFile& file, PaintState& paint, TimelineState& timeline, float width)
+        {
+            const SpriteFile::Sprite& sprite = *file.Sprite;
+            const int count = static_cast<int>(sprite.Frames.size());
+            std::set<int> used;
+            for (const SpriteFile::Step& step : sprite.Steps)
+                used.insert(step.Frame);
+
+            const float pixel = std::max(2.0f, std::round(Px(3.0f)));
+            const float inset = std::round(Px(3.0f));
+            const ImVec2 box = FrameBox();
+            const float gap = Px(6.0f);
+            const float rowWidth = box.x * static_cast<float>(count) + gap * static_cast<float>(std::max(0, count - 1));
+
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+            ImGui::BeginChild("##frames", ImVec2(width, box.y + ImGui::GetStyle().ScrollbarSize), ImGuiChildFlags_None,
+                ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::PopStyleColor();
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            for (int index = 0; index < count; ++index)
+            {
+                if (index > 0)
+                    ImGui::SameLine(0.0f, gap);
+                ImGui::PushID(index);
+                const ImVec2 pos = ImGui::GetCursorScreenPos();
+                if (ImGui::InvisibleButton("##frame", box) && !timeline.Playing)
+                    paint.Frame = index;
+                const bool hovered = ImGui::IsItemHovered();
+                const ImVec2 max(pos.x + box.x, pos.y + box.y);
+                const bool current = paint.Frame == index;
+                if (current && timeline.SeenFrame != index)
+                {
+                    const float left = ImGui::GetWindowPos().x;
+                    if (rowWidth > width && (pos.x < left || max.x > left + ImGui::GetWindowWidth()))
+                        ImGui::SetScrollHereX(0.5f);
+                    timeline.SeenFrame = index;
+                }
+                const bool unused = !used.contains(index) && sprite.Sleep != index;
+                drawList->AddRectFilled(pos, max, Color(ManifoldTheme::Sidebar), Px(4.0f));
+                if (file.View)
+                    Animation::DrawSpriteFrame(drawList, ImVec2(pos.x + inset, pos.y + inset), file.View->Get(), index, pixel, false, Animation::Tint::Colors);
+                if (unused)
+                    drawList->AddRectFilled(pos, max, Color(ManifoldTheme::WithAlpha(ManifoldTheme::Sidebar, 0.55f)), Px(4.0f));
+                const ImVec4 border = current ? ManifoldTheme::Accent : hovered ? ManifoldTheme::WithAlpha(ManifoldTheme::Text, 0.35f) : ManifoldTheme::WithAlpha(TintOf(index), 0.55f);
+                drawList->AddRect(pos, max, Color(border), Px(4.0f), 0, current ? Px(2.0f) : Px(1.0f));
+                const std::string number = std::to_string(index + 1);
+                drawList->AddText(ImVec2(pos.x + Px(4.0f), pos.y + Px(2.0f)), Color(ManifoldTheme::WithAlpha(ManifoldTheme::Text, 0.7f)), number.c_str());
+                if (sprite.Sleep == index)
+                {
+                    const ImVec2 moonSize = ImGui::CalcTextSize(ICON_FA_MOON);
+                    drawList->AddText(ImVec2(max.x - moonSize.x - Px(4.0f), pos.y + Px(2.0f)), Color(ManifoldTheme::Label), ICON_FA_MOON);
+                }
+                std::string tip = "Frame " + number;
+                if (sprite.Sleep == index)
+                    tip += ", the sleeping frame";
+                if (unused)
+                    tip += ". No step shows it.";
+                Tooltip(tip.c_str());
+                ImGui::PopID();
+            }
+            ImGui::EndChild();
         }
 
         void StepTrack(CreatureFile& file, PaintState& paint, TimelineState& timeline, float width)
@@ -420,9 +448,7 @@ namespace Idler::SpriteCreator
         const float line = ImGui::GetTextLineHeight();
         const float spacing = style.ItemSpacing.y;
         const float chrome = UI::PxWhole(14.0f, 12.0f).y * 2.0f + line + spacing + Px(4.0f) + spacing;
-        const float pixel = std::max(2.0f, std::round(Px(3.0f)));
-        const float box = pixel * static_cast<float>(SpriteFile::kRows) + std::round(Px(3.0f)) * 2.0f;
-        const float left = line + spacing + box + spacing + Px(4.0f) + spacing + line + spacing + std::round(Px(34.0f)) + style.ScrollbarSize;
+        const float left = std::round(Px(24.0f)) + spacing + FrameBox().y + style.ScrollbarSize + spacing + line + spacing + std::round(Px(34.0f)) + style.ScrollbarSize;
         return std::ceil(chrome + std::max(left, FieldsHeight()) + Px(2.0f));
     }
 
@@ -467,9 +493,8 @@ namespace Idler::SpriteCreator
         const float gap = std::round(Px(18.0f));
         const float left = std::max(Px(200.0f), room.x - fieldsWidth - gap);
 
-        Label("Frames", left);
+        FrameButtons(*file, paint, timeline, left);
         FrameRow(*file, paint, timeline, left);
-        ImGui::Dummy(ImVec2(0.0f, Px(4.0f)));
         Label("Steps", left);
         StepTrack(*file, paint, timeline, left);
 
