@@ -14,7 +14,7 @@ This file is made from `Source/Core/Errors.cpp` with `idler explain --markdown`.
 | [Idling](#idling) | MI-2001 to MI-2007 |
 | [Library](#library) | MI-3001 to MI-3009 |
 | [Achievements and stats](#achievements-and-stats) | MI-4001 to MI-4012 |
-| [The program](#the-program) | MI-5001 to MI-5019 |
+| [The program](#the-program) | MI-5001 to MI-5021 |
 | [Command line and server](#command-line-and-server) | MI-6001 to MI-6015 |
 | [Web page](#web-page) | MI-7001 to MI-7021 |
 | [Card farm](#card-farm) | MI-8001 to MI-8009 |
@@ -485,6 +485,22 @@ What to do: Choose another backup: each one is a file of its own. Nothing was ch
 What happened: Writing the settings or the statistics failed: the folder is read-only, the disk is full, or another program holds a file.
 
 What to do: Check that the folder can be written to and try again. What was there before is in the backup marked before restore.
+
+### MI-5020
+
+**The program ended unexpectedly: ....**
+
+What happened: Something in the program failed that it could not go on from, a bug most likely. The lines after this one show where it happened.
+
+What to do: Start it again. If it happens again, report the code with the report from the crashes folder next to the settings. Look into it first: it can hold your Steam name and the names of your games.
+
+### MI-5021
+
+**The last run ended unexpectedly. Its report is in ....**
+
+What happened: The program crashed the last time it ran. The lines after this one are where it happened, read from that report.
+
+What to do: Start it again. If it happens again, report the code with the report from the crashes folder next to the settings. Look into it first: it can hold your Steam name and the names of your games.
 
 ## Command line and server
 

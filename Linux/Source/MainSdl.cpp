@@ -1,3 +1,4 @@
+#include "App/CrashHandler.h"
 #include "App/Desktop.h"
 #include "App/SdlApplication.h"
 #include "App/StartOptions.h"
@@ -126,8 +127,10 @@ int main(int argc, char** argv)
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Manifold Idler runs already", Idler::ErrorMessage(Idler::ErrorCode::SettingsInUse).c_str(), nullptr);
         return 1;
     }
-    if (capture.empty() || !settings.empty())
-        Idler::RuntimeLog::OpenFile(std::filesystem::path(settingsFile).replace_extension(".log"));
+    const std::filesystem::path logFile = capture.empty() || !settings.empty() ? std::filesystem::path(settingsFile).replace_extension(".log") : std::filesystem::path();
+    if (!logFile.empty())
+        Idler::RuntimeLog::OpenFile(logFile);
+    Idler::CrashHandler::Install(settingsFile, logFile);
 
     int result = 0;
     bool restart = false;

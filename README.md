@@ -75,6 +75,18 @@ keeps the last 7 days. Settings > Backups shows the last one, makes one by hand 
 them with their creatures and hours; the chosen one goes back in place and the program starts again with it. What was there
 before goes into a backup of its own first, so a restore can be undone the same way. Each ZIP opens in any ZIP program too.
 
+### Crash reports
+
+When the program crashes, it writes a report into `Manifold-Idler.crashes` next to the settings: a text file that says what
+went wrong and where (the stack trace) and, on Windows, a minidump. The same lines go into the log. At the next start a note
+says so and the Log tab shows the trace. The last 10 reports are kept. They stay on your computer, but they can hold your Steam
+name and the names of your games: look into one before you send it to anyone.
+
+A release build names the program's own code only as `Manifold-Idler.exe+0x...`. Each release has the symbols as
+`Manifold-Idler-symbols-windows-x64.zip`: open the `.dmp` with them in Visual Studio or WinDbg, or put `Manifold-Idler.pdb`
+next to the program, and its next report names the functions and lines. For Linux, `Manifold-Idler-symbols-linux-x86_64.zip`
+holds the program before stripping: `addr2line -f -C -e manifold-idler 0x...` turns an offset into a function.
+
 ## Download
 
 The [Releases](../../releases) page has the window program and the CLI for Windows and Linux, and the Sprite Creator for
@@ -177,6 +189,8 @@ Flags for checking a build next to a running program:
 --pretend-messages        shows the goal and queue-finished messages once
 --web-preview             opens Steam's sign-in page in its dialog, for the look; do not sign in there
 --fake-shutdown=<file>    writes that file instead of shutting down
+--crash-test=<how>        crashes on purpose at the first frame, to check the report: access, abort, terminate, throw,
+                          noexcept, stack or thread
 --scale=<factor>          overrides the DPI scaling
 ```
 

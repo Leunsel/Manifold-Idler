@@ -75,6 +75,9 @@
     <ClCompile Include="..\Source\App\Desktop.cpp">
       <Filter>Source\App</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\App\CrashHandlerWin32.cpp">
+      <Filter>Source\App</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\App\IdlerModel.cpp">
       <Filter>Source\App</Filter>
     </ClCompile>
@@ -82,6 +85,9 @@
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Core\Cards.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\CrashReport.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Core\Creatures.cpp">
@@ -245,6 +251,9 @@
     <ClInclude Include="..\Source\App\Desktop.h">
       <Filter>Source\App</Filter>
     </ClInclude>
+    <ClInclude Include="..\Source\App\CrashHandler.h">
+      <Filter>Source\App</Filter>
+    </ClInclude>
     <ClInclude Include="..\Source\App\IdlerModel.h">
       <Filter>Source\App</Filter>
     </ClInclude>
@@ -270,6 +279,9 @@
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Core\Clock.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\CrashReport.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Core\Creatures.h">

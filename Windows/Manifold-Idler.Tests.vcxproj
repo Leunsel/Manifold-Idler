@@ -75,6 +75,7 @@
     <ClCompile Include="..\Source\Core\Json.cpp" />
     <ClCompile Include="..\Source\Core\SpriteFile.cpp" />
     <ClCompile Include="..\Source\Core\SpriteEdit.cpp" />
+    <ClCompile Include="..\Source\Core\CrashReport.cpp" />
     <ClCompile Include="..\Source\Core\Creatures.cpp" />
     <ClCompile Include="..\Source\Core\Errors.cpp" />
     <ClCompile Include="..\Source\Core\FileLock.cpp" />

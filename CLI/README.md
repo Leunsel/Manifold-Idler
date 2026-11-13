@@ -106,6 +106,8 @@ one of them idled, the other one counts. Next to it lie the statistics, the log 
 Only one program at a time uses a settings file: the second one says so (MI-5016 in the window, MI-6003 here) and does not start.
 The server backs up the settings and statistics once a day, as the window program does, into `Manifold-Idler.backups` next to
 them, and keeps the last 7 days. A restore first backs up what is there, so it can be undone with another restore.
+When the server crashes, it writes the stack trace into its log and a report into `Manifold-Idler.crashes` next to the
+settings; its next start says so in the log.
 Earlier versions called the file `idler.ini`. `idler serve` and `idler service install` rename it, its statistics and its token
 once to the shared names, when nothing uses it and no shared file exists yet; if both exist, `idler.ini` is left as it is.
 

@@ -19,7 +19,9 @@ namespace Idler
         constexpr std::string_view kReport = "Restart the computer. If it stays, report the code.";
         constexpr std::string_view kDriver = "Update the graphics driver. Over Remote Desktop, start the program on the computer itself once.";
         constexpr std::string_view kWritable = "Check that the folder can be written to and the disk is not full.";
-        constexpr std::string_view kWebView = "Install Microsoft's WebView2 Runtime (Evergreen) and start the program again. Windows 11 has it already.";
+        constexpr std::string_view kCrashHelp = "Start it again. If it happens again, report the code with the report from the crashes folder next to the settings. "
+                                                "Look into it first: it can hold your Steam name and the names of your games.";
+        constexpr std::string_view kWebView ="Install Microsoft's WebView2 Runtime (Evergreen) and start the program again. Windows 11 has it already.";
 
         struct Area
         {
@@ -215,6 +217,12 @@ namespace Idler
             { ErrorCode::BackupNotRestored, "The backup could not be put back: {} was not written.",
                 "Writing the settings or the statistics failed: the folder is read-only, the disk is full, or another program holds a file.",
                 "Check that the folder can be written to and try again. What was there before is in the backup marked before restore." },
+            { ErrorCode::Crashed, "The program ended unexpectedly: {}.",
+                "Something in the program failed that it could not go on from, a bug most likely. The lines after this one show where it happened.",
+                kCrashHelp },
+            { ErrorCode::LastRunCrashed, "The last run ended unexpectedly. Its report is in {}.",
+                "The program crashed the last time it ran. The lines after this one are where it happened, read from that report.",
+                kCrashHelp },
 
             { ErrorCode::NoServer, "No idler runs with these settings. Start one with: idler serve",
                 "The command found no running server for this settings file.",

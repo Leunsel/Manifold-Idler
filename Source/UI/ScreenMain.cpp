@@ -1,5 +1,6 @@
 #include "UI/ScreenMain.h"
 
+#include "App/CrashHandler.h"
 #include "App/IdlerModel.h"
 #include "App/Shell.h"
 #include "App/Desktop.h"
@@ -70,6 +71,8 @@ namespace Idler::UI
         constexpr const char* kCardIcon = ICON_FA_CLONE;
 
         bool g_logTabShown = false;
+        bool g_crashLogShown = false;
+        std::wstring g_crashTest;
 
         bool PageShown(Page page)
         {
@@ -5130,12 +5133,21 @@ namespace Idler::UI
 
             std::vector<std::uint32_t> goals;
             bool queueFinished = false;
+            bool crashed = false;
             for (const WindowMessage& message : model.TakeWindowMessages())
             {
                 if (message.What == WindowMessage::Kind::GoalReached)
                     goals.push_back(message.AppId);
-                else
+                else if (message.What == WindowMessage::Kind::QueueFinished)
                     queueFinished = true;
+                else
+                    crashed = true;
+            }
+            if (crashed)
+            {
+                g_crashLogShown = true;
+                const CreatureId creature = model.Buddy() ? *model.Buddy() : IdleAnimation::CreatureOf(model.Account());
+                g_toasts.push_back({ creature, 3u, "Last run crashed", "The log shows where", Page::Log, 0, ManifoldTheme::Warning });
             }
             if (goals.size() == 1)
                 g_toasts.push_back({ IdleAnimation::CreatureOf(goals[0]), goals[0], "Goal reached", GameName(model, goals[0]), Page::Idling, goals[0] });
@@ -5852,6 +5864,11 @@ namespace Idler::UI
         g_selectedGame = selectedApp;
     }
 
+    void SetCrashTest(std::wstring_view how)
+    {
+        g_crashTest = how;
+    }
+
     void SetWebPreview()
     {
         g_webWantsOpen = true;
@@ -5913,7 +5930,9 @@ namespace Idler::UI
     void DrawMain(Shell& app)
     {
         QueueByKey(app.Model());
-        g_logTabShown = app.Model().Options().ShowLog;
+        g_logTabShown = app.Model().Options().ShowLog || g_crashLogShown;
+        if (!g_crashTest.empty())
+            CrashHandler::CrashOnPurpose(std::exchange(g_crashTest, {}));
         if (!PageShown(g_page))
             g_page = Page::Settings;
 

@@ -53,7 +53,8 @@ namespace Idler
         enum class Kind
         {
             GoalReached,
-            QueueFinished
+            QueueFinished,
+            LastRunCrashed
         };
         Kind What = Kind::GoalReached;
         std::uint32_t AppId = 0;

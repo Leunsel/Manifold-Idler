@@ -29,6 +29,7 @@ add_library(idler_core STATIC
     ${IDLER_SOURCE}/Core/AppInfo.cpp
     ${IDLER_SOURCE}/Core/Backups.cpp
     ${IDLER_SOURCE}/Core/Cards.cpp
+    ${IDLER_SOURCE}/Core/CrashReport.cpp
     ${IDLER_SOURCE}/Core/Creatures.cpp
     ${IDLER_SOURCE}/Core/Deflate.cpp
     ${IDLER_SOURCE}/Core/Errors.cpp
@@ -60,10 +61,10 @@ add_library(idler_engine STATIC
     Source/Desktop.cpp
     ${IDLER_SOURCE}/Steam/SteamWebNone.cpp)
 if(WIN32)
-    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcess.cpp)
+    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcess.cpp ${IDLER_SOURCE}/App/CrashHandlerWin32.cpp)
     target_link_libraries(idler_engine PUBLIC shell32)
 else()
-    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcessPosix.cpp)
+    target_sources(idler_engine PRIVATE ${IDLER_SOURCE}/Steam/WorkerProcessPosix.cpp ${IDLER_SOURCE}/App/CrashHandlerPosix.cpp)
     target_link_libraries(idler_engine PUBLIC ${CMAKE_DL_LIBS})
 endif()
 target_include_directories(idler_engine BEFORE PUBLIC Shim)

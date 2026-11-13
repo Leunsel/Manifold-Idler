@@ -21,6 +21,9 @@
     <ClCompile Include="..\Source\Core\Cards.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Core\CrashReport.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\Core\Creatures.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>

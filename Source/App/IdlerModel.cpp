@@ -1,6 +1,7 @@
 #include "App/IdlerModel.h"
 
 #include "App/Desktop.h"
+#include "Core/CrashReport.h"
 #include "Core/Errors.h"
 #include "Core/RuntimeLog.h"
 #include "Core/Text.h"
@@ -85,6 +86,16 @@ namespace Idler
         LOG_INFO("Manifold Idler started");
         if constexpr (!kCardFarmEnabled)
             LOG_INFO("Card farm is off: nothing goes to Steam's web side");
+        if (const std::optional<CrashReport::LastCrash> crash = CrashReport::TakeLastCrash(m_settingsPath))
+        {
+            const std::filesystem::path where = crash->Report.empty() ? CrashReport::FolderOf(m_settingsPath) : crash->Report;
+            LOG_ERROR(ErrorMessage(ErrorCode::LastRunCrashed, PathText(where)));
+            if (!crash->Problem.empty())
+                LOG_ERROR("Problem: " + crash->Problem);
+            for (const std::string& line : crash->Stack)
+                LOG_ERROR(line);
+            m_windowMessages.push_back({ WindowMessage::Kind::LastRunCrashed, 0 });
+        }
 
         for (const CreatureInfo& info : AllCreatures())
         {

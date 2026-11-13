@@ -36,6 +36,18 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+      - name: Gather the symbols
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist-symbols | Out-Null
+          Copy-Item Build\Windows\Release\Manifold-Idler.pdb, Build\Windows\Release\Manifold-Idler-Sprite-Creator.pdb dist-symbols\
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Manifold-Idler-symbols-windows-x64
+          path: dist-symbols/
+          if-no-files-found: error
+
       - name: Gather the Sprite Creator
         shell: pwsh
         run: |
@@ -68,6 +80,11 @@ jobs:
       - name: Build
         run: cmake --build Build/Linux --parallel
 
+      - name: Keep the symbols
+        run: |
+          mkdir dist-symbols
+          cp Build/Linux/manifold-idler dist-symbols/
+
       - name: Check what it needs at run time
         run: |
           strip Build/Linux/manifold-idler
@@ -85,6 +102,12 @@ jobs:
         with:
           name: Manifold-Idler-linux-x86_64
           path: dist/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Manifold-Idler-symbols-linux-x86_64
+          path: dist-symbols/
           if-no-files-found: error
 
   cli:

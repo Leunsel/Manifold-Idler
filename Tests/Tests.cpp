@@ -2,6 +2,7 @@
 #include "Core/Backups.h"
 #include "Core/Cards.h"
 #include "Core/Clock.h"
+#include "Core/CrashReport.h"
 #include "Core/Creatures.h"
 #include "Core/Errors.h"
 #include "Core/FileLock.h"
@@ -30,6 +31,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -4587,6 +4589,101 @@ void TestBackups()
     std::filesystem::remove_all(folder, error);
 }
 
+void TestCrashReport()
+{
+    using namespace CrashReport;
+
+    const std::filesystem::path root = TestFile("-crash");
+    std::error_code error;
+    std::filesystem::remove_all(root, error);
+    std::filesystem::create_directories(root, error);
+    const std::filesystem::path settings = root / "Manifold-Idler.ini";
+    const std::filesystem::path folder = FolderOf(settings);
+
+    CHECK(folder == root / "Manifold-Idler.crashes");
+    CHECK(MarkerOf(settings) == root / "Manifold-Idler.crashed");
+    CHECK(Hex(0) == "0x0" && Hex(0x1a2b) == "0x1a2b");
+    CHECK(ExceptionText(0xC0000005u) == "access violation" && ExceptionText(0xC00000FDu) == "stack overflow");
+    CHECK(ExceptionText(0xE06D7363u) == "a C++ exception nobody caught" && ExceptionText(0x12345678u) == "exception 0x12345678");
+    CHECK(AccessText(0, 0x10) == "reading address 0x10" && AccessText(1, 0) == "writing address 0x0" && AccessText(8, 0x7ff) == "running code at address 0x7ff");
+    CHECK(SignalText(SIGSEGV, 0x8) == "segmentation fault at address 0x8" && SignalText(SIGABRT, 0) == "the program called abort");
+
+    const Frame named{ "Manifold-Idler.exe", 0x1a2b3c, "Idler::UI::DrawMain", 0x12, "ScreenMain.cpp", 5910 };
+    const Frame bare{ "ntdll.dll", 0x9f00, "", 0, "", 0 };
+    CHECK(FrameText(0, named) == "#0 Manifold-Idler.exe+0x1a2b3c Idler::UI::DrawMain+0x12 (ScreenMain.cpp:5910)");
+    CHECK(FrameText(7, bare) == "#7 ntdll.dll+0x9f00");
+    CHECK(FrameText(1, Frame{}) == "#1 ?+0x0");
+    const Frame again{ "Manifold-Idler.exe", 0x40, "Deeper", 0x29, "", 0 };
+    const std::vector<std::string> folded = StackLines({ bare, again, again, again, again, named });
+    CHECK(folded.size() == 4 && folded[1] == FrameText(1, again) && folded[2] == "#2 to #4 the same as #1" && folded[3] == FrameText(5, named));
+    CHECK(StackLines({ again, again }).size() == 2 && StackLines({}).empty());
+
+    std::tm noon{};
+    noon.tm_year = 126;
+    noon.tm_mon = 10;
+    noon.tm_mday = 13;
+    noon.tm_hour = 12;
+    noon.tm_min = 14;
+    noon.tm_sec = 5;
+    noon.tm_isdst = -1;
+    const std::time_t time = std::mktime(&noon);
+    CHECK(ReportName(time) == "2026-11-13 12-14-05");
+
+    Crash crash;
+    crash.Time = time;
+    crash.Problem = "access violation, reading address 0x0";
+    crash.Program = "C:\\Games\\Manifold-Idler.exe";
+    crash.Built = "Nov 13 2026";
+    crash.Thread = 4242;
+    crash.Stack = { named, bare };
+    crash.Dump = "2026-11-13 12-14-05.dmp";
+    const std::string text = ReportText(crash);
+    CHECK(text.starts_with("Manifold Idler ended unexpectedly on 2026-11-13 at 12:14:05.\n"));
+    CHECK(text.find("Problem: access violation, reading address 0x0\n") != std::string::npos);
+    CHECK(text.find("Program: C:\\Games\\Manifold-Idler.exe, built Nov 13 2026\n") != std::string::npos && text.find("Thread: 4242\n") != std::string::npos);
+    CHECK(text.find("\nStack:\n#0 Manifold-Idler.exe+0x1a2b3c") != std::string::npos && text.find("\nDump: 2026-11-13 12-14-05.dmp\n") != std::string::npos);
+    Crash empty;
+    empty.Time = time;
+    empty.Problem = "the program called abort";
+    CHECK(ReportText(empty).find("Stack:\n(none could be read)\n") != std::string::npos && ReportText(empty).find("Dump:") == std::string::npos);
+
+    const std::string lines = LogLines(crash, folder / "2026-11-13 12-14-05.txt");
+    CHECK(lines.starts_with("[12:14:05] [ERROR] [Crash] The program ended unexpectedly: access violation, reading address 0x0. (MI-5020)\n"));
+    CHECK(lines.find("[12:14:05] [ERROR] [Crash] #1 ntdll.dll+0x9f00\n") != std::string::npos);
+    CHECK(lines.find("[12:14:05] [ERROR] [Crash] The report is in ") != std::string::npos && std::count(lines.begin(), lines.end(), '\n') == 4);
+    const std::string withoutReport = LogLines(crash, {});
+    CHECK(std::count(withoutReport.begin(), withoutReport.end(), '\n') == 3);
+
+    const std::optional<LastCrash> read = ReadReport(text);
+    CHECK(read && read->Problem == crash.Problem && read->Stack.size() == 2 && read->Stack[0] == FrameText(0, named));
+    CHECK(!ReadReport("hello\n#0 nothing\n"));
+
+    CHECK(!TakeLastCrash(settings));
+    std::filesystem::create_directories(folder, error);
+    WriteText(folder / "2026-11-13 12-14-05.txt", text);
+    WriteText(MarkerOf(settings), "2026-11-13 12-14-05\r\n");
+    const std::optional<LastCrash> last = TakeLastCrash(settings);
+    CHECK(last && last->Report == folder / "2026-11-13 12-14-05.txt" && last->Problem == crash.Problem && last->Stack.size() == 2);
+    CHECK(!std::filesystem::exists(MarkerOf(settings)) && !TakeLastCrash(settings));
+    WriteText(MarkerOf(settings), "../../somewhere\n");
+    const std::optional<LastCrash> odd = TakeLastCrash(settings);
+    CHECK(odd && odd->Report.empty() && odd->Stack.empty() && !std::filesystem::exists(MarkerOf(settings)));
+
+    for (int index = 0; index < 12; ++index)
+    {
+        const std::string name = ReportName(time + index * 60);
+        WriteText(folder / (name + ".txt"), "report");
+        WriteText(folder / (name + ".dmp"), "dump");
+    }
+    WriteText(folder / "notes.txt", "mine");
+    CHECK(Prune(settings) == 4);
+    CHECK(!std::filesystem::exists(folder / "2026-11-13 12-14-05.txt") && !std::filesystem::exists(folder / "2026-11-13 12-15-05.dmp"));
+    CHECK(std::filesystem::exists(folder / "2026-11-13 12-16-05.txt") && std::filesystem::exists(folder / "2026-11-13 12-25-05.dmp"));
+    CHECK(std::filesystem::exists(folder / "notes.txt") && Prune(settings) == 0);
+
+    std::filesystem::remove_all(root, error);
+}
+
 int main()
 {
 #ifdef _WIN32
@@ -4642,6 +4739,7 @@ int main()
         { "FileLock", TestFileLock },
         { "Zip", TestZip },
         { "Backups", TestBackups },
+        { "CrashReport", TestCrashReport },
     };
     for (const auto& test : tests)
     {

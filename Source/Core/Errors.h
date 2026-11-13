@@ -63,6 +63,8 @@
     X(BackupNotMade, 5017) \
     X(BackupNotRead, 5018) \
     X(BackupNotRestored, 5019) \
+    X(Crashed, 5020) \
+    X(LastRunCrashed, 5021) \
     X(NoServer, 6001) \
     X(BadReply, 6002) \
     X(WindowProgramRuns, 6003) \

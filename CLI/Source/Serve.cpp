@@ -1,5 +1,6 @@
 #include "Serve.h"
 
+#include "App/CrashHandler.h"
 #include "App/IdlerModel.h"
 #include "Commands.h"
 #include "Core/Errors.h"
@@ -142,7 +143,9 @@ namespace Idler::Cli
         }
 
         WatchForTheEnd();
-        RuntimeLog::OpenFile(std::filesystem::path(options.Settings).replace_extension(L".log"));
+        const std::filesystem::path logFile = std::filesystem::path(options.Settings).replace_extension(L".log");
+        RuntimeLog::OpenFile(logFile);
+        CrashHandler::Install(options.Settings, logFile);
 
         Settings settings;
         settings.Load(options.Settings);

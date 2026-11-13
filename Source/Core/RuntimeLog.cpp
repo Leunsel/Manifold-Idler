@@ -94,9 +94,9 @@ namespace Idler::RuntimeLog
         std::error_code ignored;
         std::filesystem::rename(path, std::filesystem::path(path).replace_extension(L".previous.log"), ignored);
 #ifdef _WIN32
-        g_file = ::_wfsopen(path.c_str(), L"w", _SH_DENYNO);
+        g_file = ::_wfsopen(path.c_str(), L"a", _SH_DENYNO);
 #else
-        g_file = std::fopen(path.c_str(), "w");
+        g_file = std::fopen(path.c_str(), "a");
 #endif
     }
 

@@ -62,6 +62,8 @@ namespace Idler::StartOptions
             UI::SetStartCreature(creature);
         if (const std::wstring game = Argument(commandLine, L"--mini-game="); !settings.empty() && !game.empty())
             UI::SetMiniGamePreview(game);
+        if (const std::wstring crash = Argument(commandLine, L"--crash-test="); !settings.empty() && !crash.empty())
+            UI::SetCrashTest(crash);
         if (const std::wstring light = Argument(commandLine, L"--home-light="); !settings.empty() && !light.empty())
             UI::SetHomeLightPreview(light == L"night" ? 0.0f : light == L"dawn" ? 0.55f : light == L"dusk" ? 0.45f : 1.0f);
     }

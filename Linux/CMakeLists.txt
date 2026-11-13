@@ -52,7 +52,7 @@ if(NOT WIN32)
     target_link_libraries(idler_imgui PUBLIC ${CMAKE_DL_LIBS})
 endif()
 
-set(CORE AppInfo Backups Cards Creatures Deflate Errors FileLock Json Library MiniGames Queue RuntimeLog Settings SpriteFile Stats Terrarium Text Vdf WebPolicy Zip)
+set(CORE AppInfo Backups Cards CrashReport Creatures Deflate Errors FileLock Json Library MiniGames Queue RuntimeLog Settings SpriteFile Stats Terrarium Text Vdf WebPolicy Zip)
 set(STEAM LibraryScan SteamClient SteamLocal Worker)
 set(UI Covers Fonts IdleAnimation MenuWidgets MiniGameView SceneKit ScreenMain SpriteView TerrariumView
     Scenes/HomeAutumn Scenes/HomeSpring Scenes/HomeSummer Scenes/HomeWinter Scenes/StageClouds Scenes/StageMeadow Scenes/StageUnderwater)
@@ -77,9 +77,9 @@ foreach(name IN LISTS APP)
 endforeach()
 
 if(WIN32)
-    list(APPEND SOURCES "${SOURCE}/App/Desktop.cpp" "${SOURCE}/Steam/WorkerProcess.cpp" "${SOURCE}/Steam/SteamWeb.cpp")
+    list(APPEND SOURCES "${SOURCE}/App/Desktop.cpp" "${SOURCE}/App/CrashHandlerWin32.cpp" "${SOURCE}/Steam/WorkerProcess.cpp" "${SOURCE}/Steam/SteamWeb.cpp")
 else()
-    list(APPEND SOURCES "${LINUX_SOURCE}/App/DesktopLinux.cpp" "${SOURCE}/Steam/WorkerProcessPosix.cpp" "${SOURCE}/Steam/SteamWebNone.cpp")
+    list(APPEND SOURCES "${LINUX_SOURCE}/App/DesktopLinux.cpp" "${SOURCE}/App/CrashHandlerPosix.cpp" "${SOURCE}/Steam/WorkerProcessPosix.cpp" "${SOURCE}/Steam/SteamWebNone.cpp")
 endif()
 
 add_executable(manifold-idler ${SOURCES})

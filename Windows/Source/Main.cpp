@@ -1,4 +1,5 @@
 #include "App/Application.h"
+#include "App/CrashHandler.h"
 #include "App/Desktop.h"
 #include "App/Splash.h"
 #include "App/StartOptions.h"
@@ -87,8 +88,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPWSTR c
             ::CloseHandle(single);
         return 1;
     }
-    if (capture.empty() || !settings.empty())
-        Idler::RuntimeLog::OpenFile(std::filesystem::path(settingsFile).replace_extension(L".log"));
+    const std::filesystem::path logFile = capture.empty() || !settings.empty() ? std::filesystem::path(settingsFile).replace_extension(L".log") : std::filesystem::path();
+    if (!logFile.empty())
+        Idler::RuntimeLog::OpenFile(logFile);
+    Idler::CrashHandler::Install(settingsFile, logFile);
 
     int result = 0;
     bool restart = false;
