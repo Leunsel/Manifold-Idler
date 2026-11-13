@@ -17,6 +17,7 @@ namespace Idler::Desktop
     void OpenSteam();
     void OpenStorePage(std::uint32_t appId);
     void OpenInLibrary(std::uint32_t appId);
+    void OpenFolder(const std::filesystem::path& folder);
 
     void SetSteamStatus(const wchar_t* status);
 

@@ -87,6 +87,7 @@ namespace Idler
 
         std::vector<double> PerDay(std::uint32_t account, std::int32_t lastDay, int count) const;
         std::vector<double> PerDay(std::uint32_t account, std::uint32_t appId, std::int32_t lastDay, int count) const;
+        double Total() const;
         double Total(std::uint32_t account) const;
         double Total(std::uint32_t account, std::int32_t firstDay, std::int32_t lastDay) const;
 
@@ -97,6 +98,7 @@ namespace Idler
         std::array<double, 24> PerHour(std::uint32_t account) const;
 
         void Load(const std::filesystem::path& path);
+        void Read(std::string_view content);
         bool Save(const std::filesystem::path& path) const;
 
     private:

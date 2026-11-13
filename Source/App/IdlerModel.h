@@ -6,6 +6,7 @@
 #include "Core/Library.h"
 #include "Core/Queue.h"
 #include "Core/Settings.h"
+#include "Core/Backups.h"
 #include "Core/Stats.h"
 #include "Steam/LibraryScan.h"
 #include "Steam/SteamLocal.h"
@@ -271,6 +272,10 @@ namespace Idler
         const Settings& Options() const { return m_settings; }
         void SaveNow();
 
+        Backups::Result BackUpNow();
+        Backups::Result RestoreBackup(const std::filesystem::path& backup);
+        bool SavesBlocked() const { return m_savesBlocked; }
+
     private:
         struct Session
         {
@@ -311,6 +316,7 @@ namespace Idler
         void StoreListsOfAccount();
         std::string UniqueListName(std::string_view name, int except) const;
         void MarkDirty() { m_dirty = true; }
+        void BackUpDaily(std::int32_t today);
         void StopAllWorkers();
         void UpdateKeepAwake(bool force);
         void UpdateInvisible(double now);
@@ -338,6 +344,8 @@ namespace Idler
         double m_nextScan = 0.0;
         double m_steamRetryAt = 0.0;
         bool m_dirty = false;
+        bool m_savesBlocked = false;
+        std::int32_t m_backupDay = 0;
 
         Steam::Status m_steam;
         std::uint32_t m_clientAccount = 0;

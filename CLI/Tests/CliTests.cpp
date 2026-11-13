@@ -1,3 +1,4 @@
+#include "BackupCommands.h"
 #include "Core/Errors.h"
 #include "Http.h"
 #include "Paths.h"
@@ -500,6 +501,35 @@ namespace
         std::filesystem::remove(folder, error);
     }
 
+    void BackupChecks()
+    {
+        const std::filesystem::path settings = std::filesystem::temp_directory_path() / "manifold-idler-backup-test" / "Manifold-Idler.ini";
+        const std::filesystem::path folder = Backups::FolderOf(settings);
+        CHECK(BackupsText({}, {}) == "No backups yet.\n");
+
+        Backups::Backup daily;
+        daily.File = folder / "2026-11-13.zip";
+        Backups::Backup saved;
+        saved.File = folder / "2026-11-13 14-05-12.zip";
+        saved.Kind = Backups::BackupKind::Saved;
+        CHECK(BackupsText({ saved, daily }, { "41 creatures, 12 h idled", "" }) ==
+            "2026-11-13 14-05-12.zip  by hand  41 creatures, 12 h idled\n"
+            "2026-11-13.zip           daily\n");
+
+        Backups::Result result;
+        result.What = Backups::Outcome::Made;
+        result.File = daily.File;
+        CHECK(BackupResultText(result) == "Backed up as 2026-11-13.zip.");
+        result.What = Backups::Outcome::Unchanged;
+        CHECK(BackupResultText(result) == "Nothing changed since the last backup, 2026-11-13.zip.");
+        result.What = Backups::Outcome::Failed;
+        result.Problem = "No.";
+        CHECK(BackupResultText(result) == "No.");
+
+        CHECK(BackupFileNamed(settings, "2026-11-13") == folder / "2026-11-13.zip");
+        CHECK(BackupFileNamed(settings, "2026-11-13.zip") == folder / "2026-11-13.zip");
+    }
+
     void AnswerChecks()
     {
         WebConfig config;
@@ -690,6 +720,7 @@ int main()
     TokenChecks();
     AnswerChecks();
     ThemeChecks();
+    BackupChecks();
 
     std::printf("%d checks, %d failed\n", g_checks, g_failed);
     return g_failed == 0 ? 0 : 1;

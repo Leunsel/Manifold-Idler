@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <ctime>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <sstream>
 #include <system_error>
@@ -327,9 +328,22 @@ namespace Idler
         std::ifstream file(path, std::ios::binary);
         if (!file)
             return;
+        Read(std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>()));
+    }
 
+    double IdleStats::Total() const
+    {
+        double seconds = 0.0;
+        for (const auto& [key, row] : m_rows)
+            seconds += row.Seconds;
+        return seconds;
+    }
+
+    void IdleStats::Read(std::string_view content)
+    {
+        std::istringstream lines{ std::string(content) };
         std::string line;
-        while (std::getline(file, line))
+        while (std::getline(lines, line))
         {
             std::string_view text = Trim(line);
             std::string_view parts[6];

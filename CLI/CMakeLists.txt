@@ -27,8 +27,10 @@ endfunction()
 
 add_library(idler_core STATIC
     ${IDLER_SOURCE}/Core/AppInfo.cpp
+    ${IDLER_SOURCE}/Core/Backups.cpp
     ${IDLER_SOURCE}/Core/Cards.cpp
     ${IDLER_SOURCE}/Core/Creatures.cpp
+    ${IDLER_SOURCE}/Core/Deflate.cpp
     ${IDLER_SOURCE}/Core/Errors.cpp
     ${IDLER_SOURCE}/Core/FileLock.cpp
     ${IDLER_SOURCE}/Core/Library.cpp
@@ -43,8 +45,10 @@ add_library(idler_core STATIC
     ${IDLER_SOURCE}/Core/Terrarium.cpp
     ${IDLER_SOURCE}/Core/Text.cpp
     ${IDLER_SOURCE}/Core/Vdf.cpp
-    ${IDLER_SOURCE}/Core/WebPolicy.cpp)
+    ${IDLER_SOURCE}/Core/WebPolicy.cpp
+    ${IDLER_SOURCE}/Core/Zip.cpp)
 target_include_directories(idler_core PUBLIC ${IDLER_SOURCE})
+target_include_directories(idler_core SYSTEM PRIVATE ${IDLER_ROOT}/Dependencies/stb)
 idler_flags(idler_core)
 
 add_library(idler_engine STATIC
@@ -68,6 +72,7 @@ target_link_libraries(idler_engine PUBLIC idler_core Threads::Threads)
 idler_flags(idler_engine)
 
 add_library(idler_cli_base STATIC
+    Source/BackupCommands.cpp
     Source/Http.cpp
     Source/Ipc.cpp
     Source/Paths.cpp

@@ -121,6 +121,11 @@ namespace Idler::Desktop
         OpenLink("steam://nav/games/details/" + std::to_string(appId));
     }
 
+    void OpenFolder(const std::filesystem::path& folder)
+    {
+        StartAndForget({ "xdg-open", folder.string() });
+    }
+
     void SetSteamStatus(const wchar_t* status)
     {
         OpenLink("steam://friends/status/" + WideToUtf8(status));

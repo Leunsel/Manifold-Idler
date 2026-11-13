@@ -1,4 +1,5 @@
 #include "Core/AppInfo.h"
+#include "Core/Backups.h"
 #include "Core/Cards.h"
 #include "Core/Clock.h"
 #include "Core/Creatures.h"
@@ -17,6 +18,7 @@
 #include "Core/WebPolicy.h"
 #include "Core/Text.h"
 #include "Core/Vdf.h"
+#include "Core/Zip.h"
 #include "UI/CreatureSprites.h"
 #include "UI/SpriteView.h"
 
@@ -30,7 +32,9 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -4372,6 +4376,217 @@ void TestTug()
     }
 }
 
+namespace
+{
+    constexpr std::string_view kPythonZip =
+        "504b0304140000000800c5ab6c5d301314a337000000a5000000120000004d616e69666f6c642d49646c65722e696e69b356084acd4dcd4d4a2d4a4de1e50acec92f29b635e1e5722e"
+        "4a4d2c292d4ab54d2bca4f57a8513034378002851a05635e2e6bba6a0300504b0304140000000000c6ab6c5d7f2445982800000028000000140000004d616e69666f6c642d49646c6572"
+        "2e7374617473323032362d31312d3132207c2037207c20343830207c2033363030207c2032207c20313830300d0a504b01021400140000000800c5ab6c5d301314a337000000a50000"
+        "001200000000000000000000008001000000004d616e69666f6c642d49646c65722e696e69504b01021400140000000000c6ab6c5d7f24459828000000280000001400000000000000"
+        "000000008001670000004d616e69666f6c642d49646c65722e7374617473504b0506000000000200020082000000c10000000000";
+
+    constexpr std::string_view kPythonZipWithDescriptor =
+        "504b0304140008000800c5ab6c5d000000000000000000000000120000004d616e69666f6c642d49646c65722e696e69b356084acd4dcd4d4a2d4a4de1e50acec92f29b635e1e5722e"
+        "4a4d2c292d4ab54d2bca4f57a8513034378002851a05635e2e6bba6a0300504b0708301314a337000000a5000000504b0304140008000000c6ab6c5d0000000000000000000000001400"
+        "00004d616e69666f6c642d49646c65722e7374617473323032362d31312d3132207c2037207c20343830207c2033363030207c2032207c20313830300d0a504b07087f244598280000"
+        "0028000000504b01021400140008000800c5ab6c5d301314a337000000a50000001200000000000000000000008001000000004d616e69666f6c642d49646c65722e696e69504b0102"
+        "1400140008000000c6ab6c5d7f24459828000000280000001400000000000000000000008001770000004d616e69666f6c642d49646c65722e7374617473504b050600000000020002"
+        "0082000000e10000000000";
+
+    std::string FromHex(std::string_view hex)
+    {
+        std::string bytes;
+        for (std::size_t at = 0; at + 1 < hex.size(); at += 2)
+            bytes.push_back(static_cast<char>(std::stoi(std::string(hex.substr(at, 2)), nullptr, 16)));
+        return bytes;
+    }
+
+    std::string ReadText(const std::filesystem::path& path)
+    {
+        std::ifstream file(path, std::ios::binary);
+        return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    }
+
+    void WriteText(const std::filesystem::path& path, std::string_view text)
+    {
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        file.write(text.data(), static_cast<std::streamsize>(text.size()));
+    }
+}
+
+void TestZip()
+{
+    CHECK(Zip::Crc32("") == 0u);
+    CHECK(Zip::Crc32("123456789") == 0xCBF43926u);
+
+    std::string lines;
+    for (int line = 0; line < 2000; ++line)
+        lines += "2026-11-" + std::to_string(10 + line % 20) + " | 7 | " + std::to_string(400 + line) + " | 3600 | 2 | 1800\r\n";
+    std::string noise;
+    std::uint32_t seed = 12345u;
+    for (int index = 0; index < 4096; ++index)
+    {
+        seed = seed * 1664525u + 1013904223u;
+        noise.push_back(static_cast<char>(seed >> 24));
+    }
+    const std::time_t when = 1794000000;
+    const std::vector<Zip::Entry> entries = {
+        { "Manifold-Idler.stats", lines, when },
+        { "empty.txt", "", when },
+        { "noise.bin", noise, when },
+        { "Grüße.ini", "Slots=2\r\n", when },
+    };
+    const std::optional<std::string> archive = Zip::Write(entries);
+    CHECK(archive.has_value());
+    if (archive)
+    {
+        CHECK(archive->size() < lines.size() / 3 + noise.size() + 1000);
+        const std::optional<std::vector<Zip::Entry>> back = Zip::Read(*archive);
+        CHECK(back && back->size() == entries.size());
+        if (back && back->size() == entries.size())
+        {
+            bool same = true;
+            for (std::size_t index = 0; index < entries.size(); ++index)
+            {
+                const Zip::Entry& read = (*back)[index];
+                same &= read.Name == entries[index].Name && read.Data == entries[index].Data;
+                same &= std::abs(static_cast<long long>(read.Time) - static_cast<long long>(when)) <= 2;
+            }
+            CHECK(same);
+        }
+        std::string damaged = *archive;
+        damaged[60] = static_cast<char>(damaged[60] ^ 0x55);
+        CHECK(!Zip::Read(damaged));
+        CHECK(!Zip::Read(archive->substr(0, archive->size() - 1)));
+        CHECK(!Zip::Read(archive->substr(0, archive->size() / 2)));
+    }
+    CHECK(!Zip::Read(""));
+    CHECK(!Zip::Read(std::string_view("PK\x05\x06", 4)));
+    CHECK(!Zip::Write({ { "", "x", 0 } }));
+
+    std::string ini;
+    for (int copy = 0; copy < 3; ++copy)
+        ini += "; Remembered\r\nSlots=4\r\nCreature=frog | 1700000000 | 3\r\n";
+    for (const std::string_view hex : { kPythonZip, kPythonZipWithDescriptor })
+    {
+        const std::optional<std::vector<Zip::Entry>> read = Zip::Read(FromHex(hex));
+        CHECK(read && read->size() == 2);
+        if (!read || read->size() != 2)
+            continue;
+        CHECK((*read)[0].Name == "Manifold-Idler.ini" && (*read)[0].Data == ini);
+        CHECK((*read)[1].Name == "Manifold-Idler.stats" && (*read)[1].Data == "2026-11-12 | 7 | 480 | 3600 | 2 | 1800\r\n");
+        std::tm local{};
+        CHECK(LocalTime((*read)[0].Time, local) && local.tm_year == 126 && local.tm_mon == 10 && local.tm_mday == 12 && local.tm_hour == 21 &&
+            local.tm_min == 30 && local.tm_sec == 10);
+    }
+}
+
+void TestBackups()
+{
+    using namespace Backups;
+
+    const std::filesystem::path folder = TestFile("-backups");
+    std::error_code error;
+    std::filesystem::remove_all(folder, error);
+    std::filesystem::create_directories(folder, error);
+    const std::filesystem::path settings = folder / "Manifold-Idler.ini";
+    const std::filesystem::path stats = folder / "Manifold-Idler.stats";
+    const std::filesystem::path backups = folder / "Manifold-Idler.backups";
+
+    std::tm noon{};
+    noon.tm_year = 126;
+    noon.tm_mon = 10;
+    noon.tm_mday = 13;
+    noon.tm_hour = 12;
+    noon.tm_min = 14;
+    noon.tm_sec = 5;
+    noon.tm_isdst = -1;
+    const std::time_t day = std::mktime(&noon);
+    constexpr std::time_t kDay = 86400;
+
+    CHECK(FolderOf(settings) == backups);
+    CHECK(FilesOf(settings).size() == 3 && FilesOf(settings)[1] == stats && FilesOf(settings)[2] == folder / "Manifold-Idler.cards");
+    CHECK(FileName(BackupKind::Daily, day) == "2026-11-13.zip");
+    CHECK(FileName(BackupKind::Saved, day) == "2026-11-13 12-14-05.zip");
+    CHECK(FileName(BackupKind::BeforeRestore, day) == "2026-11-13 12-14-05 before restore.zip");
+    bool parsed = true;
+    for (const BackupKind kind : { BackupKind::Daily, BackupKind::Saved, BackupKind::BeforeRestore })
+    {
+        const std::optional<Backup> backup = FromFile(backups / FileName(kind, day));
+        parsed &= backup && backup->Kind == kind && backup->Time <= day && day - backup->Time < kDay;
+    }
+    CHECK(parsed);
+    CHECK(FromFile("2026-11-13 12-14-05.zip") && FromFile("2026-11-13 12-14-05.zip")->Time == day);
+    CHECK(!FromFile("notes.zip") && !FromFile("2026-11-13.txt") && !FromFile("2026-13-01.zip") && !FromFile("2026-11-13 25-00-00.zip"));
+    CHECK(!FromFile("2026-11-13 12-14-05 copy.zip") && !FromFile("2026-11-13 (2).zip") && !FromFile("2026-11-13.zip.saving"));
+
+    CHECK(Make(settings, BackupKind::Daily, day).What == Outcome::NothingToBackUp);
+    CHECK(List(settings).empty() && !MadeToday(settings, day));
+
+    const std::string firstSettings = "Slots=2\r\nCreature=frog | 1700000000 | 3\r\n";
+    const std::string firstStats = "2026-11-12 | 7 | 480 | 7200 | 2 | 3600\r\n";
+    WriteText(settings, firstSettings);
+    WriteText(stats, firstStats);
+    const Result daily = Make(settings, BackupKind::Daily, day);
+    CHECK(daily.What == Outcome::Made && daily.File == backups / "2026-11-13.zip" && MadeToday(settings, day));
+    CHECK(Make(settings, BackupKind::Daily, day + 3600).What == Outcome::Unchanged);
+    CHECK(Make(settings, BackupKind::Saved, day + 60).What == Outcome::Unchanged);
+
+    std::size_t startCreatures = 0;
+    for (const CreatureInfo& info : AllCreatures())
+        startCreatures += info.Kind == UnlockKind::Start ? 1 : 0;
+    const std::optional<Contents> contents = Inspect(settings, daily.File);
+    CHECK(contents && contents->HasSettings && contents->HasStats && !contents->HasCards);
+    CHECK(contents && contents->Seconds == 7200.0 && contents->Creatures == startCreatures + 1);
+
+    WriteText(stats, firstStats + "2026-11-13 | 7 | 620 | 60 | 1 | 60\r\n");
+    const Result saved = Make(settings, BackupKind::Saved, day + 120);
+    CHECK(saved.What == Outcome::Made && saved.File == backups / FileName(BackupKind::Saved, day + 120));
+    CHECK(List(settings).size() == 2 && List(settings).front().Kind == BackupKind::Saved && List(settings).front().Bytes > 0);
+    CHECK(Make(settings, BackupKind::Daily, day + kDay).What == Outcome::Made);
+    CHECK(Make(settings, BackupKind::Daily, day + 2 * kDay).What == Outcome::Unchanged && !MadeToday(settings, day + 2 * kDay));
+
+    WriteText(settings, "Slots=9\r\n");
+    WriteText(stats, "");
+    WriteText(backups / "notes.txt", "mine");
+    WriteText(backups / "mine.zip", "mine");
+    const Result restored = Restore(settings, daily.File, day + 3 * kDay);
+    CHECK(restored.What == Outcome::Made && restored.File == backups / FileName(BackupKind::BeforeRestore, day + 3 * kDay));
+    CHECK(ReadText(settings) == firstSettings && ReadText(stats) == firstStats);
+    const std::optional<Contents> before = Inspect(settings, restored.File);
+    CHECK(before && before->HasSettings && before->HasStats && before->Seconds == 0.0 && before->Creatures == startCreatures);
+    CHECK(Restore(settings, restored.File, day + 3 * kDay + 5).Ok() && ReadText(settings) == "Slots=9\r\n" && ReadText(stats).empty());
+
+    const std::filesystem::path broken = backups / "2026-11-01.zip";
+    WriteText(broken, "not a zip");
+    const std::size_t listed = List(settings).size();
+    const Result refused = Restore(settings, broken, day + 4 * kDay);
+    CHECK(!refused.Ok() && refused.Problem.find("MI-5018") != std::string::npos);
+    CHECK(ReadText(settings) == "Slots=9\r\n" && List(settings).size() == listed);
+    CHECK(!Inspect(settings, broken));
+
+    for (int extra = 5; extra < 20; ++extra)
+    {
+        WriteText(stats, firstStats + std::to_string(extra));
+        Make(settings, BackupKind::Daily, day + extra * kDay);
+    }
+    for (int extra = 0; extra < 8; ++extra)
+    {
+        WriteText(stats, firstStats + "saved " + std::to_string(extra));
+        Make(settings, BackupKind::Saved, day + 20 * kDay + extra * 60);
+    }
+    std::size_t dailies = 0;
+    std::size_t others = 0;
+    for (const Backup& backup : List(settings))
+        (backup.Kind == BackupKind::Daily ? dailies : others) += 1;
+    CHECK(dailies == kKeepDaily && others == kKeepOthers);
+    CHECK(List(settings).front().File == backups / FileName(BackupKind::Saved, day + 20 * kDay + 7 * 60));
+    CHECK(std::filesystem::exists(backups / "notes.txt") && std::filesystem::exists(backups / "mine.zip") && !std::filesystem::exists(broken));
+    CHECK(!std::filesystem::exists(backups / "2026-11-13.zip") && std::filesystem::exists(backups / FileName(BackupKind::Daily, day + 19 * kDay)));
+
+    std::filesystem::remove_all(folder, error);
+}
+
 int main()
 {
 #ifdef _WIN32
@@ -4425,6 +4640,8 @@ int main()
         { "SpriteTimeline", TestSpriteTimeline },
         { "CreatureFiles", TestCreatureFiles },
         { "FileLock", TestFileLock },
+        { "Zip", TestZip },
+        { "Backups", TestBackups },
     };
     for (const auto& test : tests)
     {

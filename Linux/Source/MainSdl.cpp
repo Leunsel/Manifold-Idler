@@ -12,11 +12,14 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace
 {
@@ -50,6 +53,40 @@ namespace
                 line += word;
         }
         return line;
+#endif
+    }
+
+    void StartAgain(int argc, char** argv)
+    {
+#ifdef _WIN32
+        static_cast<void>(argc);
+        static_cast<void>(argv);
+        std::wstring program(MAX_PATH, L'\0');
+        const DWORD length = ::GetModuleFileNameW(nullptr, program.data(), static_cast<DWORD>(program.size()));
+        if (length == 0 || length >= program.size())
+            return;
+        program.resize(length);
+        std::wstring line = ::GetCommandLineW();
+        for (std::size_t at = line.find(L" --minimised"); at != std::wstring::npos; at = line.find(L" --minimised"))
+            line.erase(at, 12);
+        STARTUPINFOW startup{};
+        startup.cb = sizeof(startup);
+        PROCESS_INFORMATION process{};
+        if (::CreateProcessW(program.c_str(), line.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startup, &process))
+        {
+            ::CloseHandle(process.hThread);
+            ::CloseHandle(process.hProcess);
+        }
+#else
+        std::vector<char*> arguments;
+        for (int index = 0; index < argc; ++index)
+        {
+            if (index > 0 && std::string_view(argv[index]) == "--minimised")
+                continue;
+            arguments.push_back(argv[index]);
+        }
+        arguments.push_back(nullptr);
+        ::execv("/proc/self/exe", arguments.data());
 #endif
     }
 
@@ -92,15 +129,25 @@ int main(int argc, char** argv)
     if (capture.empty() || !settings.empty())
         Idler::RuntimeLog::OpenFile(std::filesystem::path(settingsFile).replace_extension(".log"));
 
-    Idler::SdlApplication app(settingsFile);
-    Idler::StartOptions::Apply(app, commandLine.c_str(), settings, capture);
-    if (!capture.empty())
-        app.SetCapture(PathOf(capture));
-
-    if (!app.Initialise())
+    int result = 0;
+    bool restart = false;
     {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Manifold Idler could not be started", app.LastError().c_str(), nullptr);
-        return 1;
+        Idler::SdlApplication app(settingsFile);
+        Idler::StartOptions::Apply(app, commandLine.c_str(), settings, capture);
+        if (!capture.empty())
+            app.SetCapture(PathOf(capture));
+
+        if (!app.Initialise())
+        {
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Manifold Idler could not be started", app.LastError().c_str(), nullptr);
+            return 1;
+        }
+        result = app.Run();
+        restart = app.RestartRequested();
     }
-    return app.Run();
+    Idler::RuntimeLog::OpenFile({});
+    settingsLock.Release();
+    if (restart)
+        StartAgain(argc, argv);
+    return result;
 }

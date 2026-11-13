@@ -97,6 +97,7 @@ namespace Idler
                 m_creatures.set(static_cast<std::size_t>(*id));
         }
         m_buddy = CreatureWithKey(m_settings.CreatureBuddy);
+        BackUpDaily(TodayNumber());
     }
 
     IdlerModel::~IdlerModel()
@@ -158,6 +159,8 @@ namespace Idler
             m_nextSteamCheck = now + kSteamCheckSeconds;
             m_today = TodayNumber();
             m_hour = CurrentHour();
+            if (m_today != m_backupDay)
+                BackUpDaily(m_today);
             RefreshSteam(now);
             RefreshRules();
             RefreshGuards();
@@ -207,6 +210,8 @@ namespace Idler
 
     void IdlerModel::SaveNow()
     {
+        if (m_savesBlocked)
+            return;
         StoreListsOfAccount();
         m_settings.WasActive = m_active;
         const bool settingsSaved = m_settings.Save(m_settingsPath);
@@ -219,6 +224,41 @@ namespace Idler
         m_statsUnsaved = !statsSaved;
         m_dirty = false;
         m_nextSave = Now() + kSaveSeconds;
+    }
+
+    void IdlerModel::BackUpDaily(std::int32_t today)
+    {
+        m_backupDay = today;
+        const Backups::Result result = Backups::Make(m_settingsPath, Backups::BackupKind::Daily, std::time(nullptr));
+        if (result.What == Backups::Outcome::Made)
+            LOG_INFO("Backed up the settings and statistics as " + PathText(result.File.filename()));
+        else if (!result.Ok())
+            LOG_ERROR(result.Problem);
+    }
+
+    Backups::Result IdlerModel::BackUpNow()
+    {
+        SaveNow();
+        const Backups::Result result = Backups::Make(m_settingsPath, Backups::BackupKind::Saved, std::time(nullptr));
+        if (result.What == Backups::Outcome::Made)
+            LOG_SUCCESS("Backed up the settings and statistics as " + PathText(result.File.filename()));
+        else if (!result.Ok())
+            LOG_ERROR(result.Problem);
+        return result;
+    }
+
+    Backups::Result IdlerModel::RestoreBackup(const std::filesystem::path& backup)
+    {
+        SaveNow();
+        const Backups::Result result = Backups::Restore(m_settingsPath, backup, std::time(nullptr));
+        if (!result.Ok())
+        {
+            LOG_ERROR(result.Problem);
+            return result;
+        }
+        m_savesBlocked = true;
+        LOG_SUCCESS("Restored the backup " + PathText(backup.filename()) + ". The program starts again with it.");
+        return result;
     }
 
     void IdlerModel::RefreshSteam(double now)

@@ -166,7 +166,12 @@ namespace Idler
         std::ifstream file(path, std::ios::binary);
         if (!file)
             return;
-        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        Read(std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>()));
+    }
+
+    void Settings::Read(std::string_view source)
+    {
+        std::string content(source);
         if (content.starts_with("\xEF\xBB\xBF"))
             content.erase(0, 3);
 

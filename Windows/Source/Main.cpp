@@ -18,6 +18,36 @@
 namespace
 {
     constexpr const wchar_t* kInstanceName = Idler::kCardFarmEnabled ? L"Local\\ManifoldIdlerAlt" : L"Local\\ManifoldIdler";
+
+    void StartAgain()
+    {
+        std::wstring program(MAX_PATH, L'\0');
+        for (;;)
+        {
+            const DWORD length = ::GetModuleFileNameW(nullptr, program.data(), static_cast<DWORD>(program.size()));
+            if (length == 0)
+                return;
+            if (length < program.size())
+            {
+                program.resize(length);
+                break;
+            }
+            program.resize(program.size() * 2);
+        }
+
+        std::wstring line = ::GetCommandLineW();
+        for (std::size_t at = line.find(L" --minimised"); at != std::wstring::npos; at = line.find(L" --minimised"))
+            line.erase(at, 12);
+
+        STARTUPINFOW startup{};
+        startup.cb = sizeof(startup);
+        PROCESS_INFORMATION process{};
+        if (::CreateProcessW(program.c_str(), line.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startup, &process))
+        {
+            ::CloseHandle(process.hThread);
+            ::CloseHandle(process.hProcess);
+        }
+    }
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPWSTR commandLine, _In_ int showCommand)
@@ -60,18 +90,27 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPWSTR c
     if (capture.empty() || !settings.empty())
         Idler::RuntimeLog::OpenFile(std::filesystem::path(settingsFile).replace_extension(L".log"));
 
-    Idler::Application app(settingsFile);
-
-    Idler::StartOptions::Apply(app, commandLine, settings, capture);
-
-    if (!app.Initialise(instance, showCommand))
+    int result = 0;
+    bool restart = false;
     {
-        Idler::Splash::Close();
-        ::MessageBoxW(nullptr, app.LastError(), L"Manifold Idler could not be started", MB_ICONERROR | MB_OK);
-        return 1;
+        Idler::Application app(settingsFile);
+
+        Idler::StartOptions::Apply(app, commandLine, settings, capture);
+
+        if (!app.Initialise(instance, showCommand))
+        {
+            Idler::Splash::Close();
+            ::MessageBoxW(nullptr, app.LastError(), L"Manifold Idler could not be started", MB_ICONERROR | MB_OK);
+            return 1;
+        }
+        result = app.Run();
+        restart = app.RestartRequested();
     }
-    const int result = app.Run();
+    Idler::RuntimeLog::OpenFile({});
+    settingsLock.Release();
     if (single)
         ::CloseHandle(single);
+    if (restart)
+        StartAgain();
     return result;
 }

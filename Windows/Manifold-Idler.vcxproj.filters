@@ -114,6 +114,15 @@
     <ClCompile Include="..\Source\Core\Settings.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Core\Backups.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Deflate.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Zip.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\Core\Stats.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
@@ -294,6 +303,15 @@
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Core\SmoothWheel.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Backups.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Deflate.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Core\Zip.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Core\Stats.h">

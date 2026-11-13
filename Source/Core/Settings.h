@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Idler
@@ -108,6 +109,7 @@ namespace Idler
         std::vector<StoredPlay> CreaturePlays;
 
         void Load(const std::filesystem::path& path);
+        void Read(std::string_view source);
         bool Save(const std::filesystem::path& path) const;
     };
 }

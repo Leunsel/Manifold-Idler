@@ -56,6 +56,9 @@ idler log 50                 what it did last
 idler web                    the web page's address, with its token
 idler themes                 the web page's themes; themes copy <theme> <name> makes one of your own from one
 idler quit                   ends the server; Ctrl+C does too
+idler backups                the backups of the settings and statistics, newest first
+idler backup                 makes one now, from what was saved last
+idler restore 2026-11-13     puts one back; only while neither the server nor the window program runs
 idler explain MI-1001        what an error code means; without a code, all of them
 ```
 
@@ -101,6 +104,8 @@ one of them idled, the other one counts. Next to it lie the statistics, the log 
 | Linux | `$XDG_CONFIG_HOME/manifold-idler/Manifold-Idler.ini`, the window program's file | `$XDG_RUNTIME_DIR`, or the temp folder |
 
 Only one program at a time uses a settings file: the second one says so (MI-5016 in the window, MI-6003 here) and does not start.
+The server backs up the settings and statistics once a day, as the window program does, into `Manifold-Idler.backups` next to
+them, and keeps the last 7 days. A restore first backs up what is there, so it can be undone with another restore.
 Earlier versions called the file `idler.ini`. `idler serve` and `idler service install` rename it, its statistics and its token
 once to the shared names, when nothing uses it and no shared file exists yet; if both exist, `idler.ini` is left as it is.
 

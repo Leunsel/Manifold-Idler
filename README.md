@@ -68,6 +68,13 @@ runs the same queue without a window, on Windows and Linux.
 
 Settings, statistics and the log are kept next to the program: `Manifold-Idler.ini`, `.stats`, `.log`.
 
+### Backups
+
+Each day the program runs, it packs the settings and statistics into a ZIP in `Manifold-Idler.backups` next to them and
+keeps the last 7 days. Settings > Backups shows the last one, makes one by hand and opens the folder. "Restore a backup" lists
+them with their creatures and hours; the chosen one goes back in place and the program starts again with it. What was there
+before goes into a backup of its own first, so a restore can be undone the same way. Each ZIP opens in any ZIP program too.
+
 ## Download
 
 The [Releases](../../releases) page has the window program and the CLI for Windows and Linux, and the Sprite Creator for

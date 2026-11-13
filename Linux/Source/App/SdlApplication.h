@@ -48,6 +48,12 @@ namespace Idler
         void Close() override;
         bool HasTray() const override { return false; }
         void Quit() { m_running = false; }
+        void Restart() override
+        {
+            m_restart = true;
+            Quit();
+        }
+        bool RestartRequested() const { return m_restart; }
 
         int HitTest(int x, int y) const;
 
@@ -81,6 +87,7 @@ namespace Idler
 
         SmoothWheel m_wheel;
         bool m_running = false;
+        bool m_restart = false;
         float m_scaleOverride = 0.0f;
         float m_zoom = 1.0f;
         float m_appliedScale = 0.0f;

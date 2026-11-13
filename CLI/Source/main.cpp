@@ -1,3 +1,4 @@
+#include "BackupCommands.h"
 #include "Core/Errors.h"
 #include "Core/Text.h"
 #include "Ipc.h"
@@ -245,6 +246,12 @@ int main(int argc, char** argv)
     themesCopy->add_option("name", themeName, "The new theme's name, also its folder's: a to z, 0 to 9 and -")->required();
     themesCopy->add_option("--themes", themesText, "The folder with themes of your own; Manifold-Idler.themes beside the settings without it");
 
+    CLI::App* backupsCommand = app.add_subcommand("backups", "The backups of the settings and statistics");
+    CLI::App* backupCommand = app.add_subcommand("backup", "Back up the settings and statistics now");
+    std::string restoreName;
+    CLI::App* restoreCommand = app.add_subcommand("restore", "Put a backup back; neither the window program nor the server may run");
+    restoreCommand->add_option("backup", restoreName, "Its file name, as idler backups lists it")->required();
+
     std::string explainCode;
     bool explainMarkdown = false;
     CLI::App* explain = app.add_subcommand("explain", "What an error code means, MI-1001 for example; without one, all codes");
@@ -265,6 +272,13 @@ int main(int argc, char** argv)
     std::filesystem::path settings = settingsText.empty() ? Idler::Cli::DefaultSettingsFile() : Idler::Cli::PathFromUtf8(settingsText);
     if (settingsText.empty() && (serve->parsed() || serviceInstall->parsed()))
         settings = Idler::Cli::TakeOverOldSettings(settings);
+
+    if (backupsCommand->parsed())
+        return Idler::Cli::ListBackups(settings);
+    if (backupCommand->parsed())
+        return Idler::Cli::BackUp(settings);
+    if (restoreCommand->parsed())
+        return Idler::Cli::RestoreBackup(settings, restoreName);
 
     if (serviceInstall->parsed())
         return Idler::Cli::InstallService(settings, serviceStart, serviceWeb->count() > 0, serviceWebAddress);

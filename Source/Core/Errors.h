@@ -60,6 +60,9 @@
     X(StatsNotSaved, 5014) \
     X(ClockRunsOff, 5015) \
     X(SettingsInUse, 5016) \
+    X(BackupNotMade, 5017) \
+    X(BackupNotRead, 5018) \
+    X(BackupNotRestored, 5019) \
     X(NoServer, 6001) \
     X(BadReply, 6002) \
     X(WindowProgramRuns, 6003) \

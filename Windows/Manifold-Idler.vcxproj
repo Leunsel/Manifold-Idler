@@ -51,7 +51,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(ProjectDir)..\Source;$(ProjectDir)..\Dependencies\ImGui;$(ProjectDir)..\Dependencies\ImGui\backends;$(ProjectDir)..\Dependencies\WebView2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(ProjectDir)..\Source;$(ProjectDir)..\Dependencies\ImGui;$(ProjectDir)..\Dependencies\stb;$(ProjectDir)..\Dependencies\ImGui\backends;$(ProjectDir)..\Dependencies\WebView2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>$(CardFarmDefine)_WINDOWS;WIN32_LEAN_AND_MEAN;NOMINMAX;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -105,6 +105,9 @@
     <ClCompile Include="..\Source\Core\Queue.cpp" />
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp" />
     <ClCompile Include="..\Source\Core\Settings.cpp" />
+    <ClCompile Include="..\Source\Core\Backups.cpp" />
+    <ClCompile Include="..\Source\Core\Deflate.cpp" />
+    <ClCompile Include="..\Source\Core\Zip.cpp" />
     <ClCompile Include="..\Source\Core\Stats.cpp" />
     <ClCompile Include="..\Source\Core\Terrarium.cpp" />
     <ClCompile Include="..\Source\UI\TerrariumView.cpp" />
@@ -160,6 +163,9 @@
     <ClInclude Include="..\Source\Core\Settings.h" />
     <ClInclude Include="..\Source\Core\SmoothWheel.h" />
     <ClInclude Include="..\Source\Core\Clock.h" />
+    <ClInclude Include="..\Source\Core\Backups.h" />
+    <ClInclude Include="..\Source\Core\Deflate.h" />
+    <ClInclude Include="..\Source\Core\Zip.h" />
     <ClInclude Include="..\Source\Core\Stats.h" />
     <ClInclude Include="..\Source\Core\Terrarium.h" />
     <ClInclude Include="..\Source\App\WebPanel.h" />

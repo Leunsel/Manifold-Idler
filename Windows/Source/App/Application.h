@@ -45,6 +45,12 @@ namespace Idler
         void Close() override;
         bool HasTray() const override { return true; }
         void Quit() { m_running = false; }
+        void Restart() override
+        {
+            m_restart = true;
+            Quit();
+        }
+        bool RestartRequested() const { return m_restart; }
 
         static UINT ShowWindowMessage();
         static const wchar_t* WindowClass();
@@ -75,6 +81,7 @@ namespace Idler
 
         HINSTANCE m_instance = nullptr;
         bool m_running = false;
+        bool m_restart = false;
 
         bool m_startMinimised = false;
         bool m_openInBackground = false;

@@ -47,7 +47,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\Source;$(ProjectDir)..\Dependencies\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Source;$(ProjectDir)..\Dependencies\ImGui;$(ProjectDir)..\Dependencies\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CONSOLE;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -82,6 +82,9 @@
     <ClCompile Include="..\Source\Core\Queue.cpp" />
     <ClCompile Include="..\Source\Core\RuntimeLog.cpp" />
     <ClCompile Include="..\Source\Core\Settings.cpp" />
+    <ClCompile Include="..\Source\Core\Backups.cpp" />
+    <ClCompile Include="..\Source\Core\Deflate.cpp" />
+    <ClCompile Include="..\Source\Core\Zip.cpp" />
     <ClCompile Include="..\Source\Core\Stats.cpp" />
     <ClCompile Include="..\Source\Core\Terrarium.cpp" />
     <ClCompile Include="..\Source\Core\WebPolicy.cpp" />

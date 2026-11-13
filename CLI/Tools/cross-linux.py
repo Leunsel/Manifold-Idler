@@ -13,9 +13,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = "x86_64-linux-gnu.2.31"
-CORE = ["AppInfo", "Cards", "Creatures", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteEdit", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy"]
+CORE = ["AppInfo", "Backups", "Cards", "Creatures", "Deflate", "Errors", "FileLock", "Json", "Library", "MiniGames", "Queue", "RuntimeLog", "Settings", "SpriteEdit", "SpriteFile", "Stats", "Terrarium", "Text", "Vdf", "WebPolicy", "Zip"]
 STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "Worker", "WorkerProcessPosix"]
-BASE = ["Http", "Ipc", "Paths", "Request", "Service", "Themes", "Web", "WebAssets", "WebPage", "WebServer"]
+BASE = ["BackupCommands", "Http", "Ipc", "Paths", "Request", "Service", "Themes", "Web", "WebAssets", "WebPage", "WebServer"]
 PROGRAM = ["main", "Commands", "PageCommands", "Serve", "Desktop"]
 
 
@@ -42,7 +42,7 @@ def main():
     core_tests = os.path.join(root, "Tests", "Tests.cpp")
     sprite_view = os.path.join(source, "UI", "SpriteView.cpp")
 
-    includes = ["-I", os.path.join(HERE, "Shim"), "-I", source, "-I", src, "-isystem", os.path.join(root, "Dependencies", "CLI11"), "-isystem", os.path.join(root, "Dependencies", "ImGui")]
+    includes = ["-I", os.path.join(HERE, "Shim"), "-I", source, "-I", src, "-isystem", os.path.join(root, "Dependencies", "CLI11"), "-isystem", os.path.join(root, "Dependencies", "ImGui"), "-isystem", os.path.join(root, "Dependencies", "stb")]
     flags = ["-target", TARGET, "-std=c++20", "-O2", "-Wall", "-Wextra", "-DIDLER_CLI"]
 
     def compile_one(path):

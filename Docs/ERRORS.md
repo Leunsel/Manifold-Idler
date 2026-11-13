@@ -14,7 +14,7 @@ This file is made from `Source/Core/Errors.cpp` with `idler explain --markdown`.
 | [Idling](#idling) | MI-2001 to MI-2007 |
 | [Library](#library) | MI-3001 to MI-3009 |
 | [Achievements and stats](#achievements-and-stats) | MI-4001 to MI-4012 |
-| [The program](#the-program) | MI-5001 to MI-5016 |
+| [The program](#the-program) | MI-5001 to MI-5019 |
 | [Command line and server](#command-line-and-server) | MI-6001 to MI-6015 |
 | [Web page](#web-page) | MI-7001 to MI-7021 |
 | [Card farm](#card-farm) | MI-8001 to MI-8009 |
@@ -461,6 +461,30 @@ What to do: Nothing to do: everything that counts keeps to real time.
 What happened: Only one program may use a settings file at a time; two would idle the same queue twice and overwrite each other's statistics.
 
 What to do: Close the other window, or end the server with idler quit. To run both, give one of them settings of its own with --settings.
+
+### MI-5017
+
+**No backup could be made in ....**
+
+What happened: Reading the settings or writing the backup failed: the folder is read-only, the disk is full, or another program holds a file.
+
+What to do: Check that the folder can be written to and the disk is not full.
+
+### MI-5018
+
+**The backup ... could not be read.**
+
+What happened: The file is damaged, or it is a ZIP that holds no settings or statistics of this program.
+
+What to do: Choose another backup: each one is a file of its own. Nothing was changed.
+
+### MI-5019
+
+**The backup could not be put back: ... was not written.**
+
+What happened: Writing the settings or the statistics failed: the folder is read-only, the disk is full, or another program holds a file.
+
+What to do: Check that the folder can be written to and try again. What was there before is in the backup marked before restore.
 
 ## Command line and server
 

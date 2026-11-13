@@ -54,6 +54,15 @@
     <ClCompile Include="..\Source\Core\Settings.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Core\Backups.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Deflate.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Core\Zip.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="..\Source\Core\Stats.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
