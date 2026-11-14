@@ -4,8 +4,10 @@
 #include "UI/IdleAnimation.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 
 namespace Idler::UI
 {
@@ -26,6 +28,21 @@ namespace Idler::UI
         float g_push = 0.0f;
         float g_pushSpeed = 0.0f;
         float g_mouse = 0.0f;
+
+        float F(int value)
+        {
+            return static_cast<float>(value);
+        }
+
+        int Round(float value)
+        {
+            return static_cast<int>(std::floor(value + 0.5f));
+        }
+
+        std::uint32_t Hash(int value, std::uint32_t salt)
+        {
+            return Noise(static_cast<std::uint32_t>(value + 1000) * 2654435761u + salt);
+        }
 
         float EventShare(double now, double offset)
         {
@@ -62,214 +79,298 @@ namespace Idler::UI
             IdleAnimation::RequestFrames();
         }
 
-        float Wave(float x, float scale, float phase)
+        enum Material : std::uint8_t
         {
-            return std::sin(x * scale + phase);
-        }
-
-        std::uint32_t Hash(int value, std::uint32_t salt)
-        {
-            return Noise(static_cast<std::uint32_t>(value + 1000) * 2654435761u + salt);
-        }
-
-        void Dot(const Canvas& canvas, float x, float y, ImVec4 color)
-        {
-            canvas.Fill(x, y, x + 1.0f, y + 1.0f, color);
-        }
-
-        struct Step
-        {
-            float X = 0.0f;
-            float Y = 0.0f;
-            float Tx = 0.0f;
-            float Ty = 0.0f;
-            float Ox = 0.0f;
-            float Oy = 0.0f;
-            bool Top = false;
+            kEmpty = 0,
+            kStem,
+            kLeafA,
+            kLeafB,
+            kLeafC,
+            kLeafD,
+            kSnow,
+            kIce,
+            kDried,
+            kMaterialCount
         };
 
-        struct Vine
+        constexpr std::uint8_t kVein = 0x40;
+        constexpr std::uint8_t kKind = 0x3F;
+        constexpr std::uint8_t kShadow = 0xFF;
+        constexpr int kTones = 1 + 4 * (kMaterialCount - 1);
+
+        using Palette = std::array<ImVec4, kTones>;
+
+        int ToneOf(std::uint8_t material, int level)
         {
-            int Width = 0;
+            return 1 + (static_cast<int>(material) - 1) * 4 + level;
+        }
+
+        struct Cell
+        {
+            int X = 0;
+            int Y = 0;
+        };
+
+        class Cells
+        {
+        public:
+            static constexpr int kWidth = 256;
+            static constexpr int kHeight = 56;
+            static constexpr int kLeft = 12;
+            static constexpr int kTop = 20;
+
+            void Clear()
+            {
+                if (m_right >= m_left)
+                {
+                    for (int row = m_top; row <= m_bottom; ++row)
+                    {
+                        std::fill_n(m_material.begin() + row * kWidth + m_left, m_right - m_left + 1, std::uint8_t{ 0 });
+                        std::fill_n(m_tone.begin() + row * kWidth + m_left, m_right - m_left + 1, std::uint8_t{ 0 });
+                    }
+                }
+                m_left = kWidth;
+                m_right = -1;
+                m_top = kHeight;
+                m_bottom = -1;
+            }
+
+            void Put(int x, int y, std::uint8_t material)
+            {
+                const int column = x + kLeft;
+                const int row = y + kTop;
+                if (column < 1 || column >= kWidth - 1 || row < 1 || row >= kHeight - 1)
+                    return;
+                m_material[static_cast<std::size_t>(row * kWidth + column)] = material;
+                m_left = std::min(m_left, column - 1);
+                m_right = std::max(m_right, column + 1);
+                m_top = std::min(m_top, row - 1);
+                m_bottom = std::max(m_bottom, row + 1);
+            }
+
+            std::uint8_t At(int x, int y) const
+            {
+                const int column = x + kLeft;
+                const int row = y + kTop;
+                if (column < 0 || column >= kWidth || row < 0 || row >= kHeight)
+                    return 0;
+                return m_material[static_cast<std::size_t>(row * kWidth + column)];
+            }
+
+            void Shade()
+            {
+                for (int row = m_top; row <= m_bottom; ++row)
+                {
+                    for (int column = m_left; column <= m_right; ++column)
+                    {
+                        const std::uint8_t raw = m_material[static_cast<std::size_t>(row * kWidth + column)];
+                        const std::uint8_t kind = raw & kKind;
+                        if (kind == kEmpty)
+                            continue;
+                        const auto other = [&](int dx, int dy)
+                            {
+                                return (m_material[static_cast<std::size_t>((row + dy) * kWidth + column + dx)] & kKind) != kind;
+                            };
+                        const bool up = other(0, -1);
+                        const bool left = other(-1, 0);
+                        const bool down = other(0, 1);
+                        const bool right = other(1, 0);
+                        int level = 1 + (up || left ? 1 : 0) - (down || right ? 1 : 0);
+                        if (up && left && !down && !right)
+                            level = 3;
+                        if ((raw & kVein) != 0)
+                            level = std::max(0, level - 1);
+                        m_tone[static_cast<std::size_t>(row * kWidth + column)] = static_cast<std::uint8_t>(ToneOf(kind, level));
+                    }
+                }
+                for (int row = m_bottom; row > m_top; --row)
+                {
+                    for (int column = m_right; column > m_left; --column)
+                    {
+                        const auto here = static_cast<std::size_t>(row * kWidth + column);
+                        const auto from = static_cast<std::size_t>((row - 1) * kWidth + column - 1);
+                        if (m_material[here] == kEmpty && m_material[from] != kEmpty)
+                            m_tone[here] = kShadow;
+                    }
+                }
+            }
+
+            void Brighten(int fromX, int toX, std::uint8_t material)
+            {
+                for (int row = m_top; row <= m_bottom; ++row)
+                {
+                    for (int x = fromX; x <= toX; ++x)
+                    {
+                        const int column = x + kLeft;
+                        if (column <= m_left || column >= m_right)
+                            continue;
+                        const auto index = static_cast<std::size_t>(row * kWidth + column);
+                        if ((m_material[index] & kKind) == material)
+                            m_tone[index] = static_cast<std::uint8_t>(ToneOf(material, 3));
+                    }
+                }
+            }
+
+            void Flush(const Canvas& paint, const Palette& colors, ImVec4 shadow) const
+            {
+                for (int row = m_top; row <= m_bottom; ++row)
+                {
+                    const std::uint8_t* line = m_tone.data() + static_cast<std::size_t>(row * kWidth);
+                    int column = m_left;
+                    while (column <= m_right)
+                    {
+                        const std::uint8_t tone = line[column];
+                        int end = column + 1;
+                        while (end <= m_right && line[end] == tone)
+                            ++end;
+                        if (tone != 0)
+                        {
+                            const float top = F(row - kTop);
+                            paint.Fill(F(column - kLeft), top, F(end - kLeft), top + 1.0f, tone == kShadow ? shadow : colors[tone]);
+                        }
+                        column = end;
+                    }
+                }
+            }
+
+        private:
+            std::array<std::uint8_t, static_cast<std::size_t>(kWidth * kHeight)> m_material{};
+            std::array<std::uint8_t, static_cast<std::size_t>(kWidth * kHeight)> m_tone{};
+            int m_left = 0;
+            int m_right = kWidth - 1;
+            int m_top = 0;
+            int m_bottom = kHeight - 1;
+        };
+
+        Cells g_cells;
+
+        class Path
+        {
+        public:
+            static constexpr int kCapacity = 512;
+
+            void Start(float x, float y)
+            {
+                m_count = 0;
+                m_x = x;
+                m_y = y;
+                Add(Round(x), Round(y));
+            }
+
+            void LineTo(float x, float y)
+            {
+                const float span = std::max(std::fabs(x - m_x), std::fabs(y - m_y));
+                const int steps = std::max(1, static_cast<int>(std::ceil(span * 2.0f)));
+                for (int step = 1; step <= steps; ++step)
+                {
+                    const float share = F(step) / F(steps);
+                    Add(Round(m_x + (x - m_x) * share), Round(m_y + (y - m_y) * share));
+                }
+                m_x = x;
+                m_y = y;
+            }
+
+            int Count() const { return m_count; }
+
+            Cell At(int index) const { return m_cells[static_cast<std::size_t>(std::clamp(index, 0, std::max(0, m_count - 1)))]; }
+
+        private:
+            void Add(int x, int y)
+            {
+                if (m_count > 0)
+                {
+                    const Cell& last = m_cells[static_cast<std::size_t>(m_count - 1)];
+                    if (last.X == x && last.Y == y)
+                        return;
+                }
+                if (m_count >= 2)
+                {
+                    const Cell& before = m_cells[static_cast<std::size_t>(m_count - 2)];
+                    const Cell& last = m_cells[static_cast<std::size_t>(m_count - 1)];
+                    if (std::abs(x - before.X) == 1 && std::abs(y - before.Y) == 1 && (last.X == before.X || last.Y == before.Y))
+                    {
+                        m_cells[static_cast<std::size_t>(m_count - 1)] = Cell{ x, y };
+                        return;
+                    }
+                }
+                if (m_count < kCapacity)
+                    m_cells[static_cast<std::size_t>(m_count++)] = Cell{ x, y };
+            }
+
+            std::array<Cell, kCapacity> m_cells{};
+            int m_count = 0;
+            float m_x = 0.0f;
+            float m_y = 0.0f;
+        };
+
+        struct Anchor
+        {
+            int X = 0;
+            int Y = 0;
+            int Tx = 0;
+            int Ty = 0;
+            int Ox = 0;
+            int Oy = 0;
+        };
+
+        struct Mask
+        {
+            const char* const* Rows = nullptr;
             int Height = 0;
-            int Left = 0;
-            int Top = 0;
-            int Right = 0;
-
-            Vine(float width, float height)
-                : Width(static_cast<int>(width)), Height(static_cast<int>(height)), Left(Height), Top(Width + 2), Right(std::max(2, Height / 3))
-            {
-            }
-
-            int Count() const { return Left + Top + Right; }
-
-            Step At(int index) const
-            {
-                if (index < Left)
-                {
-                    const auto y = static_cast<float>(Height - index);
-                    return { Wave(y, 0.8f, 0.3f) > 0.45f ? 0.0f : -1.0f, y, 0.0f, -1.0f, -1.0f, 0.0f, false };
-                }
-                index -= Left;
-                if (index < Top)
-                {
-                    const auto x = static_cast<float>(index - 1);
-                    return { x, Wave(x, 0.45f, 0.4f) > 0.35f ? -2.0f : -1.0f, 1.0f, 0.0f, 0.0f, -1.0f, true };
-                }
-                index -= Top;
-                const auto y = static_cast<float>(index);
-                const bool last = index >= Right - 1;
-                return { static_cast<float>(Width) + (!last && Wave(y, 0.9f, 1.1f) > 0.4f ? 1.0f : 0.0f), y, 0.0f, 1.0f, 1.0f, 0.0f, false };
-            }
-
-            bool NearCurl(int index) const
-            {
-                const int top = index - Left;
-                for (const int curl : { Top * 28 / 100, Top * 66 / 100 })
-                {
-                    if (std::abs(top - curl) <= 2)
-                        return true;
-                }
-                return false;
-            }
         };
 
-        void Put(const Canvas& canvas, const Step& step, float along, float out, ImVec4 color)
-        {
-            Dot(canvas, step.X + step.Tx * along + step.Ox * out, step.Y + step.Ty * along + step.Oy * out, color);
-        }
+        constexpr const char* kTinyRows[] = { "X ", "XX", "s " };
+        constexpr const char* kSmallRows[] = { "  XX", " XXX", "XvX ", "s   " };
+        constexpr const char* kBigRows[] = { "   XX", " XXXX", "XXvX ", "XvX  ", "s    " };
+        constexpr const char* kCurlRows[] = { " XX ", "X  X", "X X ", "s   " };
 
-        Step Flipped(Step step)
-        {
-            step.Ox = -step.Ox;
-            step.Oy = -step.Oy;
-            return step;
-        }
+        constexpr Mask kTiny{ kTinyRows, 3 };
+        constexpr Mask kSmall{ kSmallRows, 4 };
+        constexpr Mask kBig{ kBigRows, 5 };
+        constexpr Mask kCurl{ kCurlRows, 4 };
 
-        enum class LeafSize
+        void PutMask(Cells& cells, const Anchor& at, const Mask& mask, int mirror, std::uint8_t leaf, std::uint8_t stem)
         {
-            Tiny,
-            Small,
-            Big
-        };
-
-        struct Leafage
-        {
-            ImVec4 Leaf;
-            ImVec4 Light;
-            ImVec4 Vein;
-        };
-
-        void DrawLeaf(const Canvas& canvas, const Step& step, float side, LeafSize size, float sway, ImVec4 stem, const Leafage& colors)
-        {
-            const float lean = side + sway;
-            if (size == LeafSize::Tiny)
+            int attach = 0;
+            const char* bottom = mask.Rows[mask.Height - 1];
+            for (int column = 0; bottom[column] != '\0'; ++column)
             {
-                Put(canvas, step, sway, 1.0f, colors.Leaf);
-                Put(canvas, step, lean, 1.0f, colors.Leaf);
-                Put(canvas, step, lean, 2.0f, colors.Light);
-                return;
+                if (bottom[column] == 's')
+                    attach = column;
             }
-            if (size == LeafSize::Small)
+            for (int row = 0; row < mask.Height; ++row)
             {
-                Put(canvas, step, sway, 1.0f, colors.Leaf);
-                Put(canvas, step, lean, 1.0f, colors.Vein);
-                Put(canvas, step, lean, 2.0f, colors.Light);
-                Put(canvas, step, lean + side, 2.0f, colors.Leaf);
-                Put(canvas, step, lean + side, 1.0f, colors.Leaf);
-                return;
+                const char* line = mask.Rows[row];
+                const int out = mask.Height - row;
+                for (int column = 0; line[column] != '\0'; ++column)
+                {
+                    const char ink = line[column];
+                    if (ink == ' ')
+                        continue;
+                    const int along = (column - attach) * mirror;
+                    const std::uint8_t material = ink == 's' ? stem : ink == 'v' ? static_cast<std::uint8_t>(leaf | kVein) : leaf;
+                    cells.Put(at.X + at.Tx * along + at.Ox * out, at.Y + at.Ty * along + at.Oy * out, material);
+                }
             }
-            Put(canvas, step, 0.0f, 1.0f, stem);
-            for (float along = -1.0f; along <= 1.0f; along += 1.0f)
-            {
-                Put(canvas, step, along + sway, 2.0f, along == 0.0f ? colors.Vein : colors.Leaf);
-                Put(canvas, step, along + sway, 3.0f, along == -side ? colors.Light : along == 0.0f ? colors.Vein : colors.Leaf);
-            }
-            Put(canvas, step, lean, 4.0f, colors.Leaf);
-        }
-
-        void DrawCurl(const Canvas& canvas, const Step& step, float side, ImVec4 color)
-        {
-            constexpr float kCells[][2] = { { 0.0f, 1.0f }, { 0.0f, 2.0f }, { 1.0f, 3.0f }, { 2.0f, 3.0f }, { 3.0f, 2.0f }, { 2.0f, 1.0f } };
-            for (const auto& cell : kCells)
-                Put(canvas, step, cell[0] * side, cell[1], color);
-        }
-
-        void DrawEndHook(const Canvas& canvas, const Step& step, ImVec4 color)
-        {
-            constexpr float kCells[][2] = { { 1.0f, 0.0f }, { 2.0f, 0.0f }, { 3.0f, 1.0f }, { 2.0f, 2.0f }, { 1.0f, 1.0f } };
-            for (const auto& cell : kCells)
-                Put(canvas, step, cell[0], cell[1], color);
         }
 
         struct Style
         {
-            ImVec4 Stem;
-            ImVec4 Tendril;
-            Leafage Leaves[4];
-            int LeafKinds = 1;
-            int Spacing = 0;
-            LeafSize TopLeaf = LeafSize::Small;
+            int Leaves = 1;
+            int Spacing = 4;
+            bool Big = false;
             int BareShare = 0;
-            bool Snow = false;
-            ImVec4 SnowColor;
-            ImVec4 Ice;
+            bool Winter = false;
         };
-
-        const Leafage& LeafOf(const Style& style, std::uint32_t mixed)
-        {
-            return style.Leaves[(mixed >> 12) % static_cast<std::uint32_t>(std::max(1, style.LeafKinds))];
-        }
 
         bool Bare(const Style& style, std::uint32_t mixed)
         {
             return style.BareShare > 0 && static_cast<int>((mixed >> 8) % 100u) < style.BareShare;
         }
 
-        float Sway(int index, float front)
+        std::uint8_t LeafOf(const Style& style, std::uint32_t mixed)
         {
-            return front > -100.0f && std::fabs(static_cast<float>(index) - front) < 2.5f ? 1.0f : 0.0f;
-        }
-
-        void DrawVine(const Canvas& canvas, const Vine& vine, const Style& style, float front, float clearFrom, float clearTo)
-        {
-            for (int index = 0; index < vine.Count(); ++index)
-            {
-                const Step step = vine.At(index);
-                Dot(canvas, step.X, step.Y, style.Stem);
-            }
-            Dot(canvas, -1.0f, 0.0f, style.Stem);
-
-            int curlNumber = 0;
-            for (const int curl : { vine.Top * 28 / 100, vine.Top * 66 / 100 })
-                DrawCurl(canvas, vine.At(vine.Left + curl), curlNumber++ % 2 == 0 ? 1.0f : -1.0f, style.Tendril);
-            DrawEndHook(canvas, vine.At(vine.Count() - 1), style.Tendril);
-
-            if (style.Spacing <= 0)
-                return;
-            const int creature = std::min(vine.Width / 3, 17);
-            int number = 0;
-            for (int base = 3; base < vine.Left + vine.Top - 1; base += style.Spacing, ++number)
-            {
-                const std::uint32_t mixed = Hash(base, 71u);
-                const int index = base + static_cast<int>(mixed % 3u) - 1;
-                const Step step = vine.At(index);
-                if ((step.Top && vine.NearCurl(index)) || (!step.Top && index > vine.Left - 2) || Bare(style, mixed))
-                    continue;
-                const float side = (mixed >> 4) % 2u == 0u ? 1.0f : -1.0f;
-                const Leafage& colors = LeafOf(style, mixed);
-                const float sway = Sway(index, front);
-                if (!step.Top)
-                {
-                    DrawLeaf(canvas, step, side, LeafSize::Tiny, sway, style.Stem, colors);
-                    continue;
-                }
-                const bool hanging = number % 2 == 1 && step.X > static_cast<float>(creature) && (step.X < clearFrom || step.X > clearTo);
-                if (hanging)
-                    DrawLeaf(canvas, Flipped(step), side, LeafSize::Small, sway, style.Stem, colors);
-                else
-                    DrawLeaf(canvas, step, side, style.TopLeaf, sway, style.Stem, colors);
-            }
+            return static_cast<std::uint8_t>(kLeafA + (mixed >> 12) % static_cast<std::uint32_t>(std::max(1, style.Leaves)));
         }
 
         struct Motion
@@ -287,20 +388,9 @@ namespace Idler::UI
             const float depth = std::max(0.0f, rest.y + 1.0f);
             const float share = std::min(1.0f, depth / motion.Reach);
             const float away = rest.x >= motion.Mouse ? 1.0f : -1.0f;
-            const float swing = motion.Sway * share * std::sin(motion.Time * 1.9f - depth * 0.3f);
+            const float swing = motion.Sway * share * std::sin(motion.Time * 5.0f - depth * 0.35f);
             const float x = std::clamp(rest.x + swing + motion.Push * away * depth * 0.6f, -1.0f, motion.Right);
-            const float y = rest.y - motion.Push * depth * 0.75f;
-            return ImVec2(std::round(x), std::round(y));
-        }
-
-        void Line(const Canvas& canvas, ImVec2 from, ImVec2 to, ImVec4 color)
-        {
-            const int steps = static_cast<int>(std::max(std::fabs(to.x - from.x), std::fabs(to.y - from.y)));
-            for (int step = 1; step <= steps; ++step)
-            {
-                const float share = static_cast<float>(step) / static_cast<float>(steps);
-                Dot(canvas, std::round(from.x + (to.x - from.x) * share), std::round(from.y + (to.y - from.y) * share), color);
-            }
+            return ImVec2(x, rest.y - motion.Push * depth * 0.75f);
         }
 
         struct Strand
@@ -323,245 +413,342 @@ namespace Idler::UI
 
         struct Strands
         {
-            Strand List[3];
+            std::array<Strand, 3> List{};
             int Count = 0;
+            float FreeFrom = 0.0f;
+            float ClearFrom = 1.0e6f;
+            float ClearTo = -1.0e6f;
         };
 
-        Strands PlanStrands(const Vine& vine, float textEnd)
+        int CreatureEnd(int width)
+        {
+            return std::min(width / 3, 17);
+        }
+
+        Strands PlanStrands(int columns, int rows, float textEnd)
         {
             Strands plan;
-            const auto width = static_cast<float>(vine.Width);
-            const auto height = static_cast<float>(vine.Height);
-            const float creature = std::min(width / 3.0f, 17.0f) + 2.0f;
+            const float width = F(columns);
+            const float height = F(rows);
+            const float creature = F(CreatureEnd(columns)) + 2.0f;
             const float swagTo = std::min(width - 8.0f, creature + std::max(14.0f, width * 0.4f));
             if (swagTo - creature >= 12.0f)
-                plan.List[plan.Count++] = { true, creature, swagTo, 3.0f, 1u };
+            {
+                plan.List[static_cast<std::size_t>(plan.Count++)] = Strand{ true, creature, swagTo, 3.0f, 1u };
+                plan.ClearFrom = creature - 2.0f;
+                plan.ClearTo = swagTo + 2.0f;
+            }
             const float from = std::max(textEnd + 3.0f, creature);
+            plan.FreeFrom = from;
             const float right = width - 3.0f;
             if (right - from >= 6.0f)
-                plan.List[plan.Count++] = { false, right - 1.0f, 0.0f, height - 4.0f, 2u };
+                plan.List[static_cast<std::size_t>(plan.Count++)] = Strand{ false, right - 1.0f, 0.0f, height - 4.0f, 2u };
             if (right - from >= 15.0f)
-                plan.List[plan.Count++] = { false, from + 3.0f, 0.0f, height - 7.0f, 3u };
+                plan.List[static_cast<std::size_t>(plan.Count++)] = Strand{ false, from + 3.0f, 0.0f, height - 7.0f, 3u };
             return plan;
         }
 
-        void DrawStrand(const Canvas& canvas, const Strand& strand, const Style& style, const Motion& motion)
+        void DrawStrand(Cells& cells, const Strand& strand, const Motion& motion, const Style& style)
         {
-            const int samples = std::max(4, static_cast<int>(strand.Length() * 1.5f));
-            ImVec2 previous = Moved(strand.Rest(0.0f), motion);
-            Dot(canvas, previous.x, previous.y, style.Stem);
+            const int samples = std::max(6, static_cast<int>(strand.Length() * 1.2f));
+            const int every = std::max(2, static_cast<int>(F(samples) * (strand.Swag ? 4.0f : 3.0f) / strand.Length()));
+            Path path;
+            const ImVec2 first = Moved(strand.Rest(0.0f), motion);
+            path.Start(first.x, first.y);
+            std::array<int, 48> leafAt{};
+            int leaves = 0;
             for (int sample = 1; sample <= samples; ++sample)
             {
-                const ImVec2 at = Moved(strand.Rest(static_cast<float>(sample) / static_cast<float>(samples)), motion);
-                Line(canvas, previous, at, style.Stem);
-                if (style.Snow && strand.Swag)
+                const ImVec2 at = Moved(strand.Rest(F(sample) / F(samples)), motion);
+                path.LineTo(at.x, at.y);
+                if (sample % every == 0 && sample < samples - 1 && leaves < static_cast<int>(leafAt.size()))
+                    leafAt[static_cast<std::size_t>(leaves++)] = path.Count() - 1;
+            }
+            for (int index = 0; index < path.Count(); ++index)
+            {
+                const Cell cell = path.At(index);
+                cells.Put(cell.X, cell.Y, kStem);
+            }
+
+            if (style.Winter && strand.Swag)
+            {
+                for (int index = 1; index < path.Count() - 1; ++index)
                 {
-                    const std::uint32_t mixed = Hash(sample, strand.Seed * 977u);
+                    const Cell cell = path.At(index);
+                    const std::uint32_t mixed = Hash(cell.X, strand.Seed * 977u);
                     if (mixed % 10u < 6u)
-                        Dot(canvas, at.x, at.y - 1.0f, style.SnowColor);
+                        cells.Put(cell.X, cell.Y - 1, kSnow);
                     if (mixed % 7u == 0u)
-                        Dot(canvas, at.x, at.y + 1.0f, style.Ice);
+                        cells.Put(cell.X, cell.Y + 1, kIce);
                 }
-                previous = at;
             }
 
             if (!strand.Swag)
             {
-                const float side = strand.Seed % 2u == 0u ? 1.0f : -1.0f;
-                Dot(canvas, previous.x, previous.y + 1.0f, style.Tendril);
-                Dot(canvas, previous.x + side, previous.y + 2.0f, style.Tendril);
-                Dot(canvas, previous.x + 2.0f * side, previous.y + 1.0f, style.Tendril);
-                Dot(canvas, previous.x + 2.0f * side, previous.y, style.Tendril);
-                if (style.Snow)
-                    Dot(canvas, previous.x + side, previous.y + 3.0f, style.Ice);
+                const Cell tip = path.At(path.Count() - 1);
+                const int side = strand.Seed % 2u == 0u ? 1 : -1;
+                PutMask(cells, Anchor{ tip.X, tip.Y, side, 0, 0, 1 }, kCurl, 1, kStem, kStem);
             }
 
-            if (style.Spacing <= 0)
+            if (style.Winter)
                 return;
-            const int leaves = std::max(1, static_cast<int>(strand.Length() / (strand.Swag ? 4.0f : 3.0f)));
-            for (int leaf = 1; leaf <= leaves; ++leaf)
+            for (int leaf = 0; leaf < leaves; ++leaf)
             {
-                const std::uint32_t mixed = Hash(leaf, strand.Seed * 977u);
+                const std::uint32_t mixed = Hash(leaf, strand.Seed * 131u);
                 if (Bare(style, mixed))
                     continue;
-                const float share = (static_cast<float>(leaf) - 0.6f + 0.2f * static_cast<float>(mixed % 3u)) / (static_cast<float>(leaves) + 0.4f);
-                const ImVec2 at = Moved(strand.Rest(share), motion);
-                const float side = leaf % 2 == 0 ? 1.0f : -1.0f;
-                const Leafage& colors = LeafOf(style, mixed);
+                const Cell cell = path.At(leafAt[static_cast<std::size_t>(leaf)]);
+                const int side = leaf % 2 == 0 ? 1 : -1;
+                const std::uint8_t material = LeafOf(style, mixed);
                 if (strand.Swag)
                 {
-                    const float out = leaf % 2 == 0 ? 1.0f : -1.0f;
-                    Dot(canvas, at.x, at.y + out, colors.Leaf);
-                    Dot(canvas, at.x + side, at.y + out, colors.Light);
-                    Dot(canvas, at.x + side, at.y + 2.0f * out, colors.Leaf);
-                    continue;
+                    const int out = cell.Y <= 0 ? side : -1;
+                    PutMask(cells, Anchor{ cell.X, cell.Y, 1, 0, 0, out }, kSmall, (mixed >> 4) % 2u == 0u ? 1 : -1, material, kStem);
                 }
-                Dot(canvas, at.x + side, at.y, colors.Leaf);
-                Dot(canvas, at.x + 2.0f * side, at.y, colors.Light);
-                Dot(canvas, at.x + side, at.y + 1.0f, colors.Vein);
-                Dot(canvas, at.x + 2.0f * side, at.y + 1.0f, colors.Leaf);
-                if (style.TopLeaf == LeafSize::Big)
-                {
-                    Dot(canvas, at.x + 3.0f * side, at.y + 1.0f, colors.Leaf);
-                    Dot(canvas, at.x + 2.0f * side, at.y + 2.0f, colors.Leaf);
-                }
+                else
+                    PutMask(cells, Anchor{ cell.X, cell.Y, 0, 1, side, 0 }, kSmall, 1, material, kStem);
             }
         }
 
-        float WindFront(const Vine& vine, float share)
+        Cell OutOf(Cell cell, int width)
         {
-            return share < 0.0f ? -1000.0f : share * static_cast<float>(vine.Count() + 8) - 4.0f;
+            if (cell.Y >= 0 && cell.X <= 0)
+                return Cell{ -1, 0 };
+            if (cell.Y >= 0 && cell.X >= width)
+                return Cell{ 1, 0 };
+            return Cell{ 0, -1 };
         }
 
-        Leafage Shades(ImVec4 leaf, ImVec4 stem, float light)
+        Cell AlongOf(Cell out)
         {
-            return { Lit(leaf, light), Lit(Mix(leaf, Rgb(1.0f, 0.95f, 0.75f), 0.3f), light), Lit(Mix(leaf, stem, 0.35f), light) };
+            if (out.X < 0)
+                return Cell{ 0, -1 };
+            if (out.X > 0)
+                return Cell{ 0, 1 };
+            return Cell{ 1, 0 };
         }
 
-        struct Scene
+        struct Frame
         {
-            const Canvas& Paint;
-            const Vine& Shape;
-            const Strands& Hanging;
-            const Motion& Movement;
-            float Width = 0.0f;
-            float Height = 0.0f;
-            float Daylight = 1.0f;
-            float Light = 1.0f;
-            float Share = -1.0f;
+            Path Line;
+            int TopFrom = 0;
+            int TopTo = 0;
+            int Curls[2] = { 0, 0 };
         };
 
-        void DrawAll(const Scene& scene, const Style& style, float front)
+        void BuildFrame(Frame& frame, int width, int height)
         {
-            float clearFrom = 1.0e6f;
-            float clearTo = -1.0e6f;
-            for (int index = 0; index < scene.Hanging.Count; ++index)
+            const auto leftX = [](int y) { return -0.5f + 0.45f * std::sin(F(y) * 0.55f + 0.3f); };
+            const auto topY = [](int x) { return -1.5f + 0.55f * std::sin(F(x) * 0.19f + 0.4f) + 0.25f * std::sin(F(x) * 0.47f + 1.3f); };
+            Path& path = frame.Line;
+            path.Start(leftX(height), F(height));
+            for (int y = height - 1; y >= 1; --y)
+                path.LineTo(leftX(y), F(y));
+            path.LineTo(0.4f, -0.8f);
+            frame.TopFrom = path.Count();
+            for (int x = 1; x < width; ++x)
+                path.LineTo(F(x), topY(x));
+            frame.TopTo = path.Count();
+            path.LineTo(F(width), -0.4f);
+            const int right = std::max(2, height / 3);
+            for (int y = 0; y <= right; ++y)
+                path.LineTo(F(width) + 0.2f * std::sin(F(y) * 0.9f), F(y));
+
+            const int targets[2] = { width * 28 / 100, width * 66 / 100 };
+            for (int curl = 0; curl < 2; ++curl)
             {
-                const Strand& strand = scene.Hanging.List[index];
-                if (strand.Swag)
+                int best = frame.TopFrom;
+                for (int index = frame.TopFrom; index < frame.TopTo; ++index)
                 {
-                    clearFrom = strand.From - 2.0f;
-                    clearTo = strand.To + 2.0f;
+                    if (std::abs(path.At(index).X - targets[curl]) < std::abs(path.At(best).X - targets[curl]))
+                        best = index;
                 }
+                frame.Curls[curl] = best;
             }
-            DrawVine(scene.Paint, scene.Shape, style, front, clearFrom, clearTo);
-            for (int index = 0; index < scene.Hanging.Count; ++index)
-                DrawStrand(scene.Paint, scene.Hanging.List[index], style, scene.Movement);
         }
 
-        void DrawSpring(const Scene& scene)
+        bool NearCurl(const Frame& frame, int index)
         {
-            Style style;
-            style.Stem = Lit(Rgb(0.40f, 0.62f, 0.28f), scene.Light);
-            style.Tendril = Lit(Rgb(0.52f, 0.76f, 0.34f), scene.Light);
-            style.Leaves[0] = { Lit(Rgb(0.56f, 0.84f, 0.38f), scene.Light), Lit(Rgb(0.74f, 0.94f, 0.52f), scene.Light), Lit(Rgb(0.48f, 0.76f, 0.32f), scene.Light) };
-            style.Spacing = 5;
-            style.TopLeaf = LeafSize::Small;
-            DrawAll(scene, style, WindFront(scene.Shape, scene.Share));
+            return std::abs(index - frame.Curls[0]) <= 2 || std::abs(index - frame.Curls[1]) <= 2;
         }
 
-        void DrawSummer(const Scene& scene)
+        void DrawFrame(Cells& cells, const Frame& frame, int width, const Style& style, const Strands& strands, float front)
         {
-            const ImVec4 stem = Rgb(0.28f, 0.44f, 0.20f);
-            Style style;
-            style.Stem = Lit(stem, scene.Light);
-            style.Tendril = Lit(Rgb(0.36f, 0.56f, 0.24f), scene.Light);
-            style.Leaves[0] = Shades(Rgb(0.30f, 0.58f, 0.24f), stem, scene.Light);
-            style.Leaves[1] = Shades(Rgb(0.36f, 0.66f, 0.28f), stem, scene.Light);
-            style.LeafKinds = 2;
-            style.Spacing = 3;
-            style.TopLeaf = LeafSize::Big;
-            DrawAll(scene, style, WindFront(scene.Shape, scene.Share));
-        }
+            const Path& path = frame.Line;
+            for (int index = 0; index < path.Count(); ++index)
+            {
+                const Cell cell = path.At(index);
+                const Cell out = OutOf(cell, width);
+                cells.Put(cell.X, cell.Y, kStem);
+                cells.Put(cell.X + out.X, cell.Y + out.Y, kStem);
+            }
 
-        void DrawAutumn(const Scene& scene)
-        {
-            const ImVec4 stem = Rgb(0.42f, 0.28f, 0.18f);
-            Style style;
-            style.Stem = Lit(stem, scene.Light);
-            style.Tendril = Lit(Rgb(0.50f, 0.34f, 0.20f), scene.Light);
-            style.Leaves[0] = Shades(Rgb(0.84f, 0.22f, 0.14f), stem, scene.Light);
-            style.Leaves[1] = Shades(Rgb(0.93f, 0.50f, 0.14f), stem, scene.Light);
-            style.Leaves[2] = Shades(Rgb(0.96f, 0.74f, 0.26f), stem, scene.Light);
-            style.Leaves[3] = Shades(Rgb(0.66f, 0.14f, 0.12f), stem, scene.Light);
-            style.LeafKinds = 4;
-            style.Spacing = 3;
-            style.TopLeaf = LeafSize::Big;
-            style.BareShare = 30;
-            DrawAll(scene, style, WindFront(scene.Shape, scene.Share));
-            if (scene.Share < 0.0f)
+            for (int curl = 0; curl < 2; ++curl)
+            {
+                const Cell cell = path.At(frame.Curls[curl]);
+                PutMask(cells, Anchor{ cell.X, cell.Y - 1, 1, 0, 0, -1 }, kCurl, curl == 0 ? 1 : -1, kStem, kStem);
+            }
+            const Cell end = path.At(path.Count() - 1);
+            PutMask(cells, Anchor{ end.X, end.Y, 1, 0, 0, 1 }, kCurl, 1, kStem, kStem);
+
+            if (style.Winter)
                 return;
-            float origin = scene.Width * 0.6f;
-            for (int index = 0; index < scene.Hanging.Count; ++index)
+            const int creature = CreatureEnd(width);
+            int number = 0;
+            for (int base = 2; base < frame.TopTo - 1; base += style.Spacing, ++number)
             {
-                if (!scene.Hanging.List[index].Swag)
-                    origin = scene.Hanging.List[index].From - 2.0f;
-            }
-            const float share = scene.Share;
-            const float y = std::round(1.0f + share * (scene.Height + 1.0f));
-            const float x = std::round(origin + Wave(share, 6.0f, 0.0f) * 3.0f - share * 4.0f);
-            const Leafage& colors = style.Leaves[1];
-            const bool turned = std::fmod(share * 8.0f, 1.0f) < 0.5f;
-            scene.Paint.Fill(x, y, x + 2.0f, y + 1.0f, colors.Leaf);
-            scene.Paint.Fill(x + (turned ? 1.0f : -1.0f), y + 1.0f, x + (turned ? 3.0f : 1.0f), y + 2.0f, colors.Leaf);
-            Dot(scene.Paint, x, y + 1.0f, colors.Vein);
-            Dot(scene.Paint, x + (turned ? 0.0f : 1.0f), y - 1.0f, colors.Light);
-        }
-
-        void DrawWinter(const Scene& scene)
-        {
-            const Canvas& canvas = scene.Paint;
-            const Vine& vine = scene.Shape;
-            const float dark = 1.0f - scene.Daylight;
-            const ImVec4 snow = Mix(Rgb(0.95f, 0.97f, 1.0f), Rgb(0.62f, 0.67f, 0.80f), dark * 0.6f);
-            const ImVec4 shade = Mix(Rgb(0.76f, 0.84f, 0.95f), Rgb(0.44f, 0.50f, 0.66f), dark * 0.6f);
-            const ImVec4 ice = Mix(Rgb(0.80f, 0.92f, 1.0f), Rgb(0.45f, 0.55f, 0.72f), dark * 0.6f);
-            const ImVec4 stem = Rgb(0.40f, 0.33f, 0.30f);
-            Style style;
-            style.Stem = Lit(stem, scene.Light);
-            style.Tendril = Lit(Rgb(0.46f, 0.38f, 0.33f), scene.Light);
-            style.Snow = true;
-            style.SnowColor = snow;
-            style.Ice = ice;
-            DrawAll(scene, style, -1000.0f);
-
-            const Leafage dried = Shades(Rgb(0.58f, 0.44f, 0.30f), stem, scene.Light);
-            for (const int spot : { vine.Top * 14 / 100, vine.Top * 52 / 100, vine.Top * 84 / 100 })
-                DrawLeaf(canvas, vine.At(vine.Left + spot), spot % 2 == 0 ? 1.0f : -1.0f, LeafSize::Small, 0.0f, style.Stem, dried);
-
-            const int glint = scene.Share < 0.0f ? -100 : static_cast<int>(scene.Share * static_cast<float>(vine.Top));
-            for (int index = 0; index < vine.Left + vine.Top; ++index)
-            {
-                const Step step = vine.At(index);
-                const std::uint32_t mixed = Hash(index, 313u);
-                if (!step.Top)
+                const std::uint32_t mixed = Hash(base, 71u);
+                const int index = base + static_cast<int>(mixed % 3u) - 1;
+                const Cell cell = path.At(index);
+                const Cell out = OutOf(cell, width);
+                const bool top = out.Y < 0;
+                if ((top && NearCurl(frame, index)) || (!top && index > frame.TopFrom - 3) || Bare(style, mixed))
+                    continue;
+                const Cell along = AlongOf(out);
+                const std::uint8_t material = LeafOf(style, mixed);
+                const bool gust = std::fabs(F(index) - front) < 2.5f;
+                const int mirror = gust ? 1 : (mixed >> 4) % 2u == 0u ? 1 : -1;
+                if (!top)
                 {
-                    if (mixed % 4u == 0u)
-                        Put(canvas, step, 0.0f, 1.0f, shade);
+                    PutMask(cells, Anchor{ cell.X + out.X, cell.Y + out.Y, along.X, along.Y, out.X, out.Y }, kTiny, mirror, material, kStem);
                     continue;
                 }
-                const int top = index - vine.Left;
+                const bool hanging = number % 2 == 1 && cell.X > creature && (F(cell.X) < strands.ClearFrom || F(cell.X) > strands.ClearTo);
+                if (hanging)
+                    PutMask(cells, Anchor{ cell.X, cell.Y, 1, 0, 0, 1 }, kSmall, mirror, material, kStem);
+                else
+                    PutMask(cells, Anchor{ cell.X, cell.Y - 1, 1, 0, 0, -1 }, style.Big ? kBig : kSmall, mirror, material, kStem);
+            }
+        }
+
+        void DrawWinterDetail(Cells& cells, const Frame& frame, int width)
+        {
+            const Path& path = frame.Line;
+            const int creature = CreatureEnd(width);
+            for (int index = frame.TopFrom; index < frame.TopTo; ++index)
+            {
+                const Cell cell = path.At(index);
+                const std::uint32_t mixed = Hash(cell.X, 313u);
                 if (mixed % 10u < 7u)
-                    Put(canvas, step, 0.0f, 1.0f, std::abs(top - glint) <= 1 ? Rgb(1.0f, 1.0f, 1.0f) : snow);
-                if (mixed % 5u == 0u)
-                    Put(canvas, step, 0.0f, 2.0f, top == glint ? Rgb(1.0f, 1.0f, 1.0f) : snow);
-                if (mixed % 9u == 0u)
                 {
-                    Put(canvas, step, 0.0f, -1.0f, ice);
-                    if (mixed % 2u == 0u)
-                        Put(canvas, step, 0.0f, -2.0f, ice);
+                    cells.Put(cell.X, cell.Y - 2, kSnow);
+                    if (mixed % 4u == 0u)
+                        cells.Put(cell.X, cell.Y - 3, kSnow);
+                }
+                if (cell.X > creature && mixed % 9u == 0u)
+                {
+                    cells.Put(cell.X, cell.Y + 1, kIce);
+                    if ((mixed >> 3) % 2u == 0u)
+                        cells.Put(cell.X, cell.Y + 2, kIce);
                 }
             }
-            if (scene.Share < 0.0f)
-                return;
-            for (int flake = 0; flake < 2; ++flake)
+            for (const int share : { 14, 52, 84 })
             {
-                const float fall = scene.Share * 1.35f - 0.2f * static_cast<float>(flake);
+                int best = frame.TopFrom;
+                for (int index = frame.TopFrom; index < frame.TopTo; ++index)
+                {
+                    if (std::abs(path.At(index).X - width * share / 100) < std::abs(path.At(best).X - width * share / 100))
+                        best = index;
+                }
+                if (NearCurl(frame, best))
+                    continue;
+                const Cell cell = path.At(best);
+                PutMask(cells, Anchor{ cell.X, cell.Y - 1, 1, 0, 0, -1 }, kSmall, share % 2 == 0 ? 1 : -1, kDried, kStem);
+            }
+        }
+
+        void SetRamp(Palette& palette, Material material, const ImVec4 (&tones)[4], float light)
+        {
+            for (int level = 0; level < 4; ++level)
+                palette[static_cast<std::size_t>(ToneOf(material, level))] = Lit(tones[level], light);
+        }
+
+        void SetCold(Palette& palette, Material material, const ImVec4 (&tones)[4], float dark)
+        {
+            for (int level = 0; level < 4; ++level)
+            {
+                const ImVec4 tone = tones[level];
+                palette[static_cast<std::size_t>(ToneOf(material, level))] = Mix(tone, Rgb(tone.x * 0.62f, tone.y * 0.68f, tone.z * 0.84f), dark * 0.8f);
+            }
+        }
+
+        Style SeasonStyle(SceneSeason season, Palette& palette, float daylight)
+        {
+            const float light = 0.45f + 0.55f * daylight;
+            Style style;
+            switch (season)
+            {
+            case SceneSeason::Spring:
+                SetRamp(palette, kStem, { Rgb(0.22f, 0.38f, 0.18f), Rgb(0.33f, 0.52f, 0.24f), Rgb(0.46f, 0.66f, 0.30f), Rgb(0.60f, 0.78f, 0.40f) }, light);
+                SetRamp(palette, kLeafA, { Rgb(0.30f, 0.54f, 0.22f), Rgb(0.46f, 0.72f, 0.30f), Rgb(0.62f, 0.86f, 0.40f), Rgb(0.80f, 0.95f, 0.58f) }, light);
+                SetRamp(palette, kLeafB, { Rgb(0.26f, 0.48f, 0.22f), Rgb(0.40f, 0.66f, 0.28f), Rgb(0.56f, 0.80f, 0.36f), Rgb(0.74f, 0.92f, 0.52f) }, light);
+                style.Leaves = 2;
+                style.Spacing = 5;
+                break;
+            case SceneSeason::Summer:
+                SetRamp(palette, kStem, { Rgb(0.16f, 0.26f, 0.12f), Rgb(0.24f, 0.38f, 0.17f), Rgb(0.34f, 0.50f, 0.22f), Rgb(0.46f, 0.62f, 0.30f) }, light);
+                SetRamp(palette, kLeafA, { Rgb(0.12f, 0.28f, 0.17f), Rgb(0.20f, 0.40f, 0.22f), Rgb(0.32f, 0.54f, 0.26f), Rgb(0.46f, 0.66f, 0.32f) }, light);
+                SetRamp(palette, kLeafB, { Rgb(0.18f, 0.36f, 0.19f), Rgb(0.31f, 0.54f, 0.24f), Rgb(0.48f, 0.72f, 0.29f), Rgb(0.68f, 0.86f, 0.40f) }, light);
+                style.Leaves = 2;
+                style.Spacing = 4;
+                style.Big = true;
+                break;
+            case SceneSeason::Autumn:
+                SetRamp(palette, kStem, { Rgb(0.24f, 0.15f, 0.10f), Rgb(0.36f, 0.24f, 0.16f), Rgb(0.50f, 0.35f, 0.24f), Rgb(0.62f, 0.46f, 0.32f) }, light);
+                SetRamp(palette, kLeafA, { Rgb(0.48f, 0.10f, 0.08f), Rgb(0.70f, 0.18f, 0.12f), Rgb(0.86f, 0.32f, 0.18f), Rgb(0.96f, 0.50f, 0.30f) }, light);
+                SetRamp(palette, kLeafB, { Rgb(0.62f, 0.28f, 0.06f), Rgb(0.84f, 0.46f, 0.12f), Rgb(0.95f, 0.62f, 0.22f), Rgb(1.00f, 0.78f, 0.40f) }, light);
+                SetRamp(palette, kLeafC, { Rgb(0.66f, 0.50f, 0.10f), Rgb(0.86f, 0.68f, 0.18f), Rgb(0.96f, 0.82f, 0.32f), Rgb(1.00f, 0.93f, 0.55f) }, light);
+                SetRamp(palette, kLeafD, { Rgb(0.36f, 0.08f, 0.10f), Rgb(0.54f, 0.12f, 0.14f), Rgb(0.70f, 0.20f, 0.20f), Rgb(0.84f, 0.32f, 0.30f) }, light);
+                style.Leaves = 4;
+                style.Spacing = 4;
+                style.Big = true;
+                style.BareShare = 30;
+                break;
+            default:
+                SetRamp(palette, kStem, { Rgb(0.20f, 0.16f, 0.15f), Rgb(0.32f, 0.26f, 0.24f), Rgb(0.44f, 0.37f, 0.33f), Rgb(0.56f, 0.48f, 0.43f) }, light);
+                SetRamp(palette, kDried, { Rgb(0.36f, 0.26f, 0.17f), Rgb(0.50f, 0.38f, 0.26f), Rgb(0.62f, 0.49f, 0.34f), Rgb(0.72f, 0.60f, 0.44f) }, light);
+                SetCold(palette, kSnow, { Rgb(0.62f, 0.70f, 0.84f), Rgb(0.80f, 0.86f, 0.95f), Rgb(0.93f, 0.96f, 1.00f), Rgb(1.00f, 1.00f, 1.00f) }, 1.0f - daylight);
+                SetCold(palette, kIce, { Rgb(0.50f, 0.66f, 0.82f), Rgb(0.66f, 0.80f, 0.94f), Rgb(0.82f, 0.92f, 1.00f), Rgb(0.95f, 0.99f, 1.00f) }, 1.0f - daylight);
+                style.Winter = true;
+                break;
+            }
+            return style;
+        }
+
+        void DrawParticles(Cells& cells, SceneSeason season, const Strands& strands, int width, int height, float share)
+        {
+            if (share < 0.0f)
+                return;
+            if (season == SceneSeason::Autumn)
+            {
+                float origin = F(width) * 0.6f;
+                for (int index = 0; index < strands.Count; ++index)
+                {
+                    if (!strands.List[static_cast<std::size_t>(index)].Swag)
+                        origin = strands.List[static_cast<std::size_t>(index)].From - 2.0f;
+                }
+                const int x = Round(origin + std::sin(share * 6.0f) * 3.0f - share * 4.0f);
+                const int y = Round(1.0f + share * (F(height) + 1.0f));
+                const bool turned = std::fmod(share * 8.0f, 1.0f) < 0.5f;
+                cells.Put(x, y, kLeafB);
+                cells.Put(x + 1, y, kLeafB);
+                cells.Put(turned ? x + 1 : x, y + 1, kLeafB);
+                cells.Put(turned ? x + 2 : x - 1, y + 1, kLeafA);
+                return;
+            }
+            if (season != SceneSeason::Winter)
+                return;
+            const float right = F(width) - 3.0f;
+            const float room = right - strands.FreeFrom;
+            const float bottom = room >= 4.0f ? F(height) + 1.0f : 0.0f;
+            for (int flake = 0; flake < 3; ++flake)
+            {
+                const float fall = share * 1.4f - 0.2f * F(flake);
                 if (fall < 0.0f || fall > 1.0f)
                     continue;
-                const float x = std::round(scene.Width * (0.28f + 0.42f * static_cast<float>(flake)) + Wave(fall, 7.0f, static_cast<float>(flake)) * 2.0f);
-                const float y = std::round(-6.0f + fall * (scene.Height + 7.0f));
-                Dot(canvas, x, y, snow);
+                const float lane = room >= 4.0f ? strands.FreeFrom + room * (0.2f + 0.3f * F(flake)) : F(width) * (0.24f + 0.3f * F(flake));
+                const int x = Round(lane + std::sin(fall * 7.0f + F(flake)) * 1.5f);
+                cells.Put(x, Round(-5.0f + fall * (bottom + 5.0f)), kSnow);
             }
         }
     }
@@ -575,42 +762,47 @@ namespace Idler::UI
 
         const float pixel = IdleAnimation::PixelSize();
         const ImVec2 origin(std::round(min.x), std::round(min.y));
-        const Canvas canvas{ drawList, origin, pixel, 0.0f, ImVec4() };
-        const float width = std::floor((max.x - min.x) / pixel);
-        const float height = std::round((max.y - min.y) / pixel);
+        const int width = static_cast<int>(std::floor((max.x - min.x) / pixel));
+        const int height = Round((max.y - min.y) / pixel);
+        if (width < 24 || height < 8)
+            return;
         if (hovered)
             g_mouse = (ImGui::GetIO().MousePos.x - origin.x) / pixel;
-        const bool alreadyMoving = IdleAnimation::NeedsFrames();
         UpdatePush(hovered);
 
-        const Vine vine(width, height);
-        const Strands strands = PlanStrands(vine, std::ceil((textEnd - origin.x) / pixel));
         const float share = EventShare(now, static_cast<double>(season) * 2.7);
         if (share >= 0.0f)
             IdleAnimation::RequestFrames();
+
+        Palette palette{};
+        const Style style = SeasonStyle(season, palette, daylight);
+        const Strands strands = PlanStrands(width, height, std::ceil((textEnd - origin.x) / pixel));
+        static Frame frame;
+        BuildFrame(frame, width, height);
+
         Motion motion;
         motion.Push = g_push;
         motion.Mouse = g_mouse;
         motion.Time = static_cast<float>(now);
-        motion.Right = width + 1.0f;
-        motion.Reach = std::max(1.0f, height - 3.0f);
-        motion.Sway = (share >= 0.0f ? 1.6f * std::sin(share * kPi) : 0.0f) + (alreadyMoving && IdleAnimation::Enabled() ? 0.7f : 0.0f);
+        motion.Right = F(width) + 1.0f;
+        motion.Reach = std::max(1.0f, F(height) - 3.0f);
+        motion.Sway = share >= 0.0f ? 1.4f * std::sin(share * kPi) : 0.0f;
+        const float front = share >= 0.0f ? share * F(frame.Line.Count() + 8) - 4.0f : -1000.0f;
 
-        const Scene scene{ canvas, vine, strands, motion, width, height, daylight, 0.45f + 0.55f * daylight, share };
-        switch (season)
+        Cells& cells = g_cells;
+        cells.Clear();
+        for (int index = 0; index < strands.Count; ++index)
+            DrawStrand(cells, strands.List[static_cast<std::size_t>(index)], motion, style);
+        DrawFrame(cells, frame, width, style, strands, front);
+        if (style.Winter)
+            DrawWinterDetail(cells, frame, width);
+        DrawParticles(cells, season, strands, width, height, share);
+        cells.Shade();
+        if (style.Winter && share >= 0.0f)
         {
-        case SceneSeason::Spring:
-            DrawSpring(scene);
-            break;
-        case SceneSeason::Summer:
-            DrawSummer(scene);
-            break;
-        case SceneSeason::Autumn:
-            DrawAutumn(scene);
-            break;
-        default:
-            DrawWinter(scene);
-            break;
+            const int glint = Round(share * F(width));
+            cells.Brighten(glint - 1, glint + 1, kSnow);
         }
+        cells.Flush(Canvas{ drawList, origin, pixel, 0.0f, ImVec4() }, palette, ImVec4(0.0f, 0.0f, 0.0f, 0.34f));
     }
 }
