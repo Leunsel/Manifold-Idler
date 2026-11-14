@@ -16,6 +16,9 @@
     <Filter Include="Source\App">
       <UniqueIdentifier>{628dac3d-a3e5-5867-b6f3-2cac208a58d2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\App\Model">
+      <UniqueIdentifier>{57e4355a-b80e-4867-bbaa-b4c23c38c1cc}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Core">
       <UniqueIdentifier>{b12d670b-b6fe-5017-9906-1b1413ec25c9}</UniqueIdentifier>
     </Filter>
@@ -83,6 +86,21 @@
     </ClCompile>
     <ClCompile Include="..\Source\App\ReleaseCheckWin32.cpp">
       <Filter>Source\App</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\App\Model\ModelAchievements.cpp">
+      <Filter>Source\App\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\App\Model\ModelCards.cpp">
+      <Filter>Source\App\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\App\Model\ModelCreatures.cpp">
+      <Filter>Source\App\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\App\Model\ModelLists.cpp">
+      <Filter>Source\App\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\App\Model\ModelUpkeep.cpp">
+      <Filter>Source\App\Model</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\App\IdlerModel.cpp">
       <Filter>Source\App</Filter>
@@ -301,6 +319,9 @@
     </ClInclude>
     <ClInclude Include="..\Source\App\ReleaseCheck.h">
       <Filter>Source\App</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\App\Model\ModelParts.h">
+      <Filter>Source\App\Model</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\App\IdlerModel.h">
       <Filter>Source\App</Filter>

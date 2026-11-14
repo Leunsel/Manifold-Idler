@@ -23,7 +23,7 @@ STEAM = ["LibraryScan", "SteamClient", "SteamLocal", "SteamWebNone", "Worker", "
 UI = ["Covers", "Fonts", "IdleAnimation", "MenuWidgets", "MiniGameView", "SceneKit", "ScreenMain", "SeasonFrame", "SpriteView", "TerrariumView",
       "Screen/ScreenCards", "Screen/ScreenCommon", "Screen/ScreenCreatures", "Screen/ScreenDialogs", "Screen/ScreenGameWindow", "Screen/ScreenIdling", "Screen/ScreenLibrary", "Screen/ScreenLog", "Screen/ScreenSettings", "Screen/ScreenStatistics", "Screen/ScreenToasts",
       "Scenes/HomeAutumn", "Scenes/HomeSpring", "Scenes/HomeSummer", "Scenes/HomeWinter", "Scenes/StageClouds", "Scenes/StageMeadow", "Scenes/StageUnderwater"]
-APP = ["IdlerModel", "CardService", "CrashHandlerPosix", "ReleaseCheckCurl"]
+APP = ["IdlerModel", "Model/ModelAchievements", "Model/ModelCards", "Model/ModelCreatures", "Model/ModelLists", "Model/ModelUpkeep", "CardService", "CrashHandlerPosix", "ReleaseCheckCurl"]
 OWN = ["MainSdl", "App/SdlApplication", "App/Gl", "App/WebPanelNone", "App/DesktopLinux", "UI/CoversSdl"]
 IMGUI = ["imgui", "imgui_draw", "imgui_tables", "imgui_widgets", "backends/imgui_impl_sdl3", "backends/imgui_impl_opengl3"]
 FONTS = [("Text", "NotoSans-Regular.ttf"), ("Bold", "NotoSans-Bold.ttf"), ("Icons", "fa-solid-900.ttf")]
@@ -106,7 +106,7 @@ def main():
     own += [os.path.join(source, "Core", name + ".cpp") for name in CORE]
     own += [os.path.join(source, "Steam", name + ".cpp") for name in STEAM]
     own += [os.path.join(source, "UI", name.replace("/", os.sep) + ".cpp") for name in UI]
-    own += [os.path.join(source, "App", name + ".cpp") for name in APP]
+    own += [os.path.join(source, "App", name.replace("/", os.sep) + ".cpp") for name in APP]
     imgui = [os.path.join(dependencies, "ImGui", name.replace("/", os.sep) + ".cpp") for name in IMGUI]
 
     includes = ["-I", linux, "-I", source, "-I", os.path.join(dependencies, "ImGui"), "-I", os.path.join(dependencies, "ImGui", "backends"),

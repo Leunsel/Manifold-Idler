@@ -95,6 +95,11 @@
     <ClCompile Include="..\Source\App\CrashHandlerWin32.cpp" />
     <ClCompile Include="..\Source\App\ReleaseCheckWin32.cpp" />
     <ClCompile Include="..\Source\App\IdlerModel.cpp" />
+    <ClCompile Include="..\Source\App\Model\ModelAchievements.cpp" />
+    <ClCompile Include="..\Source\App\Model\ModelCards.cpp" />
+    <ClCompile Include="..\Source\App\Model\ModelCreatures.cpp" />
+    <ClCompile Include="..\Source\App\Model\ModelLists.cpp" />
+    <ClCompile Include="..\Source\App\Model\ModelUpkeep.cpp" />
     <ClCompile Include="..\Source\Core\AppInfo.cpp" />
     <ClCompile Include="..\Source\Core\Cards.cpp" />
     <ClCompile Include="..\Source\Core\Library.cpp" />
@@ -165,6 +170,7 @@
     <ClInclude Include="..\Source\App\CrashHandler.h" />
     <ClInclude Include="..\Source\App\ReleaseCheck.h" />
     <ClInclude Include="..\Source\App\IdlerModel.h" />
+    <ClInclude Include="..\Source\App\Model\ModelParts.h" />
     <ClInclude Include="..\Source\Core\AppInfo.h" />
     <ClInclude Include="..\Source\Core\Cards.h" />
     <ClInclude Include="..\Source\Core\Library.h" />

@@ -63,6 +63,11 @@ idler_flags(idler_core)
 
 add_library(idler_engine STATIC
     ${IDLER_SOURCE}/App/IdlerModel.cpp
+    ${IDLER_SOURCE}/App/Model/ModelAchievements.cpp
+    ${IDLER_SOURCE}/App/Model/ModelCards.cpp
+    ${IDLER_SOURCE}/App/Model/ModelCreatures.cpp
+    ${IDLER_SOURCE}/App/Model/ModelLists.cpp
+    ${IDLER_SOURCE}/App/Model/ModelUpkeep.cpp
     ${IDLER_SOURCE}/Steam/LibraryScan.cpp
     ${IDLER_SOURCE}/Steam/SteamClient.cpp
     ${IDLER_SOURCE}/Steam/SteamLocal.cpp

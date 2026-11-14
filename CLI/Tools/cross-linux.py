@@ -35,7 +35,7 @@ def main():
     os.makedirs(objects, exist_ok=True)
 
     core = [os.path.join(source, "Core", name + ".cpp") for name in CORE]
-    engine = [os.path.join(source, "App", "IdlerModel.cpp"), os.path.join(source, "App", "CrashHandlerPosix.cpp"), os.path.join(source, "App", "ReleaseCheckCurl.cpp")] + [os.path.join(source, "Steam", name + ".cpp") for name in STEAM + ["SteamWebNone"]]
+    engine = [os.path.join(source, "App", "IdlerModel.cpp")] + [os.path.join(source, "App", "Model", name + ".cpp") for name in ["ModelAchievements", "ModelCards", "ModelCreatures", "ModelLists", "ModelUpkeep"]] + [os.path.join(source, "App", "CrashHandlerPosix.cpp"), os.path.join(source, "App", "ReleaseCheckCurl.cpp")] + [os.path.join(source, "Steam", name + ".cpp") for name in STEAM + ["SteamWebNone"]]
     base = [os.path.join(src, name + ".cpp") for name in BASE]
     program = [os.path.join(src, name + ".cpp") for name in PROGRAM]
     cli_tests = os.path.join(HERE, "Tests", "CliTests.cpp")

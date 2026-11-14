@@ -59,7 +59,7 @@ set(STEAM LibraryScan SteamClient SteamLocal Worker)
 set(UI Covers Fonts IdleAnimation MenuWidgets MiniGameView SceneKit ScreenMain SeasonFrame SpriteView TerrariumView
     Screen/ScreenCards Screen/ScreenCommon Screen/ScreenCreatures Screen/ScreenDialogs Screen/ScreenGameWindow Screen/ScreenIdling Screen/ScreenLibrary Screen/ScreenLog Screen/ScreenSettings Screen/ScreenStatistics Screen/ScreenToasts
     Scenes/HomeAutumn Scenes/HomeSpring Scenes/HomeSummer Scenes/HomeWinter Scenes/StageClouds Scenes/StageMeadow Scenes/StageUnderwater)
-set(APP IdlerModel CardService)
+set(APP IdlerModel Model/ModelAchievements Model/ModelCards Model/ModelCreatures Model/ModelLists Model/ModelUpkeep CardService)
 set(OWN MainSdl App/SdlApplication App/Gl App/WebPanelNone UI/CoversSdl)
 
 set(SOURCES "${FONT_DATA}")
