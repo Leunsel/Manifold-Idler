@@ -69,6 +69,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Tests\Tests.cpp" />
+    <ClCompile Include="..\Tests\CardTests.cpp" />
+    <ClCompile Include="..\Tests\CreatureTests.cpp" />
+    <ClCompile Include="..\Tests\MiniGameTests.cpp" />
+    <ClCompile Include="..\Tests\ProgramTests.cpp" />
+    <ClCompile Include="..\Tests\QueueTests.cpp" />
+    <ClCompile Include="..\Tests\SpriteTests.cpp" />
+    <ClCompile Include="..\Tests\SteamTests.cpp" />
     <ClCompile Include="..\Source\Core\AppInfo.cpp" />
     <ClCompile Include="..\Source\Core\Cards.cpp" />
     <ClCompile Include="..\Source\Core\Library.cpp" />
@@ -93,6 +100,9 @@
     <ClCompile Include="..\Source\Core\Text.cpp" />
     <ClCompile Include="..\Source\Core\Vdf.cpp" />
     <ClCompile Include="..\Source\UI\SpriteView.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Tests\TestKit.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

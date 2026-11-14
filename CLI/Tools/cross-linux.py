@@ -39,7 +39,7 @@ def main():
     base = [os.path.join(src, name + ".cpp") for name in BASE]
     program = [os.path.join(src, name + ".cpp") for name in PROGRAM]
     cli_tests = os.path.join(HERE, "Tests", "CliTests.cpp")
-    core_tests = os.path.join(root, "Tests", "Tests.cpp")
+    core_tests = [os.path.join(root, "Tests", name + ".cpp") for name in ["Tests", "CardTests", "CreatureTests", "MiniGameTests", "ProgramTests", "QueueTests", "SpriteTests", "SteamTests"]]
     sprite_view = os.path.join(source, "UI", "SpriteView.cpp")
 
     includes = ["-I", os.path.join(HERE, "Shim"), "-I", source, "-I", src, "-isystem", os.path.join(root, "Dependencies", "CLI11"), "-isystem", os.path.join(root, "Dependencies", "ImGui"), "-isystem", os.path.join(root, "Dependencies", "stb")]
@@ -54,7 +54,7 @@ def main():
     built = {}
     failed = False
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
-        for path, target, code, messages in pool.map(compile_one, core + engine + base + program + [cli_tests, core_tests, sprite_view]):
+        for path, target, code, messages in pool.map(compile_one, core + engine + base + program + [cli_tests, sprite_view] + core_tests):
             built[path] = target
             if messages.strip():
                 print(os.path.basename(path) + ":\n" + messages)
@@ -70,7 +70,7 @@ def main():
 
     link("idler", core + engine + base + program)
     link("idler_tests", [cli_tests] + base + core)
-    link("idler_core_tests", [core_tests, sprite_view] + core)
+    link("idler_core_tests", core_tests + [sprite_view] + core)
 
 
 if __name__ == "__main__":

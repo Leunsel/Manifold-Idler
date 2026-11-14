@@ -124,7 +124,16 @@ target_link_libraries(idler_tests PRIVATE idler_cli_base)
 idler_flags(idler_tests)
 add_test(NAME idler_tests COMMAND idler_tests)
 
-add_executable(idler_core_tests ${IDLER_ROOT}/Tests/Tests.cpp ${IDLER_SOURCE}/UI/SpriteView.cpp)
+add_executable(idler_core_tests
+    ${IDLER_ROOT}/Tests/Tests.cpp
+    ${IDLER_ROOT}/Tests/CardTests.cpp
+    ${IDLER_ROOT}/Tests/CreatureTests.cpp
+    ${IDLER_ROOT}/Tests/MiniGameTests.cpp
+    ${IDLER_ROOT}/Tests/ProgramTests.cpp
+    ${IDLER_ROOT}/Tests/QueueTests.cpp
+    ${IDLER_ROOT}/Tests/SpriteTests.cpp
+    ${IDLER_ROOT}/Tests/SteamTests.cpp
+    ${IDLER_SOURCE}/UI/SpriteView.cpp)
 target_include_directories(idler_core_tests SYSTEM PRIVATE ${IDLER_ROOT}/Dependencies/ImGui)
 target_link_libraries(idler_core_tests PRIVATE idler_core)
 idler_flags(idler_core_tests)
