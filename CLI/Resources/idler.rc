@@ -1,0 +1,40 @@
+#include <windows.h>
+#include "..\..\Source\Resource.h"
+#include "..\..\Source\Core\Version.h"
+
+#pragma code_page(65001)
+
+IDI_APPICON ICON "..\\..\\Source\\Resources\\icon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    IDLER_VERSION_MAJOR,IDLER_VERSION_MINOR,IDLER_VERSION_PATCH,0
+ PRODUCTVERSION IDLER_VERSION_MAJOR,IDLER_VERSION_MINOR,IDLER_VERSION_PATCH,0
+ FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS      VS_FF_DEBUG
+#else
+ FILEFLAGS      0x0L
+#endif
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       VFT_APP
+ FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "CompanyName",      "Manifold"
+            VALUE "Comments",         "Idles Steam games through the running Steam client, from a terminal."
+            VALUE "FileDescription",  "Manifold Idler command line"
+            VALUE "FileVersion",      IDLER_VERSION_TEXT
+            VALUE "InternalName",     "idler"
+            VALUE "OriginalFilename", "idler.exe"
+            VALUE "ProductName",      "Manifold Idler"
+            VALUE "ProductVersion",   IDLER_VERSION_TEXT
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END
