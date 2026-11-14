@@ -75,7 +75,7 @@ jobs:
         run: python3 Linux/Tools/cross-linux.py --stub-only Build/Linux/stub --cc clang
 
       - name: Configure
-        run: cmake -S Linux -B Build/Linux -DCMAKE_BUILD_TYPE=Release -DIDLER_SDL_LIBRARY="$PWD/Build/Linux/stub/libSDL3.so"
+        run: cmake -S Linux -B Build/Linux -DCMAKE_BUILD_TYPE=Release -DIDLER_WARNINGS_AS_ERRORS=ON -DIDLER_SDL_LIBRARY="$PWD/Build/Linux/stub/libSDL3.so"
 
       - name: Build
         run: cmake --build Build/Linux --parallel
@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Configure
-        run: cmake -S CLI -B Build/CLI -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S CLI -B Build/CLI -DCMAKE_BUILD_TYPE=Release -DIDLER_WARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build Build/CLI --config Release --parallel

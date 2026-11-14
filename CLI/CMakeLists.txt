@@ -17,6 +17,8 @@ if(NOT EXISTS "${IDLER_SOURCE}/App/IdlerModel.cpp")
     message(FATAL_ERROR "Manifold Idler's sources were not found in ${IDLER_ROOT}. Set IDLER_ROOT.")
 endif()
 
+option(IDLER_WARNINGS_AS_ERRORS "Stop the build at any compiler warning with GCC or Clang" OFF)
+
 find_package(Threads REQUIRED)
 
 function(idler_flags target)
@@ -25,6 +27,9 @@ function(idler_flags target)
         target_compile_definitions(${target} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX _CONSOLE)
     else()
         target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra>")
+        if(IDLER_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
+        endif()
     endif()
 endfunction()
 

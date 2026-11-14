@@ -31,6 +31,9 @@ It needs a C++20 compiler and the rest of the repository around it (or `-DIDLER_
 
 The result is `idler` in `Build/CLI`, or `Build/CLI/Release/idler.exe` on Windows.
 
+With GCC or Clang, `-DIDLER_WARNINGS_AS_ERRORS=ON` stops the build at any compiler warning, as GitHub Actions does;
+Visual Studio always does.
+
 From Windows, a Linux program comes from `python CLI/Tools/cross-linux.py`, with [Zig](https://ziglang.org) on the path or
 `--zig <zig.exe>`. It lands in `Build/CLI/linux-x86_64`, needs glibc 2.31 or newer and nothing else, and can be copied over as
 it is.

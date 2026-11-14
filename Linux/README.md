@@ -41,9 +41,12 @@ SDL3 at run time. This is how GitHub Actions builds it:
 
 ```
 python3 Linux/Tools/cross-linux.py --stub-only Build/Linux/stub --cc clang
-cmake -S Linux -B Build/Linux -DCMAKE_BUILD_TYPE=Release -DIDLER_SDL_LIBRARY="$PWD/Build/Linux/stub/libSDL3.so"
+cmake -S Linux -B Build/Linux -DCMAKE_BUILD_TYPE=Release -DIDLER_WARNINGS_AS_ERRORS=ON -DIDLER_SDL_LIBRARY="$PWD/Build/Linux/stub/libSDL3.so"
 cmake --build Build/Linux
 ```
+
+`-DIDLER_WARNINGS_AS_ERRORS=ON` stops the build at any compiler warning, as GitHub Actions does. Leave it out when a
+newer compiler than the one in CI warns about something new and you only want the program.
 
 `Source/` here holds what only this program has: SDL3 and OpenGL, the desktop helpers, the covers; the rest is the
 repository's `Source/`.
