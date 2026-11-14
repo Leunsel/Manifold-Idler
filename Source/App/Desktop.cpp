@@ -236,7 +236,7 @@ namespace Idler::Desktop
         context->Unmap(staging, 0);
         staging->Release();
 
-        ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        const bool comStarted = SUCCEEDED(::CoInitializeEx(nullptr, COINIT_MULTITHREADED));
         IWICImagingFactory* factory = nullptr;
         IWICStream* stream = nullptr;
         IWICBitmapEncoder* encoder = nullptr;
@@ -258,6 +258,8 @@ namespace Idler::Desktop
         Release(encoder);
         Release(stream);
         Release(factory);
+        if (comStarted)
+            ::CoUninitialize();
         return SUCCEEDED(hr);
     }
 }

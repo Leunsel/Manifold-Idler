@@ -60,13 +60,26 @@ namespace Idler
         ::SetHandleInformation(m_input, HANDLE_FLAG_INHERIT, 0);
         ::SetHandleInformation(m_output, HANDLE_FLAG_INHERIT, 0);
 
+        const auto giveUp = [&]()
+            {
+                ::CloseHandle(inputRead);
+                ::CloseHandle(outputWrite);
+                return false;
+            };
         SIZE_T attributeSize = 0;
         ::InitializeProcThreadAttributeList(nullptr, 1, 0, &attributeSize);
+        if (attributeSize == 0)
+            return giveUp();
         std::vector<char> attributeMemory(attributeSize);
         auto* attributes = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attributeMemory.data());
-        ::InitializeProcThreadAttributeList(attributes, 1, 0, &attributeSize);
+        if (!::InitializeProcThreadAttributeList(attributes, 1, 0, &attributeSize))
+            return giveUp();
         HANDLE inherited[] = { inputRead, outputWrite };
-        ::UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherited, sizeof(inherited), nullptr, nullptr);
+        if (!::UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherited, sizeof(inherited), nullptr, nullptr))
+        {
+            ::DeleteProcThreadAttributeList(attributes);
+            return giveUp();
+        }
 
         STARTUPINFOEXW startup{};
         startup.StartupInfo.cb = sizeof(startup);

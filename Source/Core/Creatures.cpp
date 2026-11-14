@@ -343,7 +343,7 @@ namespace Idler
 
     const char* BondName(int level)
     {
-        constexpr const char* kNames[kMaxBondLevel + 1] = { "Just met", "Familiar", "Friend", "Close friend", "Best friend", "Inseparable" };
+        static constexpr const char* kNames[kMaxBondLevel + 1] = { "Just met", "Familiar", "Friend", "Close friend", "Best friend", "Inseparable" };
         return kNames[std::clamp(level, 0, kMaxBondLevel)];
     }
 

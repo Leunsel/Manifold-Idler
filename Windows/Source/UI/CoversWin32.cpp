@@ -10,6 +10,7 @@ namespace Idler::UI::CoverPlatform
     {
         ID3D11Device* g_device = nullptr;
         IWICImagingFactory* g_factory = nullptr;
+        thread_local bool t_comStarted = false;
 
         template <typename T>
         void Drop(T*& object)
@@ -34,14 +35,17 @@ namespace Idler::UI::CoverPlatform
 
     void BeginWorker()
     {
-        ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-        ::CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&g_factory));
+        t_comStarted = SUCCEEDED(::CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+        if (FAILED(::CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&g_factory))))
+            g_factory = nullptr;
     }
 
     void EndWorker()
     {
         Drop(g_factory);
-        ::CoUninitialize();
+        if (t_comStarted)
+            ::CoUninitialize();
+        t_comStarted = false;
     }
 
     bool Decode(const std::filesystem::path& file, unsigned width, unsigned height, float shape, Pixels& pixels)
